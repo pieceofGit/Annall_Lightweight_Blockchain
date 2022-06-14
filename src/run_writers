@@ -1,0 +1,5 @@
+python3.7 main.py ../testdata/config.writer -myID 1
+python3.7 main.py ../testdata/config.writer -myID 2
+python3.7 main.py ../testdata/config.writer -myID 3
+python3.7 main.py ../testdata/config.writer -myID 4
+python3.7 main.py ../testdata/config.writer -myID 5
