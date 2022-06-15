@@ -5,14 +5,14 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python: Current File",
+      "name": "Python: Main",
       "type": "python",
       "request": "launch",
-      "program": "${file}",
+      "program": "${workspaceFolder}//src//main.py",
       "console": "integratedTerminal",
       "justMyCode": true,
-      "args": ["-myID 1", "-r 50"],
-      "cwd": "${fileDirname}"
+      "args": ["-myID", "1", "-r 50"],
+      "cwd": "${workspaceFolder}"
     }
   ]
 }

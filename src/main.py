@@ -32,8 +32,10 @@ if __name__ == "__main__":
     ap.add_argument("-r", default=0, type=int, help="number of rounds")
     a = ap.parse_args()
     id = a.myID
-    print("THE ID", id)
+    print("[ID]", id)
     rounds = a.r
+    print("[ROUNDS]", rounds)
+
     # Read config and other init stuff
     with open("./src/config.json", "r") as f:
         data = json.load(f)
