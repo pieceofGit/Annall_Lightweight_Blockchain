@@ -92,7 +92,7 @@ class BlockChainEngine:
 
     def __del__(self):
         # Missing conditionals and exceptions
-        self.connection.commit()
+        self.connection.commit()    # flushes transactions to disk
         self.connection.close()  # perhaps this should be out of the class
         print("DB closed")
 
@@ -116,6 +116,7 @@ class BlockChainEngine:
             cursor = self.connection.cursor()
             cursor.execute(drop_chain_table)
             cursor.execute(create_chain_table)
+            self.connection.commit()
         except Exception as e:
             print("Error creating chain table")
             print(e)
@@ -138,6 +139,7 @@ class BlockChainEngine:
             if overwrite:
                 cursor.execute(f"DELETE FROM chain WHERE round == {block_id}")
             cursor.execute(insertion)
+            self.connection.commit()
         except Exception as e:
             print("Error inserting block to chain db")
             print(e)

@@ -346,7 +346,7 @@ class ProtoCom(interfaces.ProtocolCommunication):
             5 accept connection
         """
         if VERBOSE:
-            print(" Revceived incoming connection ",
+            print(" Received incoming connection ",
                   self.list_connected_peers())
         in_conn, in_addr = listen_sock.accept()
         in_conn.settimeout(4)  # Only for accepting
@@ -511,12 +511,9 @@ class ProtoCom(interfaces.ProtocolCommunication):
             2. check type. If Data put data on message queue.
             3. send appropriate response
         """
-        # print("Reading from id:", r_id)
         try:
-            print("BEFORE - read single msg")
             msg = self.peers[r_id].read_single_msg()
-            print(msg)
-            print("AFTER - read single msg")
+            print(f"[REMOTE SOCKET MESSAGE] {msg}")
         except Exception as e:
             if DEBUG:
                 print(">!! ", "Failed to read from socket")
@@ -590,7 +587,7 @@ class ProtoCom(interfaces.ProtocolCommunication):
                     # all other ids are remote connections
                     else:
                         self.read_con(key.data, key.fileobj)
-                self.init_con_all()
+                self.init_con_all() # Connects to unconnected writers
                 time.sleep(random.random() * 0.1)  # 0-0.1 s
 
     def request_stop(self):

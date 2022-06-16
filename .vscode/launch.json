@@ -11,7 +11,7 @@
       "program": "${workspaceFolder}//src//main.py",
       "console": "integratedTerminal",
       "justMyCode": true,
-      "args": ["-myID", "1", "-r 50"],
+      "args": ["-myID", "1", "-r 20"],
       "cwd": "${workspaceFolder}"
     }
   ]

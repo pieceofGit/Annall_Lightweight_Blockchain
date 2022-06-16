@@ -42,8 +42,9 @@ if __name__ == "__main__":
     # Start Communication Engine - maintaining the peer-to-peer network of writers
     print("::> Starting up peer-to-peer network engine with id ", id)
     pComm = ProtoCom(id, data, NUM_WRITERS)
-    pComm.daemon = True
-    pComm.start()
+    pCommThread = Thread(target=pComm.run, name="ProtoComThread")   # NOT IN ORIGINAL CODE
+    pCommThread.daemon = True
+    pCommThread.start()
     print("Peer-to-peer network engine up  and running as:", pComm.name)
     # Initialize database connection
     print("::> Starting up BlockChainEngine")
@@ -72,7 +73,7 @@ if __name__ == "__main__":
     clients = TCP_Server("the server", TCP_IP, TCP_PORT, ClientHandler, bce)
     # Socket listening to events
     # The Client Handler thread
-    cthread = Thread(target=clients.run, name="ClientServerThread")
+    cthread = Thread(target=clients.run, name="TCPServerThread")
     cthread.daemon = True
     cthread.start()
     print("ClientServer up and running as:", cthread.name)
@@ -105,8 +106,7 @@ if __name__ == "__main__":
     print("Protocol Engine up and running as:", PEthread.name)
     # bce.__del__()
     # finalization and cleanup
-    PEthread.join()
-    cthread.join()
-    pComm.join()
-
-    # finalization and cleanup
+    # PEthread is not a daemon
+    PEthread.join() # MainThread awaits here for cleanup
+    # Associated daemon threads are killed when the program ends
+    

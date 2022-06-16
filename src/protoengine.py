@@ -608,8 +608,7 @@ class ProtoEngine(interfaces.ProtocolEngine):
             print(f"[ROUND COMPLETE] round {count} finished with writer with ID {coordinator} as  the coordinator")
             count += 1
             if count > self.rounds and self.rounds:
-                # self.bcdb.__del__()     # Close database connection
-                break
+                break   # Stops the program
 
     # MSG FORMAT <round nr>-<from id>-<to id>-<msg type>-<msg body>
     def _send_msg(self, round: int, type: str, message, sent_to=None):
