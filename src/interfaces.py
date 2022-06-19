@@ -88,6 +88,7 @@ class BlockChainEngine:
         assert dbconnection is not None
         self.connection = dbconnection
         self.create_table()
+        self.length = 0
         print("DB connection established")
 
     def __del__(self):
@@ -132,6 +133,10 @@ class BlockChainEngine:
         assert isinstance(block[4], int)    # winningNumber
         assert isinstance(block[5], str)    # writerSignature
         assert isinstance(block[6], str)    # hash
+        print(f"[ARBITRARY PAYLOAD] {block[3]}")
+        if block[3] == "arbitrarypayload":  # Do not write into chain if empty message
+            print("[ARBITRARY PAYLOAD TRUE]")
+            return
         print(f"[CREATE BLOCK] added block with block id {block_id} and block {block}")
         insertion = f'INSERT INTO chain(round,prevHash,writerID,coordinatorID,payload,winningNumber,writerSignature,hash) VALUES({block_id},"{block[0]}",{block[1]},{block[2]},"{block[3]}",{block[4]},"{block[5]}","{block[6]}");'
         try:
@@ -140,6 +145,9 @@ class BlockChainEngine:
                 cursor.execute(f"DELETE FROM chain WHERE round == {block_id}")
             cursor.execute(insertion)
             self.connection.commit()
+            if not overwrite:
+                self.length += 1
+            
         except Exception as e:
             print("Error inserting block to chain db")
             print(e)
@@ -158,7 +166,7 @@ class BlockChainEngine:
             print(e)
         return retrived.fetchall()
 
-    def read_blocks(self, begin, end=None, col="*"):
+    def read_blocks(self, begin, end=None, col="*", getLastRow=False):
         """ Retrieve blocks with from and including start to end
             If end is None, retrieve only the one block
             Returns a list of blocks retrieved
@@ -168,7 +176,10 @@ class BlockChainEngine:
         """
         assert isinstance(begin, int)
         assert isinstance(end, (int, NoneType))
-        if end is None:
+        print(f"[GET LAST ROW] {getLastRow}")
+        if getLastRow:  # If discrepancy between round and length of list because of arbitrarypayload
+            query = f"SELECT {col} FROM chain WHERE round >= {self.length - 1} ORDER BY round"
+        elif end is None:
             query = f"SELECT {col} FROM chain WHERE round >= {begin} ORDER BY round"
         else:
             query = f"SELECT {col} FROM chain WHERE round >= {begin} AND round <= {end} ORDER BY round"

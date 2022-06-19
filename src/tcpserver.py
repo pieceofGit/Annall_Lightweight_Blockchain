@@ -41,29 +41,70 @@ class ClientHandler(threading.Thread):
         self.confirm_queue = confirm_q
         self.bcdb = bcdb
 
-    def check_existance(self, hash: str, payload: str):
+    def check_existence(self, hash: str, payload: str):
         cond_string = f'hash == "{hash}" AND payload == "{payload}"'
         entry = self.bcdb.select_entry(cond_string)
         return bool(entry)
 
+    def format_msg(self, msg: str) -> bytes:
+        """ Format message to be sent over socket """
+        # print(">", format_msg.__name__, "Length: ", len(msg), "Message: ", msg)
+        b = len(msg).to_bytes(4, "big", signed=False) + bytes(msg, "utf-8")
+        # print(">", format_msg.__name__, "Message in bytes: ", b)
+        return b
+    
+    def send_message_to_client(self, msg):
+        byte_msg = self.format_msg(msg)
+        self.connection.send(byte_msg)
+
+    def get_message_from_client(self):
+        """Handles getting message.
+        1. Blocks on receiving message length
+        2. Blocks on receiving message
+        3. Returns JSON or string
+        """
+        # Get message length
+        byte_length = self.connection.recv(4)
+        if byte_length == b"":
+            raise Exception(f"> Connection closed. Socket:{self.connection}")
+        try:
+            # Get message length as integer
+            length = int.from_bytes(byte_length, "big", signed=False)
+        except Exception as e:
+            print(">!! Failed to read length of message")
+            return ""
+        if length > BUFFER_SIZE:
+            print(">!! Message size too large")
+            return ""
+        try:
+            # Get the message data
+            b = self.connection.recv(length)
+        except Exception as e:
+            print(">!! Failed to read message with:", e)
+        string_msg = b.decode("utf-8")
+        try:
+            json_msg = json.loads(string_msg)
+            return json_msg
+        except:
+            return ""
+
     def run(self):
+        # After initial handshake.
         # Where the actual service of the client request takes place
-        print(f"[CLIENT START]: The thread: self.name")
-
+        print(f"[CLIENT START]: The thread: {self.name}")
         # initial handshake with client
-
         msg = json.dumps({"Server": "Hello", "name": self.name})
         print(f"[MESSAGE TO CLIENT] the message: {msg}")
-        self.connection.send(msg.encode())
-
-        data = self.connection.recv(BUFFER_SIZE)
+        self.send_message_to_client(msg)
+        # self.connection.send(msg.encode())
+        # Only receive the first message. Use message length
+        
+        data = self.get_message_from_client()
         print(f"[RECEIVED DATA FROM CLIENT] {data}")
-        msg = data.decode()
-
-        # print("From client: ", msg)  # Should be: {'Client': "Hello", 'Name': name}
-        d = json.loads(msg)
-        self.name = d["name"]
-        self.payload_id = d["payload_id"]
+        # msg = data.decode()
+        # d = json.loads(data) 
+        self.name = data["name"]
+        self.payload_id = data["payload_id"]
 
         # Service client requests until client terminates
         while not self.terminate:
@@ -85,45 +126,31 @@ class ClientHandler(threading.Thread):
                 )
                 try:
                     print("Sending confirmation to client payload was added: " + msg)
-                    self.connection.send(msg.encode())
+                    self.send_message_to_client(msg)
                 except Exception as e:  # should really be more specific
                     print("exception", type(e), e)
                     self.terminate = True
                 # print(msg)
             try:
                 print("[PAYLOAD QUEUE] This is the payload queue: ",self.payload_queue)
-                print("receive from client..")
-                data = self.connection.recv(BUFFER_SIZE)    # Blocks on receiving data to socket connection from client
-                print("received")
+                d = self.get_message_from_client()    # Blocks on receiving data to socket connection from client
             except Exception as e:  # should really be more specific
                 print("exception", type(e), e)
                 self.terminate = True
                 break
-            print(f"[MESSAGE BEFORE DECODE] {msg}")
-            msg = data.decode()
-            print("Received: ", msg)
-            print(type(msg))
-            print(msg)
             print("[DECODE MESSAGE] decoding message from client")
-            d = json.loads(msg) # Converts JSON string into a dictionary
             print("Received: ", d)
-            if d["request_type"] == "verify":
-                print("request verify")
+            if d["request_type"] == "verify":   # Check if block exists
+                print("[VERIFICATION REQUEST]")
                 payload = f"{d['name']},{d['request_type']},{d['body']}"
-                acc = json.dumps({"verified": True,})
-                try:
-                    self.connection.send(acc.encode())
-                except Exception as e:  # should really be more specific
-                    print("exception", type(e), e)
-                    self.terminate = True
-                    break
-                if self.check_existance(d["hash"], payload):
+                if self.check_existence(d["hash"], payload):
                     resp = json.dumps({"verified": True,})
                 else:
                     resp = json.dumps({"verified": False,})
                 print("Sending to client verification: " + resp)
-                self.connection.send(resp.encode())
+                self.send_message_to_client(resp)
             else:
+                # Add new message to payload queue and send back ACK
                 print("request NOT verify")
                 self.payload_id = d["payload_id"]
                 payload = f"{d['name']},{d['request_type']},{d['body']}"
@@ -134,10 +161,10 @@ class ClientHandler(threading.Thread):
                 # for i in self.payload_queue:
                 #     print(f"[PAYLOAD] {i}")
                 self.payload_queue.put((self.payload_id, payload))
-                acc = json.dumps({"message_received": True,})
+                acc = json.dumps({"message_received": True, "payload_id": self.payload_id})
                 try:
                     print("Sending message_received ack")
-                    self.connection.send(acc.encode())
+                    self.send_message_to_client(acc)
                 except Exception as e:  # should really be more specific
                     print("exception", type(e), e)
                     self.terminate = True
@@ -240,7 +267,6 @@ class TCP_Server(ClientServer):
             "total threads",
             threading.active_count(),
         )
-        # TODO: Why does this thread look unlike other threads
         try:
             thread = self.RequestHandlerClass(
                 connection,

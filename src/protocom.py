@@ -544,7 +544,7 @@ class ProtoCom(interfaces.ProtocolCommunication):
         except Exception as e:
             pass """
         # TODO what if msg_type is data_ack ???
-        # TODO When reviece ECHO request reply with ECHO reply
+        # TODO When receive ECHO request reply with ECHO reply
         # if request contains data reply with that data else send list of connected ids
         if msg_typ == pMsgTyp.data:
             print("data == data")
@@ -556,7 +556,7 @@ class ProtoCom(interfaces.ProtocolCommunication):
             # ? put on some special queue
             # ? advance some counter or something in the RemoteHost object
             if VERBOSE:
-                print("Received ACK for recieving data from me")
+                print("Received ACK for receiving data from me")
         elif msg_typ == pMsgTyp.echo_request:
             if len(msg_data) > 0:
                 rep_m = pMsg.echo_repl_msg(self.id, r_id, msg_data)
@@ -619,11 +619,8 @@ class ProtoCom(interfaces.ProtocolCommunication):
             2. Wait for data acknowledge
             3. confirm successfull send
             """
-        print("broadcast")
         if send_to is None:
-            print("send_to None")
             id_list = []
-            # print(">", self.send_msg.__name__, "Broadcasting")
             for rem_id in self.peers:
                 if self.peers[rem_id].is_active:
                     try:
@@ -663,8 +660,8 @@ class ProtoCom(interfaces.ProtocolCommunication):
 
     def recv_msg(self, recv_from: int = None) -> list:
         """ returns a list of tuples of ([id]: int, [msg]: string) """
+        # return all messages
         if recv_from is None:
-            # return all messages
             with self.msg_lock:
                 tmpl = self.msg_queue.copy()
                 self.msg_queue.clear()

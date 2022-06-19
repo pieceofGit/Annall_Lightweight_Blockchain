@@ -161,10 +161,6 @@ class ProtoEngine(interfaces.ProtocolEngine):
         self.message_queue = Queue()
         # Blockhain database: the blockchain engine
         self.bcdb.insert_block(0, genesis_block)
-        ## TESTING WRITING TO DATABASE
-        the_block = ["prevHash", 1, 2, "the payload", 1, "writer signature", "the hash"]
-        msg = self.bcdb.read_blocks(0, 4)
-        print(f"[MESSAGE READ GENESIS BLOCK] The message: {msg}")
         # For how many rounds the blockchain should run for
         self.rounds = None
         # Comes from the original config file (config.json) 
@@ -341,7 +337,7 @@ class ProtoEngine(interfaces.ProtocolEngine):
         assert isinstance(pad, int)
         assert isinstance(coordinatorID, int)
 
-        prev_hash = self.bcdb.read_blocks(round - 1, col="hash")[0][0]
+        prev_hash = self.bcdb.read_blocks(round - 1, col="hash", getLastRow=True)[0][0] #TODO::::???
         prev_hash = str(prev_hash)
         # Returns payload of writer or arbitrary string if there is no payload
         payload = self.get_payload()
@@ -398,7 +394,7 @@ class ProtoEngine(interfaces.ProtocolEngine):
         canceller = parsed_message[1]
         round = int(parsed_message[0])
         coor_id = self.get_coordinatorID(round)
-        prev_hash = self.bcdb.read_blocks(round - 1, col="hash")[0][0]
+        prev_hash = self.bcdb.read_blocks(round - 1, col="hash", getLastRow=True)[0][0]
         prev_hash = str(prev_hash)
         cancel_block = (
             prev_hash,
@@ -591,7 +587,7 @@ class ProtoEngine(interfaces.ProtocolEngine):
     def run_forever(self):
         """
         """
-        # Expect all writers to join. Program does not start until writers with ID 1-5 are all connected
+        # Expects all writers to join. Program does not start until writers with ID 1-5 are all connected
         self.join_writer_set()
         print("[ALL JOINED] all writers have joined the writer set")
         count = 1
