@@ -65,7 +65,7 @@ if __name__ == "__main__":
     # Connect as client to writer of ID 1
     print("[INPUT] you can input the TCP Port")
     TCP_IP = '127.0.0.1'
-    TCP_PORT = 5023
+    TCP_PORT = 5028
 
     if len(sys.argv) > 1:
         TCP_PORT = int(sys.argv[1])

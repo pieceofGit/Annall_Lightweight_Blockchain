@@ -88,6 +88,15 @@ class ClientHandler(threading.Thread):
         except:
             return ""
 
+    def send_ack(self):
+        acc = json.dumps({"message_received": True, "payload_id": self.payload_id})
+        try:
+            print("Sending message_received ack")
+            self.send_message_to_client(acc)
+        except Exception as e:  # should really be more specific
+            print("exception", type(e), e)
+            self.terminate = True
+
     def run(self):
         # After initial handshake.
         # Where the actual service of the client request takes place
@@ -105,7 +114,7 @@ class ClientHandler(threading.Thread):
         # d = json.loads(data) 
         self.name = data["name"]
         self.payload_id = data["payload_id"]
-
+        self.send_ack()
         # Service client requests until client terminates
         while not self.terminate:
             print("Not terminate...")
@@ -132,7 +141,6 @@ class ClientHandler(threading.Thread):
                     self.terminate = True
                 # print(msg)
             try:
-                print("[PAYLOAD QUEUE] This is the payload queue: ",self.payload_queue)
                 d = self.get_message_from_client()    # Blocks on receiving data to socket connection from client
             except Exception as e:  # should really be more specific
                 print("exception", type(e), e)
@@ -161,14 +169,7 @@ class ClientHandler(threading.Thread):
                 # for i in self.payload_queue:
                 #     print(f"[PAYLOAD] {i}")
                 self.payload_queue.put((self.payload_id, payload))
-                acc = json.dumps({"message_received": True, "payload_id": self.payload_id})
-                try:
-                    print("Sending message_received ack")
-                    self.send_message_to_client(acc)
-                except Exception as e:  # should really be more specific
-                    print("exception", type(e), e)
-                    self.terminate = True
-                    break
+                self.send_ack()
             time.sleep(self.delay)
 
         print("Exiting run " + self.name)
