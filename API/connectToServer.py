@@ -49,7 +49,6 @@ class ServerConnection:
         """Verifies a block.
         Requires supplying the correct JSON object """
         # JSON: request_type="verify", name, body, hash
-        block["request_type"] = "verify"
         try:
             # Send block
             self.send_msg(block)
@@ -66,7 +65,7 @@ if __name__ == "__main__":
     # Connect as client to writer of ID 1
     print("[INPUT] you can input the TCP Port")
     TCP_IP = '127.0.0.1'
-    TCP_PORT = 5019
+    TCP_PORT = 5031
 
     if len(sys.argv) > 1:
         TCP_PORT = int(sys.argv[1])
@@ -77,7 +76,6 @@ if __name__ == "__main__":
     server = ServerConnection(TCP_PORT)
     # Initial handshake
     msg = server.read_msg()
-    # msg_0 = data.decode()
     print(f"[MESSAGE RECEIVED BY CLIENT] {msg}")
     msg = json.dumps({"payload_id": 1, "name": name})
     print(f"[MESSAGE TO SERVER] confirmation message who we are: {msg}")
@@ -87,3 +85,12 @@ if __name__ == "__main__":
     msg = json.dumps({"request_type": "block", "name": name, "body": "fjolnir1", "payload_id": 1})
     ack = server.send_msg(msg)
     print(f"[ACK FROM BLOCK ADDED] {ack}")
+    msg = json.dumps({"request_type": "read_chain", "name": name, "body": "fjolnir1", "payload_id": 1})
+    chain = server.send_msg(msg)
+    print(chain)
+    # Verification message only sent after asking for something
+    # msg = server.read_msg()
+    # print(f"[MESSAGE VERIFICATION REPLY] {msg}")
+    # msg = json.dumps({"request_type": "verify", "name": name, "body": "fjolnir1", "payload_id": 3})
+    # print(server.verify_msg(msg))
+

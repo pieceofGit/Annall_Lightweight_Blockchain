@@ -5,7 +5,7 @@ from threading import Thread, ThreadError
 import inspect
 import time
 
-__test_interfaces = False
+__test_interfaces = True
 NoneType = type(None)
 
 verbose = True
@@ -166,7 +166,13 @@ class BlockChainEngine:
             print(e)
         return retrived.fetchall()
 
-    def read_blocks(self, begin, end=None, col="*", getLastRow=False):
+    def dict_factory(self, cursor, row):
+        d = {}
+        for idx, col in enumerate(cursor.description):
+            d[col[0]] = row[idx]
+        return d
+
+    def read_blocks(self, begin, end=None, col="*", getLastRow=False, readEntireChain=False):
         """ Retrieve blocks with from and including start to end
             If end is None, retrieve only the one block
             Returns a list of blocks retrieved
@@ -179,17 +185,21 @@ class BlockChainEngine:
         print(f"[GET LAST ROW] {getLastRow}")
         if getLastRow:  # If discrepancy between round and length of list because of arbitrarypayload
             query = f"SELECT {col} FROM chain WHERE round >= {self.length - 1} ORDER BY round"
+        elif readEntireChain:   # Returns a list of tuples for each transaction
+            query = f"SELECT * FROM chain WHERE round >= {0} ORDER BY round"
         elif end is None:
             query = f"SELECT {col} FROM chain WHERE round >= {begin} ORDER BY round"
         else:
             query = f"SELECT {col} FROM chain WHERE round >= {begin} AND round <= {end} ORDER BY round"
         try:
+            if readEntireChain:     # Get back list of dictionary object for each block
+                self.connection.row_factory = self.dict_factory
             cursor = self.connection.cursor()
-            retrived = cursor.execute(query)
+            retrieved = cursor.execute(query)
         except Exception as e:
             print("Error retriving blocks from db")
             print(e)
-        return retrived.fetchall()
+        return retrieved.fetchall()
 
 
 class ClientServer:
@@ -275,12 +285,15 @@ if __test_interfaces:
     the_block = ["prevHash", 1, 2, "the payload", 1, "writer signature", "the hash"]
     genesis_block = ("0", 0, 0, "genesis block", 0, "0", "0")
     bcdb.insert_block(0, genesis_block)
-    # bcdb.insert_block(1, the_block)
-    # bcdb.insert_block(2, the_block)
-    # bcdb.insert_block(3, the_block)
+    bcdb.insert_block(1, the_block)
+    bcdb.insert_block(2, the_block)
+    bcdb.insert_block(3, the_block)
     msg = bcdb.read_blocks(0, 4)
     print(f"[MESSAGE READ BLOCKS 1-4] The message: {msg}")
-    time.sleep(100)
+    # time.sleep(100)
+    msg = bcdb.read_blocks(0, readEntireChain=True)
+    print("READING ENTIRE BLOCKCHAIN", msg, type(msg))
+
     # print("Testing ClientServer")
     # clients = ClientServer()
     # cthread = Thread(target=clients.run_forever)

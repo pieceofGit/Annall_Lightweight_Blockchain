@@ -16,8 +16,8 @@ import struct
 import inspect
 
 
-VERBOSE = True
-DEBUG = True
+VERBOSE = False
+DEBUG = False
 # **********************************
 
 # **********************************
@@ -106,9 +106,11 @@ class RemoteEnd:
     def send_bytes(self, b_msg):
         """ Send bytes over socket """
         if self.socket is not None:
-            print("send bytes..")
+            if DEBUG:
+                print("send bytes..")
             self.socket.sendall(b_msg)
-            print("bytes sent")
+            if DEBUG:
+                print("bytes sent")
             self.time_last = time.process_time()
         else:
             raise Exception("Connection not active")
@@ -301,7 +303,8 @@ class ProtoCom(interfaces.ProtocolCommunication):
         ip = None
         listen_port = None
         # Select out of the writers list who we want to connect to
-        print("[PRINTING WRITERS IN SET NO_WRITERS]", conf["active_writer_set"][0:self.num_writers])
+        if DEBUG:
+            print("[PRINTING WRITERS IN SET NO_WRITERS]", conf["active_writer_set"][0:self.num_writers])
         for writer in conf["active_writer_set"][0:self.num_writers]:
             print("The writer set ")
             if writer["id"] != self.id:
@@ -513,7 +516,8 @@ class ProtoCom(interfaces.ProtocolCommunication):
         """
         try:
             msg = self.peers[r_id].read_single_msg()
-            print(f"[REMOTE SOCKET MESSAGE] {msg}")
+            if VERBOSE:
+                print(f"[REMOTE SOCKET MESSAGE] {msg}")
         except Exception as e:
             if DEBUG:
                 print(">!! ", "Failed to read from socket")
@@ -534,7 +538,8 @@ class ProtoCom(interfaces.ProtocolCommunication):
             return
         # [type], [r_id], [self_id], optional [data]
         msg_typ, rem_id, self_id, msg_data = msg.split(pMsg.sep, maxsplit=3)
-        print(msg_typ, rem_id,self_id,msg_data)
+        if DEBUG:
+            print(msg_typ, rem_id,self_id,msg_data)
         """try:
             rem_id = int(rem_id)
             assert rem_id == r_id
@@ -547,9 +552,11 @@ class ProtoCom(interfaces.ProtocolCommunication):
         # TODO When receive ECHO request reply with ECHO reply
         # if request contains data reply with that data else send list of connected ids
         if msg_typ == pMsgTyp.data:
-            print("data == data")
+            if DEBUG:
+                print("data == data")
             with self.msg_lock:
-                print("adding to queue")
+                if DEBUG:
+                    print("adding to queue")
                 self.msg_queue.append((r_id, msg_data))
             rep_msg = pMsg.data_ack_msg(self.id, r_id)
         elif msg_typ == pMsgTyp.data_ack:

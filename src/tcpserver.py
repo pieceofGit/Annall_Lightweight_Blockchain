@@ -35,7 +35,7 @@ class ClientHandler(threading.Thread):
         if not payload_id is None:
             self.payload_id = payload_id
         self.connection = connection
-        self.delay = 3
+        self.delay = 0.1
         self.terminate = False
         self.payload_queue = payload_q
         self.confirm_queue = confirm_q
@@ -64,7 +64,7 @@ class ClientHandler(threading.Thread):
         3. Returns JSON or string
         """
         # Get message length
-        byte_length = self.connection.recv(4)
+        byte_length = self.connection.recv(4)   # Blocks
         if byte_length == b"":
             raise Exception(f"> Connection closed. Socket:{self.connection}")
         try:
@@ -96,7 +96,7 @@ class ClientHandler(threading.Thread):
         except Exception as e:  # should really be more specific
             print("exception", type(e), e)
             self.terminate = True
-
+    
     def run(self):
         # After initial handshake.
         # Where the actual service of the client request takes place
@@ -136,19 +136,19 @@ class ClientHandler(threading.Thread):
                 try:
                     print("Sending confirmation to client payload was added: " + msg)
                     self.send_message_to_client(msg)
-                except Exception as e:  # should really be more specific
+                except Exception as e:
                     print("exception", type(e), e)
                     self.terminate = True
-                # print(msg)
+            # Get new block to add to chain
             try:
                 d = self.get_message_from_client()    # Blocks on receiving data to socket connection from client
-            except Exception as e:  # should really be more specific
+            except Exception as e:  
                 print("exception", type(e), e)
                 self.terminate = True
                 break
             print("[DECODE MESSAGE] decoding message from client")
             print("Received: ", d)
-            if d["request_type"] == "verify":   # Check if block exists
+            if d["request_type"] == "verify":
                 print("[VERIFICATION REQUEST]")
                 payload = f"{d['name']},{d['request_type']},{d['body']}"
                 if self.check_existence(d["hash"], payload):
@@ -157,6 +157,11 @@ class ClientHandler(threading.Thread):
                     resp = json.dumps({"verified": False,})
                 print("Sending to client verification: " + resp)
                 self.send_message_to_client(resp)
+            elif d["request_type"] == "read_chain":
+                # Gets back chain in a list of dictionaries
+                blockchain = self.bcdb.read_blocks(0, readEntireChain=True)
+                # Send back entire blockchain json object
+                self.send_message_to_client(json.dumps(blockchain))
             else:
                 # Add new message to payload queue and send back ACK
                 print("request NOT verify")

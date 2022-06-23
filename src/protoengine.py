@@ -45,6 +45,7 @@ transactions = [
     ["WALLET3", "WALLET1", "150", "commit"],
 ]
 
+VERBOSE = False
 
 def bytes_to_long(s: str):
     """Convert a byte string to a long integer (big endian).
@@ -264,12 +265,14 @@ class ProtoEngine(interfaces.ProtocolEngine):
         # Has sent to our writer
         queue = self.clients.payload_queue
         if queue.empty():
-            print("queue empty...")
+            if VERBOSE:
+                print("queue empty...")
             # If empty we just return anything
             return "arbitrarypayload"
         else:
             payload = queue.get()
-            print(f"INSERTING PAYLOAD TO CHAIN")
+            if VERBOSE:
+                print(f"INSERTING PAYLOAD TO CHAIN")
             print(payload)
             self.stashed_payload = payload
             return payload[1]
@@ -341,7 +344,8 @@ class ProtoEngine(interfaces.ProtocolEngine):
         prev_hash = str(prev_hash)
         # Returns payload of writer or arbitrary string if there is no payload
         payload = self.get_payload()
-        print(f"[PAYLOAD] the payload is: {payload} from the TCP server payload_queue")
+        if VERBOSE:
+            print(f"[PAYLOAD] the payload is: {payload} from the TCP server payload_queue")
         signature = self.sign_payload(payload)
         winning_number = pad
         coordinatorID = coordinatorID
@@ -381,9 +385,11 @@ class ProtoEngine(interfaces.ProtocolEngine):
             )"""
 
         if self.stashed_payload is not None:
+            print("ADDING PAYLOAD TO CONFIRM QUEUE")
             confirm_payload = (self.stashed_payload[0], self.stashed_payload[1], hash)
             self.clients.confirm_queue.put(confirm_payload)
-            print("PAYLOAD CONFIRMATION SENT")
+            if VERBOSE:
+                print("PAYLOAD CONFIRMATION SENT")
             self.stashed_payload = None
         return block
 
@@ -437,7 +443,8 @@ class ProtoEngine(interfaces.ProtocolEngine):
         while message is None:
             message = self._recv_msg("request", recv_from=coordinatorID)
             time.sleep(0.01)
-        print("[REQUEST MESSAGE] Received message of request for OTP from coordinator")
+        if VERBOSE:
+            print("[REQUEST MESSAGE] Received message of request for OTP from coordinator")
         # Step 2 - Generate next number and transmit to Coordinator
 
         pad = self.generate_pad()
@@ -448,6 +455,7 @@ class ProtoEngine(interfaces.ProtocolEngine):
         while message is None:
             message = self._recv_msg("announce", recv_from=coordinatorID)
             time.sleep(0.01)
+        
         print("[WINNER MESSAGE] received message of winner writer from coordinator")
         # Step 4 - Verify and receive new block from winner
         parsed_message = message.split("-")
@@ -471,23 +479,25 @@ class ProtoEngine(interfaces.ProtocolEngine):
             while message is None:
                 message = self._recv_msg(type="block", recv_from=winner[2], round=round)
                 time.sleep(0.01)
-            # TODO: Fails here 
-            print(f"[NEW BLOCK VERIFICATION] {message}")
+            if VERBOSE:
+                print(f"[NEW BLOCK VERIFICATION] {message}")
             parsed_message = message.split("-")
-            print(f"[PARSED MESSAGE] {parsed_message}")
-            # 2-1-100-block-('0xfc0ec25ad60aa9f0e254a7b9ad982b6852166e5b61098773252d27a620f46097', 1, 2, 'TESTclient,C-REQUEST,fjolnir', 20265, '0xa3ede6fd176eed10ffa58f48874d42b8556f8099113f86443e7d2012612cc8f62a2ab74f4b16b2f732a1dfd08a528ca6ca52cdeba233635e433d581f1a8a409', '0xf536298287fe32e5dfc265c77dc284113bdad46fd3d0e7d4c859f946e818e6db')
+            if VERBOSE:
+                print(f"[PARSED MESSAGE] {parsed_message}")
             block = ast.literal_eval(parsed_message[4]) # The block 
 
             if not self.verify_block(block):
                 self.cancel_round("Block not correct", round)
-                print(block)
-                print("ERROR, BLOCK NOT CORRECT")
+                if VERBOSE:
+                    print(block)
+                    print("ERROR, BLOCK NOT CORRECT")
             else:
 
                 # Check if cancelled round
                 message = self._recv_msg(type="cancel")
                 if message is not None:
-                    print("[ROUND CANCEL] the round was cancelled because of cancel message")
+                    if VERBOSE:
+                        print("[ROUND CANCEL] the round was cancelled because of cancel message")
                     parsed_message = message.split("-")
                     cancel_block = self.create_cancel_block(message)
                     # If the block belongs to this round we continue
@@ -505,7 +515,8 @@ class ProtoEngine(interfaces.ProtocolEngine):
         else:
             # Round is not verified
             # Cancel the round
-            print("[ROUND CANCEL] round was cancelled because it was not verified")
+            if VERBOSE:
+                print("[ROUND CANCEL] round was cancelled because it was not verified")
             self.cancel_round("Round not verified", round)
         print(f"[LATEST BLOCK] the latest block is: {self.latest_block}")
         self.bcdb.insert_block(round, self.latest_block)
@@ -530,17 +541,20 @@ class ProtoEngine(interfaces.ProtocolEngine):
         print("Len writer_list:",len(self.writer_list))
         count = 1
         while len(numbers) < len(self.writer_list):
-            print(f"while: {count}")
+            if VERBOSE:
+                print(f"while: {count}")
+                print("before recv_msg")
+
             count += 1
-            print("before recv_msg")
             message = self._recv_msg(type="reply")
-            print("after recv_msg")
-            print(message)
+            if VERBOSE:        
+                print("after recv_msg")
+                print(message)
             if message is not None:
-                print("message is NOT none")
+                if VERBOSE:
+                    print("message is NOT none")
                 parsed_message = message.split("-")
                 numbers.append([int(parsed_message[1]), int(parsed_message[4])])
-            print("message is none")
             # if count == 2:
             #     break
             time.sleep(0.01)
@@ -560,7 +574,8 @@ class ProtoEngine(interfaces.ProtocolEngine):
         block = ast.literal_eval(parsed_message[4])
         if not self.verify_block(block):
             self.cancel_round("Round not verified", round)
-            print("ERROR, NOT CORRECT BLOCK")
+            if VERBOSE:
+                print("ERROR, NOT CORRECT BLOCK")
         else:
 
             # Finally - write new block to the chain (DB)
@@ -596,11 +611,14 @@ class ProtoEngine(interfaces.ProtocolEngine):
             print(f"CordinatorId: {coordinator}")
             if coordinator == self.ID:
                 self.coordinator_round(count)
-                print("after coordinator")
+                if VERBOSE:
+                    print("after coordinator")
             else:
-                print("before writer_round")
+                if VERBOSE:
+                    print("before writer_round")
                 self.writer_round(count, coordinator)
-                print("after writer_round")
+                if VERBOSE:
+                    print("after writer_round")
             print(f"[ROUND COMPLETE] round {count} finished with writer with ID {coordinator} as  the coordinator")
             count += 1
             if count > self.rounds and self.rounds:
@@ -625,7 +643,8 @@ class ProtoEngine(interfaces.ProtocolEngine):
             self.message_queue.put(message[1])
         
         if self.message_queue.empty():
-            print("message queue empty")
+            if VERBOSE:
+                print("message queue empty")
             return None
         # TODO: Why do we take the first message off of the queue when we have a list?
         mess = self.message_queue.get()
