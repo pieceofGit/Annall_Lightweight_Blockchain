@@ -145,7 +145,7 @@ class BlockChainEngine:
                 cursor.execute(f"DELETE FROM chain WHERE round == {block_id}")
             cursor.execute(insertion)
             self.connection.commit()
-            if not overwrite:
+            if not overwrite:   # Keep record of length for arbitrarypaylaod rounds
                 self.length += 1
             
         except Exception as e:
@@ -182,7 +182,9 @@ class BlockChainEngine:
         """
         assert isinstance(begin, int)
         assert isinstance(end, (int, NoneType))
+
         print(f"[GET LAST ROW] {getLastRow}")
+        print(f"[READ ENTIRE CHAIN] {readEntireChain}")
         if getLastRow:  # If discrepancy between round and length of list because of arbitrarypayload
             query = f"SELECT {col} FROM chain WHERE round >= {self.length - 1} ORDER BY round"
         elif readEntireChain:   # Returns a list of tuples for each transaction
@@ -193,13 +195,17 @@ class BlockChainEngine:
             query = f"SELECT {col} FROM chain WHERE round >= {begin} AND round <= {end} ORDER BY round"
         try:
             if readEntireChain:     # Get back list of dictionary object for each block
-                self.connection.row_factory = self.dict_factory
+                self.connection.row_factory = self.dict_factory # TODO: Bug, Goes here when reading block 
+            else:
+                self.connection.row_factory = None
             cursor = self.connection.cursor()
             retrieved = cursor.execute(query)
         except Exception as e:
-            print("Error retriving blocks from db")
+            print("Error retrieving blocks from db")
             print(e)
-        return retrieved.fetchall()
+        to_return = retrieved.fetchall()
+        print(f"[RETURN FROM READ BLOCKS] {to_return}")
+        return to_return
 
 
 class ClientServer:

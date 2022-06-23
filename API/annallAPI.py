@@ -7,8 +7,8 @@
 # GET /API/ block / <block id>
 # send back all blocks on blockchain
 # GET /API/ blocks
-
-from flask import Flask
+import json
+from flask import Flask, request, jsonify
 from flask_restful import Api, Resource
 from connectToServer import ServerConnection
 import sys
@@ -16,28 +16,38 @@ print("HELLO WORLD")
 app = Flask(__name__)
 api = Api(app)
 # Connect to server
-TCP_PORT = 5023
+TCP_PORT = 5019
 if len(sys.argv) > 1:
     TCP_PORT = int(sys.argv[1])
 server = ServerConnection(TCP_PORT)
 
-class Block(Resource):
-    # Returns a specific block
-    def get(self, blockid):
-        return {"blockid": blockid}
-    # Add block to blockchain
-    def post(self, block):
-        return {"block": "block id"}
+@app.route("/blocks", methods=["GET"])
+def get_blockchain():
+    # Asks for blockchain and gets it back
+    return server.send_msg(json.dumps({"request_type": "read_chain"}))
 
-class Blocks(Resource):
-    # Returns blockchain
-    def get(self):
-        return {"blocks": "the blockchain"}
+@app.route("/block", methods=["POST"])
+def insert_block():
+    # body the only thing that matters
+    body = json.loads(request.data)
+    print(f"[BODY] {body}")
+    block = json.dumps({"request_type": "block", "name": "name", "body": body["body"], "payload_id": 1})
+    return server.send_msg(block)
+
+# class Block(Resource):
+#     # Add block to blockchain
+#     def post(self, block):
+#         return {"block": "block id"}
+
+# class Blocks(Resource):
+#     # Returns blockchain
+#     def get(self):
+#         return {"blocks": "the blockchain"}
         
 
-api.add_resource(Block, "/block")
-api.add_resource(Annall, "/block/<int:blockid>")  # Define type of parameter 
-api.add_resource(Annall, "/blocks")
+# api.add_resource(Block, "/block")
+# api.add_resource(Annall, "/block/<int:blockid>")  # Define type of parameter 
+# api.add_resource(Annall, "/blocks")
 
 
 

@@ -110,8 +110,6 @@ class ClientHandler(threading.Thread):
         
         data = self.get_message_from_client()
         print(f"[RECEIVED DATA FROM CLIENT] {data}")
-        # msg = data.decode()
-        # d = json.loads(data) 
         self.name = data["name"]
         self.payload_id = data["payload_id"]
         self.send_ack()
@@ -141,7 +139,7 @@ class ClientHandler(threading.Thread):
                     self.terminate = True
             # Get new block to add to chain
             try:
-                d = self.get_message_from_client()    # Blocks on receiving data to socket connection from client
+                d = self.get_message_from_client()    # Blocks on waiting for data from client
             except Exception as e:  
                 print("exception", type(e), e)
                 self.terminate = True
@@ -167,12 +165,9 @@ class ClientHandler(threading.Thread):
                 print("request NOT verify")
                 self.payload_id = d["payload_id"]
                 payload = f"{d['name']},{d['request_type']},{d['body']}"
-                # payload = f"{d['name']},{d['Server']},{'dsfsdf'}"
                 print(f"[PAYLOAD] {d['name']}, {d['request_type']}, {d['body']}")
                 # Add new message to queue
                 print(f"[PAYLOAD ADDED] added new payload: {payload}")
-                # for i in self.payload_queue:
-                #     print(f"[PAYLOAD] {i}")
                 self.payload_queue.put((self.payload_id, payload))
                 self.send_ack()
             time.sleep(self.delay)

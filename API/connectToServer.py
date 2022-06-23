@@ -19,6 +19,13 @@ class ServerConnection:
         self.tcp_port = tcp_port
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((self.TCP_IP, self.tcp_port))
+        # Initial handshake
+        msg = self.read_msg() # Server sends back who he is
+        # We send back who we are and server sends ACK back
+        ack = self.send_msg(json.dumps({"payload_id": 1, "name": "Client"}))
+        print(f"[ACK] {ack}")   
+
+
     # connection writer to API
 
     def send_msg(self, msg: str):

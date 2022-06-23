@@ -77,14 +77,6 @@ if __name__ == "__main__":
     cthread.daemon = True
     cthread.start()
     print("ClientServer up and running as:", cthread.name)
-    # else:
-    #     print("::> Starting up ClientServer thread")
-    #     clients = ClientServer()
-    #     cthread = Thread(target=clients.run_forever, name="ClientServerThread"+ str(id))
-    #     cthread.daemon = True
-    #     cthread.start()
-    #     print("ClientServer up and running as:", cthread.name)
-
     # Start protocol engine
     print("::> Starting up BlockChainEngine")
     keys = data["active_writer_set"][id - 1]["priv_key"]
@@ -92,10 +84,8 @@ if __name__ == "__main__":
     PE.set_ID(id)
     PE.set_rounds(rounds)
     PE.set_conf(data)
-
+    # Writers set to wait for connecting to until rounds start
     wlist = []
-    
-    # for i in range(len(data["active_writer_set"])):
     for i in range(NUM_WRITERS):
         if (i + 1) != id:
             wlist.append(i)
@@ -104,7 +94,6 @@ if __name__ == "__main__":
     PEthread = Thread(target=PE.run_forever, name="ProtocolEngine")
     PEthread.start()
     print("Protocol Engine up and running as:", PEthread.name)
-    # bce.__del__()
     # finalization and cleanup
     # PEthread is not a daemon
     PEthread.join() # MainThread awaits here for cleanup
