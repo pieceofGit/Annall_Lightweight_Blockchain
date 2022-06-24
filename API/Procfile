@@ -1,4 +1,5 @@
 web: gunicorn gettingstarted.wsgi
+heroku ps:scale web=1
 web: gunicorn annall-api:app
 heroku config:set WEB_CONCURRENCY=4
-heroku ps:scale web=1
+
