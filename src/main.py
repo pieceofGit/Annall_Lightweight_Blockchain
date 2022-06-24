@@ -15,6 +15,7 @@ import random
 NUM_WRITERS = 2 # Can be 1-5. Starts up writers from config file
 # should put here some elementary command line argument processing
 # EG. parameters for where the config file is, number of writers (for testing), and rounds
+DEBUG = False   # If true, adds randomization to TCP_PORT
 
 if __name__ == "__main__":
 
@@ -65,8 +66,9 @@ if __name__ == "__main__":
     print("THE ID IS 1. THE ID: ", id)
     # See config.json for active_writer_set
     TCP_IP = data["active_writer_set"][id - 1]["hostname"]
-    # TCP_PORT = 5005 + id
-    TCP_PORT = 5005 + id + random.randint(0,30)
+    TCP_PORT = 5000 + id 
+    if DEBUG:
+        TCP_PORT += random.randint(0,30)
     print(F"TCP PORT: {TCP_PORT}")
     print("::> Starting up ClientServer thread")
     # TCPServer: name, IPv4_addr, port, RequestHandlerClass, bcdb,
