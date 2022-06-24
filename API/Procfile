@@ -1,3 +1,2 @@
-web: gunicorn annallAPI.wsgi
 web: gunicorn annallAPI:app
 
