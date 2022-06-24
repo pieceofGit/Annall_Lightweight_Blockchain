@@ -16,7 +16,7 @@ print("HELLO WORLD")
 app = Flask(__name__)
 api = Api(app)
 # Connect to server
-TCP_PORT = 5030
+TCP_PORT = 5023
 # if len(sys.argv) > 1:
 #     TCP_PORT = int(sys.argv[1])
 server = ServerConnection(TCP_PORT)

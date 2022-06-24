@@ -5,7 +5,7 @@ from threading import Thread, ThreadError
 import inspect
 import time
 
-__test_interfaces = True
+__test_interfaces = False
 NoneType = type(None)
 
 verbose = True
