@@ -1,17 +1,12 @@
-""" An API for Annáll using Flask and Gunicorn.
+""" 
+An API for Annáll using Flask and Gunicorn.
 """
-# Response is a JSON object
-# create a block on blockchain
-# POST /API/ block
-# send back block and acknowledge if verified
-# GET /API/ block / <block id>
-# send back all blocks on blockchain
-# GET /API/ blocks
 import json
 
 from flask import Flask, request, jsonify
 import sys
 from connectToServer import ServerConnection
+from exceptionHandler import InvalidUsage
 # import sys
 print("HELLO WORLD")
 app = Flask(__name__)
@@ -21,20 +16,6 @@ if len(sys.argv) > 1:
     TCP_PORT = int(sys.argv[1])
 server = ServerConnection(TCP_PORT)
 
-class InvalidUsage(Exception):
-    status_code = 400
-
-    def __init__(self, message, status_code=None, payload=None):
-        Exception.__init__(self)
-        self.message = message
-        if status_code is not None:
-            self.status_code = status_code
-        self.payload = payload
-
-    def to_dict(self):
-        rv = dict(self.payload or ())
-        rv['message'] = self.message
-        return rv
 
 @app.errorhandler(InvalidUsage)
 def handle_invalid_usage(error):

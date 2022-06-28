@@ -99,15 +99,13 @@ class ClientHandler(threading.Thread):
     
     def run(self):
         # After initial handshake.
-        # Where the actual service of the client request takes place
+        # Where service of the client request takes place
         print(f"[CLIENT START]: The thread: {self.name}")
         # initial handshake with client
         msg = json.dumps({"Server": "Hello", "name": self.name})
         print(f"[MESSAGE TO CLIENT] the message: {msg}")
         self.send_message_to_client(msg)
-        # self.connection.send(msg.encode())
-        # Only receive the first message. Use message length
-        
+        # Only receive the first message. Use message length        
         data = self.get_message_from_client()
         print(f"[RECEIVED DATA FROM CLIENT] {data}")
         self.name = data["name"]
@@ -115,31 +113,8 @@ class ClientHandler(threading.Thread):
         self.send_ack()
         # Service client requests until client terminates
         while not self.terminate:
-            print("Not terminate...")
-            if not self.confirm_queue.empty():
-                print("queue is not empty...")
-                data = self.confirm_queue.get()
-                print(data)
-                ts = time.gmtime()
-                msg = json.dumps(
-                    {
-                        "time_added_to_chain": time.strftime("%Y-%m-%d %H:%M:%S", ts),
-                        # "hash": "0000000000000bae09a7a393a8acded75aa67e46cb81f7acaa5ad94f9eacd103",
-                        "hash": data[2],
-                        # "hash": m.hexdigest(),  # is a hash of the payload id
-                        "payload_id": data[0],
-                        "is_verified": True,
-                    }
-                )
-                try:
-                    print("Sending confirmation to client payload was added: " + msg)
-                    self.send_message_to_client(msg)
-                except Exception as e:
-                    print("exception", type(e), e)
-                    self.terminate = True
-            # Get new block to add to chain
             try:
-                d = self.get_message_from_client()    # Blocks on waiting for data from client
+                d = self.get_message_from_client() # Blocks on waiting for data from client
             except Exception as e:  
                 print("exception", type(e), e)
                 self.terminate = True
@@ -157,12 +132,11 @@ class ClientHandler(threading.Thread):
                 self.send_message_to_client(resp)
             elif d["request_type"] == "read_chain":
                 # Gets back chain in a list of dictionaries
-                blockchain = self.bcdb.read_blocks(0, readEntireChain=True)
+                blockchain = self.bcdb.read_blocks(0, read_entire_chain=True)
                 # Send back entire blockchain json object
                 self.send_message_to_client(json.dumps(blockchain))
             else:
                 # Add new message to payload queue and send back ACK
-                print("request NOT verify")
                 self.payload_id = d["payload_id"]
                 payload = f"{d['name']},{d['request_type']},{d['body']}"
                 print(f"[PAYLOAD] {d['name']}, {d['request_type']}, {d['body']}")

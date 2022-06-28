@@ -16,8 +16,8 @@ class ServerConnection:
         # On initialization, connect to server
         self.TCP_IP = '127.0.0.1'
         self.tcp_port = tcp_port
+        # Try ten times to connect to writer
         self.connect_to_writer()
-
 
     # connection writer to API and retry 
     def connect_to_writer(self):

@@ -172,7 +172,7 @@ class BlockChainEngine:
             d[col[0]] = row[idx]
         return d
 
-    def read_blocks(self, begin, end=None, col="*", getLastRow=False, readEntireChain=False):
+    def read_blocks(self, begin, end=None, col="*", getLastRow=False, read_entire_chain=False):
         """ Retrieve blocks with from and including start to end
             If end is None, retrieve only the one block
             Returns a list of blocks retrieved
@@ -184,17 +184,17 @@ class BlockChainEngine:
         assert isinstance(end, (int, NoneType))
 
         print(f"[GET LAST ROW] {getLastRow}")
-        print(f"[READ ENTIRE CHAIN] {readEntireChain}")
+        print(f"[READ ENTIRE CHAIN] {read_entire_chain}")
         if getLastRow:  # If discrepancy between round and length of list because of arbitrarypayload
             query = f"SELECT {col} FROM chain WHERE round >= {self.length - 1} ORDER BY round"
-        elif readEntireChain:   # Returns a list of tuples for each transaction
+        elif read_entire_chain:   # Returns a list of tuples for each transaction
             query = f"SELECT * FROM chain WHERE round >= {0} ORDER BY round"
         elif end is None:
             query = f"SELECT {col} FROM chain WHERE round >= {begin} ORDER BY round"
         else:
             query = f"SELECT {col} FROM chain WHERE round >= {begin} AND round <= {end} ORDER BY round"
         try: 
-            if readEntireChain:     # Get back list of dictionary object for each block
+            if read_entire_chain:     # Get back list of dictionary object for each block
                 self.connection.row_factory = self.dict_factory  
             else:   # Send back list of tuples
                 self.connection.row_factory = None
@@ -297,7 +297,7 @@ if __test_interfaces:
     msg = bcdb.read_blocks(0, 4)
     print(f"[MESSAGE READ BLOCKS 1-4] The message: {msg}")
     # time.sleep(100)
-    msg = bcdb.read_blocks(0, readEntireChain=True)
+    msg = bcdb.read_blocks(0, read_entire_chain=True)
     print("READING ENTIRE BLOCKCHAIN", msg, type(msg))
 
     # print("Testing ClientServer")
