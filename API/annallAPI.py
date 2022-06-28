@@ -8,31 +8,72 @@
 # send back all blocks on blockchain
 # GET /API/ blocks
 import json
+
 from flask import Flask, request, jsonify
-from flask_restful import Api, Resource
-from connectToServer import ServerConnection
 import sys
+from connectToServer import ServerConnection
+# import sys
 print("HELLO WORLD")
 app = Flask(__name__)
-api = Api(app)
 # Connect to server
-TCP_PORT = 5001
-# if len(sys.argv) > 1:
-#     TCP_PORT = int(sys.argv[1])
+TCP_PORT = 5011
+if len(sys.argv) > 1:
+    TCP_PORT = int(sys.argv[1])
 server = ServerConnection(TCP_PORT)
+
+class InvalidUsage(Exception):
+    status_code = 400
+
+    def __init__(self, message, status_code=None, payload=None):
+        Exception.__init__(self)
+        self.message = message
+        if status_code is not None:
+            self.status_code = status_code
+        self.payload = payload
+
+    def to_dict(self):
+        rv = dict(self.payload or ())
+        rv['message'] = self.message
+        return rv
+
+@app.errorhandler(InvalidUsage)
+def handle_invalid_usage(error):
+    response = jsonify(error.to_dict())
+    response.status_code = error.status_code
+    return response
+
 
 @app.route("/blocks", methods=["GET"])
 def get_blockchain():
     # Asks for blockchain and gets it back
-    return server.send_msg(json.dumps({"request_type": "read_chain"}))
+    try:
+        return server.send_msg(json.dumps({"request_type": "read_chain"}))
+    except Exception:
+        raise InvalidUsage("Failed to read from writer", status_code=500)
+    
 
 @app.route("/block", methods=["POST"])
 def insert_block():
-    # body the only thing that matters
-    body = json.loads(request.data)
-    print(f"[BODY] {body}")
-    block = json.dumps({"request_type": "block", "name": "name", "body": body["body"], "payload_id": 1})
-    return server.send_msg(block)
+    # Decode the JSON
+    try:
+        request_object = json.loads(request.data)
+    except Exception:
+        raise InvalidUsage("The JSON could not be decoded", status_code=400)
+    # Get the object 
+    if "body" in request_object:
+        print("request data", request.data)
+        print(f"[REQUEST] {request_object}")
+        block = json.dumps({"request_type": "block", "name": "name", "body": request_object["body"], "payload_id": 1})
+        try:
+            return server.send_msg(block)
+        except Exception:
+            raise InvalidUsage("Unable to post to writer", status_code=500)
+    else:
+        raise InvalidUsage("The key has to be named body", status_code=400)
+
+@app.route('/foo')
+def get_foo():
+    raise InvalidUsage('This view is gone', status_code=410)
 
 # class Block(Resource):
 #     # Add block to blockchain

@@ -15,10 +15,14 @@ import random
 NUM_WRITERS = 2 # Can be 1-5. Starts up writers from config file
 # should put here some elementary command line argument processing
 # EG. parameters for where the config file is, number of writers (for testing), and rounds
-DEBUG = False   # If true, adds randomization to TCP_PORT
+DEBUG = True   # If true, adds randomization to TCP_PORT
 
+if DEBUG:
+    PREPEND = "/src"
+else:
+    PREPEND = ""
 if __name__ == "__main__":
-
+    print("MAIN STARTED")
     ap = argparse.ArgumentParser()
     # ap.add_argument('-file', help='input data file (default stdin)')
     """ap.add_argument(
@@ -38,7 +42,8 @@ if __name__ == "__main__":
     print("[ROUNDS]", rounds)
 
     # Read config and other init stuff
-    with open("./src/config.json", "r") as f:
+
+    with open(f".{PREPEND}/config.json", "r") as f:
         data = json.load(f)
     # Start Communication Engine - maintaining the peer-to-peer network of writers
     print("::> Starting up peer-to-peer network engine with id ", id)
@@ -49,7 +54,7 @@ if __name__ == "__main__":
     print("Peer-to-peer network engine up  and running as:", pComm.name)
     # Initialize database connection
     print("::> Starting up BlockChainEngine")
-    dbpath = f"/src/db/blockchain{id}.db"
+    dbpath = f"{PREPEND}/db/blockchain{id}.db"
     print("Should print here")
     print("The os ", os.getcwd())
     connection = sqlite3.connect(os.getcwd() + dbpath, check_same_thread=False)

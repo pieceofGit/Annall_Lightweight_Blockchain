@@ -193,7 +193,7 @@ class BlockChainEngine:
             query = f"SELECT {col} FROM chain WHERE round >= {begin} ORDER BY round"
         else:
             query = f"SELECT {col} FROM chain WHERE round >= {begin} AND round <= {end} ORDER BY round"
-        try:
+        try: 
             if readEntireChain:     # Get back list of dictionary object for each block
                 self.connection.row_factory = self.dict_factory  
             else:   # Send back list of tuples

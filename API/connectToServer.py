@@ -1,9 +1,8 @@
 # Connection to blockchain writer
 import sys
 import socket
-import time
 import json
-
+import time
 # secret used to verify when connecting
 test_conf = {"writerlist": {}, "secret": "42"}
 test_conf["writerlist"][0] = {"ip": "127.0.0.1", "port": 15000}
@@ -17,16 +16,30 @@ class ServerConnection:
         # On initialization, connect to server
         self.TCP_IP = '127.0.0.1'
         self.tcp_port = tcp_port
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.connect((self.TCP_IP, self.tcp_port))
-        # Initial handshake
-        msg = self.read_msg() # Server sends back who he is
-        # We send back who we are and server sends ACK back
-        ack = self.send_msg(json.dumps({"payload_id": 1, "name": "Client"}))
-        print(f"[ACK] {ack}")   
+        self.connect_to_writer()
 
 
-    # connection writer to API
+    # connection writer to API and retry 
+    def connect_to_writer(self):
+        running = False
+        count = 0
+        while not running:
+            try:
+                self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                # connect to writer
+                self.socket.connect((self.TCP_IP, self.tcp_port))
+                # Initial handshake
+                msg = self.read_msg() # Server sends back who he is
+                # We send back who we are and server sends ACK back
+                ack = self.send_msg(json.dumps({"payload_id": 1, "name": "Client"}))
+                print(f"[ACK] {ack}")   
+                running = True
+            except:
+                count += 1
+                if count == 10:
+                    print(f"Tried connecting {count} times to writer")
+                    break
+                time.sleep(1)
 
     def send_msg(self, msg: str):
         """ Formats message to bytes and sends to server and replies with ACK"""
