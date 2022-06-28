@@ -56,7 +56,7 @@ def get_blockchain():
 def insert_block():
     # Decode the JSON
     try:
-        request_object = json.loads(request.data)
+        request_object = json.loads(request.data) 
     except Exception:
         raise InvalidUsage("The JSON could not be decoded", status_code=400)
     # Get the object 
