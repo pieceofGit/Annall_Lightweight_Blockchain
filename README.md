@@ -6,10 +6,10 @@ Lightweight blockchain project
 
 There are two optional environmental variables
 -myID: Sets the id of the writer. if myID == 1, the program starts the TCPServer.
-If myID != 1, it starts the ClientServer which is empty.
--r: Sets the number of rounds.
+-r: Sets the number of rounds. If not set, the writers run indefinitely.
 command:
 python src/main.py -myID <id> -r <number of rounds>
+The program executes the rounds when all the set writers are connected. The no. of writers can be changed in main.py with the NUM_WRITERS variable. To send POST and GET requests, you run the API/annallAPI.py or you can just run src/tests/testclient.py <port no.> without the API which connects and sends transactions directly to the blockchain.
 
 ### Installing
 
@@ -39,14 +39,6 @@ Installed the required packages
 
 ```bash
 pip install -r requirements.txt
-```
-
-Create manually /src/db/blockchain.db
-
-All scripts should be located in the directory
-
-```
-/src/<script>
 ```
 
 Now you should be able to run any script in the project from the root directory

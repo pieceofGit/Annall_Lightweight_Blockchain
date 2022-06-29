@@ -55,18 +55,18 @@ class WalletService:
         """
         assert isinstance(begin, int)
         assert isinstance(end, (int, NoneType))
-        if end is None:
+        if end is None: # Matches string of any length, that includes walletserv
             query = f"SELECT {col} FROM chain WHERE payload LIKE '%walletserv%' AND round >= {begin} ORDER BY round"
         else:
             query = f"SELECT {col} FROM chain WHERE payload LIKE '%walletserv%' AND round >= {begin} AND round <= {end} ORDER BY round"
         try:
             cursor = self.connection.cursor()
-            retrived = cursor.execute(query)
+            retrieved = cursor.execute(query)
         except Exception as e:
             print("Error retriving blocks from db")
             print(e)
 
-        allBlocks = retrived.fetchall()
+        allBlocks = retrieved.fetchall()
         self.mostRecentBlock = allBlocks[-1][0]
         return allBlocks
 
