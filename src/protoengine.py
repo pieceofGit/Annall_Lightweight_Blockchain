@@ -340,7 +340,7 @@ class ProtoEngine(interfaces.ProtocolEngine):
         assert isinstance(pad, int)
         assert isinstance(coordinatorID, int)
 
-        prev_hash = self.bcdb.read_blocks(round - 1, col="hash", getLastRow=True)[0][0] #TODO::::???
+        prev_hash = self.bcdb.read_blocks(round - 1, col="hash", getLastRow=True)[0][0] 
         prev_hash = str(prev_hash)
         # Returns payload of writer or arbitrary string if there is no payload
         payload = self.get_payload()

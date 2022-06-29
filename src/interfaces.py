@@ -138,7 +138,7 @@ class BlockChainEngine:
             print("[ARBITRARY PAYLOAD TRUE]")
             return
         print(f"[CREATE BLOCK] added block with block id {block_id} and block {block}")
-        insertion = f'INSERT INTO chain(round,prevHash,writerID,coordinatorID,payload,winningNumber,writerSignature,hash) VALUES({block_id},"{block[0]}",{block[1]},{block[2]},"{block[3]}",{block[4]},"{block[5]}","{block[6]}");'
+        insertion = f'INSERT INTO chain(round,prevHash,writerID,coordinatorID,payload,winningNumber,writerSignature,hash) VALUES({self.length},"{block[0]}",{block[1]},{block[2]},"{block[3]}",{block[4]},"{block[5]}","{block[6]}");'
         try:
             cursor = self.connection.cursor()
             if overwrite:

@@ -16,7 +16,6 @@ if len(sys.argv) > 1:
     TCP_PORT = int(sys.argv[1])
 server = ServerConnection(TCP_PORT)
 
-
 @app.errorhandler(InvalidUsage)
 def handle_invalid_usage(error):
     response = jsonify(error.to_dict())
@@ -36,10 +35,9 @@ def get_blockchain():
 @app.route("/block", methods=["POST"])
 def insert_block():
     # Decode the JSON
-    try:
-        request_object = json.loads(request.data) 
-    except Exception:
-        raise InvalidUsage("The JSON could not be decoded", status_code=400)
+    
+    request_object = get_json(request)
+    
     # Get the object 
     if "body" in request_object:
         print("request data", request.data)
@@ -50,26 +48,23 @@ def insert_block():
         except Exception:
             raise InvalidUsage("Unable to post to writer", status_code=500)
     else:
-        raise InvalidUsage("The key has to be named body", status_code=400)
+        raise InvalidUsage("The JSON object key has to be named 'body'", status_code=400)
 
-@app.route('/foo')
-def get_foo():
-    raise InvalidUsage('This view is gone', status_code=410)
+# Get back block if on blockchain and verified
+# TODO: Add get block by blockid
+# TODO: Get all blocks for a wallet
+# @app.route("/block/<blockid>", methods=["GET"])
+# def get_block():
+#     request_object = get_json(request)
+    
+#     # return json.dumps({"message":"verified"})
 
-# class Block(Resource):
-#     # Add block to blockchain
-#     def post(self, block):
-#         return {"block": "block id"}
+def get_json(request):
+    try:
+        return json.loads(request.data) 
+    except Exception:
+        raise InvalidUsage("The JSON could not be decoded", status_code=400)
 
-# class Blocks(Resource):
-#     # Returns blockchain
-#     def get(self):
-#         return {"blocks": "the blockchain"}
-        
-
-# api.add_resource(Block, "/block")
-# api.add_resource(Annall, "/block/<int:blockid>")  # Define type of parameter 
-# api.add_resource(Annall, "/blocks")
 
 
 
