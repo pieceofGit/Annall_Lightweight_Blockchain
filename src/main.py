@@ -15,7 +15,7 @@ import random
 NUM_WRITERS = 2 # Can be 1-5. Starts up writers from config file
 # should put here some elementary command line argument processing
 # EG. parameters for where the config file is, number of writers (for testing), and rounds
-DEBUG = True   # If true, adds randomization to TCP_PORT
+DEBUG = False   # If true, adds randomization to TCP_PORT
 
 if DEBUG:
     PREPEND = "/src"
