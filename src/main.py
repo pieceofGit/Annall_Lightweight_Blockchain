@@ -17,10 +17,10 @@ NUM_WRITERS = 2 # Can be 1-5. Starts up writers from config file
 # EG. parameters for where the config file is, number of writers (for testing), and rounds
 DEBUG = False   # If true, adds randomization to TCP_PORT
 
-if DEBUG:
-    PREPEND = "/src"
-else:
-    PREPEND = ""
+# if DEBUG:
+PREPEND = "/src"
+# else:
+#     PREPEND = ""
 if __name__ == "__main__":
     print("MAIN STARTED")
     ap = argparse.ArgumentParser()
