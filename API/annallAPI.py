@@ -12,8 +12,8 @@ print("HELLO WORLD")
 app = Flask(__name__)
 # Connect to server
 TCP_PORT = 5011
-if len(sys.argv) > 1:
-    TCP_PORT = int(sys.argv[1])
+# if len(sys.argv) > 1:
+#     TCP_PORT = int(sys.argv[1])
 server = ServerConnection(TCP_PORT)
 
 @app.errorhandler(InvalidUsage)
@@ -69,6 +69,6 @@ def get_json(request):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)
 
 
