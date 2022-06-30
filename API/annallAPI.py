@@ -11,7 +11,7 @@ from exceptionHandler import InvalidUsage
 print("Starting annallAPI Flask application server")
 app = Flask(__name__)
 # Connect to server
-TCP_PORT = 5011
+TCP_PORT = 5001 # Connects to port of writer 1
 # if len(sys.argv) > 1:
 #     TCP_PORT = int(sys.argv[1])
 
