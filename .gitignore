@@ -1,5 +1,8 @@
 venv/
 .venv/
 __pycache__/
-db/
+*.db
+*.sqliterc
 .DS_Store
+API/test_api_client_websockets.py
+API/test_writer_server_websockets.py

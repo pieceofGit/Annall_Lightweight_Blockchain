@@ -3,6 +3,9 @@ import sys
 import socket
 import json
 import time
+import asyncio
+import websockets
+
 # secret used to verify when connecting
 test_conf = {"writerlist": {}, "secret": "42"}
 test_conf["writerlist"][0] = {"ip": "127.0.0.1", "port": 15000}
