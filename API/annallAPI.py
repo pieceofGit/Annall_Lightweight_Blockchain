@@ -14,7 +14,13 @@ app = Flask(__name__)
 TCP_PORT = 5011
 # if len(sys.argv) > 1:
 #     TCP_PORT = int(sys.argv[1])
+
+with open('/etc/config.json') as config_file:
+  config = json.load(config_file)
+app.config['SECRET_KEY'] = config.get('SECRET_KEY')
+
 server = ServerConnection(TCP_PORT)
+
 
 @app.errorhandler(InvalidUsage)
 def handle_invalid_usage(error):
