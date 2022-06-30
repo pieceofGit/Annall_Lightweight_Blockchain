@@ -5,7 +5,7 @@ Lightweight blockchain project
 ### Running
 
 There are two optional environmental variables
--myID: Sets the id of the writer. if myID == 1, the program starts the TCPServer.
+-myID: Sets the id of the writer.
 -r: Sets the number of rounds. If not set, the writers run indefinitely.
 command:
 python src/main.py -myID <id> -r <number of rounds>

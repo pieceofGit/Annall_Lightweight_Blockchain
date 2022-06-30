@@ -3,8 +3,8 @@ import sys
 import socket
 import json
 import time
-import asyncio
-import websockets
+# import asyncio
+# import websockets
 
 # secret used to verify when connecting
 test_conf = {"writerlist": {}, "secret": "42"}
@@ -17,8 +17,8 @@ test_conf["writerlist"][3] = {"ip": "127.0.0.1", "port": 15003}
 class ServerConnection:
     def __init__(self, tcp_port):
         # On initialization, connect to server
-        self.TCP_IP = '127.0.0.1'
-        self.tcp_port = tcp_port
+        self.TCP_IP = '176.58.116.107'  # Linode server
+        self.tcp_port = tcp_port    # Not doing port forwarding
         # Try ten times to connect to writer
         self.connect_to_writer()
 

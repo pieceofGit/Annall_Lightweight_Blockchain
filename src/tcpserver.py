@@ -18,7 +18,7 @@ from queue import Queue
 """
 
 BUFFER_SIZE = 4096
-
+LOCAL = False   # Connect to specific socket or any available
 
 class ClientHandler(threading.Thread):
     # noinspection PyPep8Naming
@@ -198,7 +198,10 @@ class TCP_Server(ClientServer):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         try:
-            self.s.bind((IPv4_addr, port))
+            if LOCAL:
+                self.s.bind((IPv4_addr, port))
+            else:
+                self.s.bind(("", port)) # Binds to any available IP Address
             self.s.listen(5)
         except Exception as e:
             print(
