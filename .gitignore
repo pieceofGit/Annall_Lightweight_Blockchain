@@ -7,4 +7,4 @@ __pycache__/
 API/test_api_client_websockets.py
 API/test_writer_server_websockets.py
 src/test_dict_json.py
-*.json
+/src/config.json
