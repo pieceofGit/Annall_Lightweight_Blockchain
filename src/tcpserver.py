@@ -138,7 +138,7 @@ class ClientHandler(threading.Thread):
             else:
                 # Add new message to payload queue and send back ACK
                 self.payload_id = d["payload_id"]
-                payload = f"{d['name']},{d['request_type']},{d['body']}"
+                payload = f"{d['body']}"
                 print(f"[PAYLOAD] {d['name']}, {d['request_type']}, {d['body']}")
                 # Add new message to queue
                 print(f"[PAYLOAD ADDED] added new payload: {payload}")
