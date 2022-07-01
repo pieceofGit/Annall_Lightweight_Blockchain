@@ -18,7 +18,7 @@ from queue import Queue
 """
 
 BUFFER_SIZE = 4096
-LOCAL = False   # Connect to specific socket or any available
+LOCAL = True   # Connect to specific socket or any available
 
 class ClientHandler(threading.Thread):
     # noinspection PyPep8Naming
@@ -138,7 +138,10 @@ class ClientHandler(threading.Thread):
             else:
                 # Add new message to payload queue and send back ACK
                 self.payload_id = d["payload_id"]
-                payload = d['body']
+                if type(d['body'] == dict):
+                    payload = json.loads(d['body'])
+                else:
+                    payload = f"{d['body']}"
                 print(f"[PAYLOAD] {d['name']}, {d['request_type']}, {d['body']}")
                 # Add new message to queue
                 print(f"[PAYLOAD ADDED] added new payload: {payload}")
