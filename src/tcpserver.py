@@ -83,7 +83,7 @@ class ClientHandler(threading.Thread):
             print(">!! Failed to read message with:", e)
         string_msg = b.decode("utf-8")
         try:
-            json_msg = json.loads(string_msg)
+            json_msg = json.dumps(string_msg)
             return json_msg
         except:
             return ""
