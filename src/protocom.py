@@ -291,7 +291,7 @@ class ProtoCom(interfaces.ProtocolCommunication):
         # lock is used to put on to and take off of msg_queue
         self.msg_lock = threading.RLock()
         # Define number of writers to connect to
-        self.num_writers = conf["no_writers_set"]
+        self.num_writers = conf["no_active_writers"]
         # print(">", self.name, "Number of writers: ", self.num_writers)
         self.rr_selector = None
         # set up lists and stuff

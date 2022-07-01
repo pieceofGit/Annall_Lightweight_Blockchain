@@ -1,6 +1,6 @@
 {
-  "no_writers_set": 2,
-  "NO_permitted_writers": 5,
+  "no_active_writers": 2,
+  "no_permitted_writers": 5,
   "active_writer_set": [
     {
       "id": 1,

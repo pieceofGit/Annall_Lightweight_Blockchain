@@ -15,10 +15,9 @@ TCP_PORT = 5001 # Connects to port of writer 1
 # if len(sys.argv) > 1:
 #     TCP_PORT = int(sys.argv[1])
 
-# with open('/etc/config.json') as config_file:
-#   config = json.load(config_file)
-# app.config['SECRET_KEY'] = config.get('SECRET_KEY')
-
+with open('../src/config.json') as config_file:
+  config = json.load(config_file)
+  TCP_PORT = config["active_writer_set"][0]["hostname"]
 server = ServerConnection(TCP_PORT)
 
 

@@ -18,7 +18,7 @@ def generate_public_private_key() -> tuple:
 
 
 data = {}
-data["NO_permitted_writers"] = WRITERS
+data["no_permitted_writers"] = WRITERS
 
 writers = []
 for w in range(WRITERS):

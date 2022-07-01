@@ -92,7 +92,7 @@ if __name__ == "__main__":
     PE.set_conf(data)
     # Writers set to wait for connecting to until rounds start
     wlist = []
-    for i in range(data["no_writers_set"]):
+    for i in range(data["no_active_writers"]):
         if (i + 1) != id:
             wlist.append(i)
     PE.set_writers(wlist)
