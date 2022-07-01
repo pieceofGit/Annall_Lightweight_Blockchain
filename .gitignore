@@ -9,3 +9,4 @@ API/test_writer_server_websockets.py
 src/config.json
 src/test_dict_json.py
 *.json
+config.json
