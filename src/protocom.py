@@ -280,7 +280,7 @@ class RemoteEnd:
 
 
 class ProtoCom(interfaces.ProtocolCommunication):
-    def __init__(self, self_id: int, conf: dict, num_writers=None):
+    def __init__(self, self_id: int, conf: dict):
         interfaces.ProtocolCommunication.__init__(
             self, "Protocall communication")
         # set up
@@ -290,11 +290,8 @@ class ProtoCom(interfaces.ProtocolCommunication):
         self.conn_modulus = 0
         # lock is used to put on to and take off of msg_queue
         self.msg_lock = threading.RLock()
-        # Define number of writers to attempt to connect to 
-        if num_writers:
-            self.num_writers = num_writers
-        else:
-            self.num_writers = len(conf["active_writer_set"])
+        # Define number of writers to connect to
+        self.num_writers = conf["no_writers_set"]
         # print(">", self.name, "Number of writers: ", self.num_writers)
         self.rr_selector = None
         # set up lists and stuff
@@ -327,7 +324,7 @@ class ProtoCom(interfaces.ProtocolCommunication):
             self.listen_sock.setblocking(False)
             print(f"Listening on port: {listen_port}")
             self.listen_sock.bind((ip, listen_port))
-            # TODO decide what number - lets not decide and just make it big
+            # TODO decide what number - lets not decide and k make it big
             self.listen_sock.listen(100)
             # TODO for all sockets conn.setblocking(False) when using selectors
             # ready read selector
