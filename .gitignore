@@ -8,4 +8,4 @@ API/test_api_client_websockets.py
 API/test_writer_server_websockets.py
 src/config.json
 src/test_dict_json.py
-src/config.json
+*.json
