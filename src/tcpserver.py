@@ -7,7 +7,6 @@ import argparse
 import time
 import hashlib
 
-from numpy import block
 from interfaces import ClientServer
 from queue import Queue
 
