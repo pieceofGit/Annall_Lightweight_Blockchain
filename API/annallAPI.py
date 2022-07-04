@@ -3,7 +3,7 @@ An API for Annáll using Flask and Gunicorn.
 """
 import json
 import argparse
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 import sys
 from connectToServer import ServerConnection
 from exceptionHandler import InvalidUsage
@@ -39,7 +39,8 @@ def handle_invalid_usage(error):
 def get_blockchain():
     # Asks for blockchain and gets it back
     try:
-        return server.send_msg(json.dumps({"request_type": "read_chain"}))
+        resp_obj = server.send_msg(json.dumps({"request_type": "read_chain"}))
+        return Response(resp_obj, mimetype="application/json")
     except Exception:
         raise InvalidUsage("Failed to read from writer", status_code=500)
     
@@ -56,7 +57,8 @@ def insert_block():
         print(f"[REQUEST] {request_object}")
         block = json.dumps({"request_type": "block", "name": "name", "body": request_object["body"], "payload_id": 1})
         try:
-            return server.send_msg(block)
+            resp_obj = server.send_msg(block)
+            return Response(resp_obj, mimetype="application/json")
         except Exception:
             raise InvalidUsage("Unable to post to writer", status_code=500)
     else:
