@@ -2,7 +2,7 @@
 An API for Annáll using Flask and Gunicorn.
 """
 import json
-
+import argparse
 from flask import Flask, request, jsonify
 import sys
 from connectToServer import ServerConnection
@@ -14,11 +14,18 @@ app = Flask(__name__)
 TCP_PORT = 5001 # Connects to port of writer 1
 # if len(sys.argv) > 1:
 #     TCP_PORT = int(sys.argv[1])
+# ap = argparse.ArgumentParser()
+# help="input data file (default stdin)",
+# ap.add_argument("-conf", default="config-local.json", type=str, help="config file for writers")
+# a = ap.parse_args()
+# conf_file = a.conf
 
-with open('../src/config.json') as config_file:
+with open(f'../src/config-local.json') as config_file:   # If in top directory for debug
   config = json.load(config_file)
-  TCP_PORT = config["active_writer_set"][0]["hostname"]
-server = ServerConnection(TCP_PORT)
+  IP_ADDR = config["active_writer_set"][0]["hostname"]
+  TCP_PORT = config["active_writer_set"][0]["client_port"]
+print(TCP_PORT)
+server = ServerConnection(IP_ADDR, TCP_PORT)
 
 
 @app.errorhandler(InvalidUsage)
@@ -40,7 +47,7 @@ def get_blockchain():
 @app.route("/block", methods=["POST"])
 def insert_block():
     # Decode the JSON
-    
+    print("[REQUEST OBJECT POST]", request.data)
     request_object = get_json(request)
     
     # Get the object 
@@ -74,6 +81,6 @@ def get_json(request):
 
 
 if __name__ == "__main__":
-    app.run(debug=False)
+    app.run(debug=True)
 
 

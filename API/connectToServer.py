@@ -13,11 +13,12 @@ test_conf["writerlist"][1] = {"ip": "127.0.0.1", "port": 15001}
 test_conf["writerlist"][2] = {"ip": "127.0.0.1", "port": 15002}
 test_conf["writerlist"][3] = {"ip": "127.0.0.1", "port": 15003}
 # test_conf["writerlist"][4] = {"ip": "127.0.0.1", "port": 15004}
+TEST_SERVER_CONNECTION = False
 
 class ServerConnection:
-    def __init__(self, tcp_port):
+    def __init__(self, ip_addr, tcp_port):
         # On initialization, connect to server
-        self.TCP_IP = '176.58.116.107'  # Linode server
+        self.TCP_IP = ip_addr  # Linode server
         self.tcp_port = tcp_port    # Not doing port forwarding
         # Try ten times to connect to writer
         self.connect_to_writer()
@@ -84,7 +85,7 @@ class ServerConnection:
         return False
 
 
-if __name__ == "__main__":
+if TEST_SERVER_CONNECTION:
     # Connect as client to writer of ID 1
     print("[INPUT] you can input the TCP Port")
     TCP_IP = '127.0.0.1'

@@ -34,15 +34,17 @@ if __name__ == "__main__":
     ap.add_argument("-myID", default=0, type=int,
                     help="ID fyrir skrifara, mandatory")
     ap.add_argument("-r", default=0, type=int, help="number of rounds")
+    ap.add_argument("-conf", default="config-local.json", type=str, help="config file for writers")
     a = ap.parse_args()
     id = a.myID
     print("[ID]", id)
     rounds = a.r
     print("[ROUNDS]", rounds)
+    conf_file = a.conf
 
     # Read config and other init stuff
 
-    with open(f".{PREPEND}/config.json", "r") as f:
+    with open(f".{PREPEND}/{conf_file}", "r") as f:
         data = json.load(f)
     # Start Communication Engine - maintaining the peer-to-peer network of writers
     print("::> Starting up peer-to-peer network engine with id ", id)

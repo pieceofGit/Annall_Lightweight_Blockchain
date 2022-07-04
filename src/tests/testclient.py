@@ -65,7 +65,7 @@ if __name__ == "__main__":
     # Connect as client to writer of ID 1
     print("[INPUT] you can input the TCP Port")
     TCP_IP = '127.0.0.1'
-    TCP_PORT = 5028
+    TCP_PORT = 5001
 
     if len(sys.argv) > 1:
         TCP_PORT = int(sys.argv[1])
@@ -85,25 +85,25 @@ if __name__ == "__main__":
     msg_1 = json.dumps({"payload_id": 1, "name": name})
     print(f"[MESSAGE TO SERVER] confirmation message who we are: {msg_1}")
     sock.sendall(format_msg(msg_1))
-    msg_2 = json.dumps({"request_type": "block", "name": name, "body": "fjolnir1", "payload_id": 3})
+    msg_2 = json.dumps({"request_type": "block", "name": name, "body": {"insurance_id":1}, "payload_id": 3})
     print("[SENDING MESSAGE] message 2 for blockchain")
     sock.sendall(format_msg(msg_2))
     acc_msg = read_single_msg(sock)
     print(f"[ACK] block added to payload? {acc_msg}")
-    msg_2 = json.dumps({"request_type": "block", "name": name, "body": "fjolnir2", "payload_id": 4})
+    msg_2 = json.dumps({"request_type": "block", "name": name, "body": {"insurance_id":1}, "payload_id": 4})
     print("[SENDING MESSAGE] message 2 for blockchain")
     sock.sendall(format_msg(msg_2))
     acc_msg = read_single_msg(sock)
     print(f"[ACK] block added to payload? {acc_msg}")
     print("[ASKING FOR VERIFICATION]")
-    msg_2 = json.dumps({"request_type": "verification", "name": name, "body": "fjolnir2", "payload_id": 4})
+    msg_2 = json.dumps({"request_type": "verification", "name": name, "body": {"insurance_id":1}, "payload_id": 4})
     print("[SENDING MESSAGE] message 2 for blockchain")
     sock.sendall(format_msg(msg_2))
     # wait for verification message
     verification_msg = read_single_msg(sock)
     print(f"[VERIFICATION] block exists? {verification_msg}")
     
-    msg_2 = json.dumps({"request_type": "block", "name": name, "body": "fjolnir1", "payload_id": 3})
+    msg_2 = json.dumps({"request_type": "block", "name": name, "body": {"insurance_id":1}, "payload_id": 3})
     print("[SENDING MESSAGE] message 2 for blockchain")
     sock.sendall(format_msg(msg_2))
     # wait for verification message
