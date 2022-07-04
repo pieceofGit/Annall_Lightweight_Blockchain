@@ -20,7 +20,7 @@ TCP_PORT = 5001 # Connects to port of writer 1
 # a = ap.parse_args()
 # conf_file = a.conf
 
-with open(f'../src/config-local.json') as config_file:   # If in top directory for debug
+with open(f'../src/config-remote.json') as config_file:   # If in top directory for debug
   config = json.load(config_file)
   IP_ADDR = config["active_writer_set"][0]["hostname"]
   TCP_PORT = config["active_writer_set"][0]["client_port"]
