@@ -91,17 +91,18 @@ def hash_block(block: tuple):
     '''
     Creates a hash for a given block
     
-    Block is a 7 item tuple containing the following attributes:
+    Block is a 8 item tuple containing the following attributes:
         prev_hash,
         writerID,
         coordinatorID,
         payload,
         winning_number,
         writer_signature,
+        timestamp,
         _ (current hash?)
     '''
     assert isinstance(block, tuple)
-    assert len(block) == 7
+    assert len(block) == 8  # Added timestamp
     # create a SHA-256 hash object
     key = hashlib.sha256()
 
@@ -113,6 +114,7 @@ def hash_block(block: tuple):
         payload,
         winning_number,
         writer_signature,
+        timestamp,
         _,
     ) = block
     # The update is feeding the object with bytes-like objects (typically bytes)
@@ -123,6 +125,7 @@ def hash_block(block: tuple):
     key.update(str(payload).encode("utf-8"))
     key.update(str(winning_number).encode("utf-8"))
     key.update(str(writer_signature).encode("utf-8"))
+    key.update(str(timestamp).encode("utf-8"))
     # 0x + the key hex string
     return "0x" + key.hexdigest()
 
@@ -155,7 +158,7 @@ class ProtoEngine(interfaces.ProtocolEngine):
         # The id of us the writer
         self.ID = None
         # The first block
-        genesis_block = ("0", 0, 0, "genesis block", 0, "0", "0")
+        genesis_block = ("0", 0, 0, "genesis block", 0, "0", "0", "0")
         # The latest block to be minted
         self.latest_block = genesis_block
         # Messages in our writer's queue
@@ -200,6 +203,11 @@ class ProtoEngine(interfaces.ProtocolEngine):
         for w in writers:
             assert isinstance(w, int)
         self.writer_list = writers
+    
+    def get_timestamp(self):
+        ts = time.gmtime()
+        return time.strftime("%Y:%m:%d %H:%M:%S", ts)
+
 
     def verify_block(self, block: tuple):
         '''
@@ -220,7 +228,7 @@ class ProtoEngine(interfaces.ProtocolEngine):
         signature_correct = res == D
 
         # Verify the hash
-        hash_correct = hash == block[6]
+        hash_correct = hash == block[7] # 6 -> 7 because of added timestamp
 
         # both signature and hash are correct => True else False
         return signature_correct and hash_correct
@@ -350,6 +358,8 @@ class ProtoEngine(interfaces.ProtocolEngine):
         winning_number = pad
         coordinatorID = coordinatorID
         writerID = self.ID
+        timestamp = self.get_timestamp()
+
 
         block = (
             prev_hash,
@@ -358,6 +368,7 @@ class ProtoEngine(interfaces.ProtocolEngine):
             payload,
             winning_number,
             signature,
+            timestamp,
             -1,
         )
 
@@ -370,6 +381,7 @@ class ProtoEngine(interfaces.ProtocolEngine):
             payload,
             winning_number,
             signature,
+            timestamp,
             hash,
         )
 
@@ -381,6 +393,7 @@ class ProtoEngine(interfaces.ProtocolEngine):
                 "wrongpayload",
                 winning_number,
                 signature,
+                timestamp,
                 hash,
             )"""
 
@@ -392,6 +405,8 @@ class ProtoEngine(interfaces.ProtocolEngine):
             if VERBOSE:
                 print("PAYLOAD CONFIRMATION SENT")
             self.stashed_payload = None
+        if VERBOSE:
+            print("[BLOCK] ", block)
         return block
 
     def create_cancel_block(self, message: str):
@@ -403,6 +418,7 @@ class ProtoEngine(interfaces.ProtocolEngine):
         coor_id = self.get_coordinatorID(round)
         prev_hash = self.bcdb.read_blocks(round - 1, col="hash", getLastRow=True)[0][0]
         prev_hash = str(prev_hash)
+        timestamp = self.get_timestamp()
         cancel_block = (
             prev_hash,
             0,
@@ -410,6 +426,7 @@ class ProtoEngine(interfaces.ProtocolEngine):
             f"round {round} cancelled by {canceller}",
             0,
             "0",
+            timestamp,
             "0",
         )
         cancel_block = (
@@ -419,6 +436,7 @@ class ProtoEngine(interfaces.ProtocolEngine):
             f"round {round} cancelled by {canceller}",
             0,
             "0",
+            timestamp,
             hash_block(cancel_block),
         )
         self.latest_block = cancel_block
@@ -462,6 +480,7 @@ class ProtoEngine(interfaces.ProtocolEngine):
         parsed_message = message.split("-")
         winner = ast.literal_eval(parsed_message[4])
         # 
+        print(f"[WINNER MESSAGE] {winner}")
         verified_round = self.verify_round_winner(winner, pad)
         if VERBOSE:
             print(f"[WINNER WRITER] writer with ID {winner[2]} won the round")

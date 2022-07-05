@@ -1,3 +1,4 @@
+import time
 import json
 the_dict = {"hello":"john"}
 if type(the_dict) == dict:
@@ -14,3 +15,8 @@ print(json_dict)
 # print(json_dict)
 # print(json.dumps(json_dict))
 
+ts = time.gmtime()
+insert_time = time.strftime("%Y:%m:%d %H:%M:%S", ts)
+
+print(insert_time)
+print(type(insert_time))

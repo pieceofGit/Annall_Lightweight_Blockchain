@@ -6,7 +6,7 @@ import inspect
 import time
 import json
 
-__test_interfaces = True
+__test_interfaces = False
 NoneType = type(None)
 
 VERBOSE = False
@@ -111,6 +111,7 @@ class BlockChainEngine:
             payload string,
             winningNumber integer NOT NULL,
             writerSignature string NOT NULL,
+            timestamp string NOT NULL,
             hash string NOT NULL
         );"""
 
@@ -133,7 +134,10 @@ class BlockChainEngine:
         assert isinstance(block[3], str)    # payload
         assert isinstance(block[4], int)    # winningNumber
         assert isinstance(block[5], str)    # writerSignature
-        assert isinstance(block[6], str)    # hash
+        assert isinstance(block[6], str)    # timestamp
+        assert isinstance(block[7], str)    # hash
+        if VERBOSE:
+            print(f"[BLOCK] {block} with length {len(block)}")
         if VERBOSE:
             print(f"[ARBITRARY PAYLOAD] {block[3]}")
         if block[3] == "arbitrarypayload":  # Do not write into chain if empty message
@@ -150,8 +154,8 @@ class BlockChainEngine:
             # cursor.execute(insertion)
             # ts = time.gmtime()
             # curr_time = time.strftime("%Y-%m-%d %H:%M:%S", ts)
-            cursor.execute("insert into chain values (?, ?, ?, ?, ?, ?, ?, ?)",
-            [self.length, block[0], block[1], block[2], block[3], block[4], block[5], block[6]]
+            cursor.execute("insert into chain values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [self.length, block[0], block[1], block[2], block[3], block[4], block[5], block[6], block[7]]
             )
             self.connection.commit()
             if not overwrite:   # Keep record of length for arbitrarypaylaod rounds
@@ -305,9 +309,11 @@ if __test_interfaces:
     # insertion = f'INSERT INTO chain(round,prevHash,writerID,coordinatorID,payload,winningNumber,writerSignature,hash) VALUES({block_id},"{block[0]}",{block[1]},{block[2]},"{block[3]}",{block[4]},"{block[5]}","{block[6]}");'
     import json
     print(json.dumps({"insurance":"john"}))
-    the_block = ("prevHash", 1, 2, json.dumps({"hello":{"sailor":"the sailor"}}), 0, "writer signature", "the hash")
+    ts = time.gmtime()
+    timestamp = time.strftime("%Y:%m:%d %H:%M:%S", ts)
+    the_block = ("prevHash", 1, 2, json.dumps({"hello":{"sailor":"the sailor"}}), 0, "writer signature", timestamp, "the hash")
     # the_block = ("prevHash", 1, 2, json.dumps({"the payload": 1}), 0, "writer signature", "the hash")
-    genesis_block = ("0", 0, 0,  "genesis block", 0, "0", "0")
+    genesis_block = ("0", 0, 0,  "genesis block", 0, "0", timestamp, "0")
     bcdb.insert_block(0, genesis_block)
     bcdb.insert_block(1, the_block)
     bcdb.insert_block(2, the_block)
