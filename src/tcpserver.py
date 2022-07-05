@@ -20,6 +20,7 @@ from queue import Queue
 
 BUFFER_SIZE = 4096
 LOCAL = True   # Connect to specific socket or any available
+VERBOSE = False
 
 class ClientHandler(threading.Thread):
     # noinspection PyPep8Naming
@@ -28,8 +29,6 @@ class ClientHandler(threading.Thread):
     ):
         threading.Thread.__init__(self)
         assert not connection is None
-
-        print("hello")
 
         if not name is None:
             self.name = name
@@ -49,10 +48,11 @@ class ClientHandler(threading.Thread):
 
     def format_msg(self, msg: str) -> bytes:
         """ Format message to be sent over socket """
-        print(">", self.format_msg.__name__, "Length: ", len(msg), "Message: ", msg)
-        print(msg, type(msg))
+        if VERBOSE:
+            print(">", self.format_msg.__name__, "Length: ", len(msg), "Message: ", msg)
         b = len(msg).to_bytes(4, "big", signed=False) + bytes(msg, "utf-8")
-        print(">", self.format_msg.__name__, "Message in bytes: ", b)
+        if VERBOSE:
+            print(">", self.format_msg.__name__, "Message in bytes: ", b)
         return b
     
     def send_message_to_client(self, msg):
@@ -92,7 +92,8 @@ class ClientHandler(threading.Thread):
     def send_ack(self, payload=None):
         acc = json.dumps({"message_received": True, "payload_id": self.payload_id})
         try:
-            print("Sending message_received ack")
+            if VERBOSE:
+                print("Sending message_received ack")
             if payload:
                 self.send_message_to_client(payload)
             else:
@@ -104,14 +105,17 @@ class ClientHandler(threading.Thread):
     def run(self):
         # After initial handshake.
         # Where service of the client request takes place
-        print(f"[CLIENT START]: The thread: {self.name}")
+        if VERBOSE:
+            print(f"[CLIENT START]: The thread: {self.name}")
         # initial handshake with client
         msg = json.dumps({"Server": "Hello", "name": self.name})
-        print(f"[MESSAGE TO CLIENT] the message: {msg}")
+        if VERBOSE:
+            print(f"[MESSAGE TO CLIENT] the message: {msg}")
         self.send_message_to_client(msg)
         # Only receive the first message. Use message length        
         data = self.get_message_from_client()
-        print(f"[RECEIVED DATA FROM CLIENT] {data}")
+        if VERBOSE:
+            print(f"[RECEIVED DATA FROM CLIENT] {data}")
         self.name = data["name"]
         self.payload_id = data["payload_id"]
         self.send_ack()
@@ -123,8 +127,9 @@ class ClientHandler(threading.Thread):
                 print("exception", type(e), e)
                 self.terminate = True
                 break
-            print("[DECODE MESSAGE] decoding message from client")
-            print("Received: ", d)
+            if VERBOSE:
+                print("[DECODE MESSAGE] decoding message from client")
+                print("Received: ", d)
             if d["request_type"] == "verify":
                 print("[VERIFICATION REQUEST]")
                 payload = f"{d['name']},{d['request_type']},{d['body']}"
@@ -132,13 +137,15 @@ class ClientHandler(threading.Thread):
                     resp = json.dumps({"verified": True,})
                 else:
                     resp = json.dumps({"verified": False,})
-                print("Sending to client verification: " + resp)
+                if VERBOSE:
+                    print("Sending to client verification: " + resp)
                 self.send_message_to_client(resp)
             elif d["request_type"] == "read_chain":
                 # Gets back chain in a list of dictionaries
                 blockchain = self.bcdb.read_blocks(0, read_entire_chain=True)
                 # Send back entire blockchain json object
-                print("[SENDING BLOCKCHAIN] ", blockchain, type(blockchain))
+                if VERBOSE:
+                    print("[SENDING BLOCKCHAIN] ", blockchain, type(blockchain))
                 self.send_message_to_client(json.dumps(blockchain))
             else:   # "request_type == "block"
                 # Add new message to payload queue and send back ACK
@@ -147,9 +154,11 @@ class ClientHandler(threading.Thread):
                     payload = json.dumps(d['body']) # Take dict and turn to json
                 else:
                     payload = f"{d['body']}"    # If not dict, store unchanged string
-                print(f"[PAYLOAD] {d['name']}, {d['request_type']}, {d['body']}")
+                if VERBOSE:
+                    print(f"[PAYLOAD] {d['name']}, {d['request_type']}, {d['body']}")
                 # Add new message to queue
-                print(f"[PAYLOAD ADDED] added new payload: {payload}")
+                if VERBOSE:
+                    print(f"[PAYLOAD ADDED] added new payload: {payload}")
                 self.payload_queue.put((self.payload_id, payload))
                 self.send_ack(payload)
             time.sleep(self.delay)
@@ -270,7 +279,6 @@ class TCP_Server(ClientServer):
         # The main loop.
         # Server is listening to the socket. For each client request a new thread is created
         # dedicated to service that request.
-        print("[PAYLOAD QUEUE] This is the payload queue: ",self.payload_queue)
         assert not self.running
         self.__is_shut_down.clear()
         try:

@@ -9,12 +9,12 @@ import json
 __test_interfaces = True
 NoneType = type(None)
 
-verbose = True
+VERBOSE = False
 vverbose = False
 
 
 def verbose_print(*s):
-    if verbose:
+    if VERBOSE:
         print(" ".join(map(str, s)))
 
 
@@ -134,17 +134,22 @@ class BlockChainEngine:
         assert isinstance(block[4], int)    # winningNumber
         assert isinstance(block[5], str)    # writerSignature
         assert isinstance(block[6], str)    # hash
-        print(f"[ARBITRARY PAYLOAD] {block[3]}")
+        if VERBOSE:
+            print(f"[ARBITRARY PAYLOAD] {block[3]}")
         if block[3] == "arbitrarypayload":  # Do not write into chain if empty message
-            print("[ARBITRARY PAYLOAD TRUE]")
+            if VERBOSE:
+                print("[ARBITRARY PAYLOAD TRUE]")
             return
-        print(f"[CREATE BLOCK] added block with block id {block_id} and block {block}")
+        if VERBOSE:
+            print(f"[CREATE BLOCK] added block with block id {block_id} and block {block}")
         # insertion = f'INSERT INTO chain(round,prevHash,writerID,coordinatorID,payload,winningNumber,writerSignature,hash) VALUES({self.length},"{block[0]}",{block[1]},{block[2]},"{block[3]}",{block[4]},"{block[5]}","{block[6]}");'
         try:
             cursor = self.connection.cursor()
             if overwrite:
                 cursor.execute(f"DELETE FROM chain WHERE round == {block_id}")
             # cursor.execute(insertion)
+            # ts = time.gmtime()
+            # curr_time = time.strftime("%Y-%m-%d %H:%M:%S", ts)
             cursor.execute("insert into chain values (?, ?, ?, ?, ?, ?, ?, ?)",
             [self.length, block[0], block[1], block[2], block[3], block[4], block[5], block[6]]
             )
@@ -173,8 +178,9 @@ class BlockChainEngine:
         d = {}
         for idx, col in enumerate(cursor.description):
             if col[0] == "payload" and row[idx] != "genesis block": 
-                print(row, idx)
-                print("[JSON THE PAYLOAD] ", row[idx])
+                if VERBOSE:
+                    print(row, idx)
+                    print("[JSON THE PAYLOAD] ", row[idx])
                 d[col[0]] = json.loads(row[idx])    # Loads payload dict to json 
             else: 
                 d[col[0]] = row[idx]
@@ -190,9 +196,9 @@ class BlockChainEngine:
         """
         assert isinstance(begin, int)
         assert isinstance(end, (int, NoneType))
-
-        print(f"[GET LAST ROW] {getLastRow}")
-        print(f"[READ ENTIRE CHAIN] {read_entire_chain}")
+        if VERBOSE:
+            print(f"[GET LAST ROW] {getLastRow}")
+            print(f"[READ ENTIRE CHAIN] {read_entire_chain}")
         if getLastRow:  # If discrepancy between round and length of list because of arbitrarypayload
             query = f"SELECT {col} FROM chain WHERE round >= {self.length - 1} ORDER BY round"
         elif read_entire_chain:   # Returns a list of tuples for each transaction
@@ -212,7 +218,8 @@ class BlockChainEngine:
             print("Error retrieving blocks from db")
             print(e)
         to_return = retrieved.fetchall()
-        print(f"[RETURN FROM READ BLOCKS] {to_return}")
+        if VERBOSE:
+            print(f"[RETURN FROM READ BLOCKS] {to_return}")
         return to_return
 
 
