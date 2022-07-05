@@ -6,7 +6,7 @@ For a POST /block, the API expects a key "body" and payload in a JSON object.
 
 To run the API:
 
-    1. virtualenv venv
+    1. virtualenv api_venv
     2. source ./api_venv/bin/activate
     3. pip install -r requirements.txt
     4. python annallAPI.py <local writer port>
