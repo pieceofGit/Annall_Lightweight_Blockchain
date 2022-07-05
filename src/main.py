@@ -13,15 +13,14 @@ from tcpserver import TCP_Server, ClientHandler
 from protocom import ProtoCom
 import random
 
-NUM_WRITERS = 2 # Can be 1-5. Starts up writers from config file
 # should put here some elementary command line argument processing
 # EG. parameters for where the config file is, number of writers (for testing), and rounds
-DEBUG = True   # If true, adds randomization to TCP_PORT
+DEBUG = False   # If true, adds randomization to TCP_PORT
 
-if DEBUG:
-    PREPEND = "/src"
-else:
-    PREPEND = ""
+# if DEBUG:
+PREPEND = "/src"
+# else:
+#     PREPEND = ""
 if __name__ == "__main__":
     print("MAIN STARTED")
     ap = argparse.ArgumentParser()
@@ -36,19 +35,21 @@ if __name__ == "__main__":
     ap.add_argument("-myID", default=0, type=int,
                     help="ID fyrir skrifara, mandatory")
     ap.add_argument("-r", default=0, type=int, help="number of rounds")
+    ap.add_argument("-conf", default="config-local.json", type=str, help="config file for writers")
     a = ap.parse_args()
     id = a.myID
     print("[ID]", id)
     rounds = a.r
     print("[ROUNDS]", rounds)
+    conf_file = a.conf
 
     # Read config and other init stuff
 
-    with open(f".{PREPEND}/config.json", "r") as f:
+    with open(f".{PREPEND}/{conf_file}", "r") as f:
         data = json.load(f)
     # Start Communication Engine - maintaining the peer-to-peer network of writers
     print("::> Starting up peer-to-peer network engine with id ", id)
-    pComm = ProtoCom(id, data, NUM_WRITERS)
+    pComm = ProtoCom(id, data)
     pCommThread = Thread(target=pComm.run, name="ProtoComThread")   # NOT IN ORIGINAL CODE
     pCommThread.daemon = True
     pCommThread.start()
@@ -94,7 +95,7 @@ if __name__ == "__main__":
     PE.set_conf(data)
     # Writers set to wait for connecting to until rounds start
     wlist = []
-    for i in range(NUM_WRITERS):
+    for i in range(data["no_active_writers"]):
         if (i + 1) != id:
             wlist.append(i)
     PE.set_writers(wlist)

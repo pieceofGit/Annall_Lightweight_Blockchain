@@ -11,8 +11,18 @@
       "program": "${workspaceFolder}//src//main.py",
       "console": "integratedTerminal",
       "justMyCode": true,
-      "args": ["-myID", "1", "-r 20"],
+      "args": ["-myID", "1", "-r 20", "-conf", "config-local.json"],
       "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Python: API",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      //   "args": [""],
+      "cwd": "${fileDirname}"
     }
   ]
 }

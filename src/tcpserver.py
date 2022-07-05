@@ -6,6 +6,7 @@ import json
 import argparse
 import time
 import hashlib
+
 from interfaces import ClientServer
 from queue import Queue
 
@@ -18,7 +19,7 @@ from queue import Queue
 """
 
 BUFFER_SIZE = 4096
-
+LOCAL = True   # Connect to specific socket or any available
 
 class ClientHandler(threading.Thread):
     # noinspection PyPep8Naming
@@ -48,9 +49,10 @@ class ClientHandler(threading.Thread):
 
     def format_msg(self, msg: str) -> bytes:
         """ Format message to be sent over socket """
-        # print(">", format_msg.__name__, "Length: ", len(msg), "Message: ", msg)
+        print(">", self.format_msg.__name__, "Length: ", len(msg), "Message: ", msg)
+        print(msg, type(msg))
         b = len(msg).to_bytes(4, "big", signed=False) + bytes(msg, "utf-8")
-        # print(">", format_msg.__name__, "Message in bytes: ", b)
+        print(">", self.format_msg.__name__, "Message in bytes: ", b)
         return b
     
     def send_message_to_client(self, msg):
@@ -81,18 +83,20 @@ class ClientHandler(threading.Thread):
             b = self.connection.recv(length)
         except Exception as e:
             print(">!! Failed to read message with:", e)
-        string_msg = b.decode("utf-8")
         try:
-            json_msg = json.loads(string_msg)
+            json_msg = json.loads(b)
             return json_msg
         except:
             return ""
 
-    def send_ack(self):
+    def send_ack(self, payload=None):
         acc = json.dumps({"message_received": True, "payload_id": self.payload_id})
         try:
             print("Sending message_received ack")
-            self.send_message_to_client(acc)
+            if payload:
+                self.send_message_to_client(payload)
+            else:
+                self.send_message_to_client(acc)
         except Exception as e:  # should really be more specific
             print("exception", type(e), e)
             self.terminate = True
@@ -114,7 +118,7 @@ class ClientHandler(threading.Thread):
         # Service client requests until client terminates
         while not self.terminate:
             try:
-                d = self.get_message_from_client() # Blocks on waiting for data from client
+                d = self.get_message_from_client() # Blocks on waiting for data from client and loads into dict
             except Exception as e:  
                 print("exception", type(e), e)
                 self.terminate = True
@@ -134,16 +138,20 @@ class ClientHandler(threading.Thread):
                 # Gets back chain in a list of dictionaries
                 blockchain = self.bcdb.read_blocks(0, read_entire_chain=True)
                 # Send back entire blockchain json object
+                print("[SENDING BLOCKCHAIN] ", blockchain, type(blockchain))
                 self.send_message_to_client(json.dumps(blockchain))
-            else:
+            else:   # "request_type == "block"
                 # Add new message to payload queue and send back ACK
                 self.payload_id = d["payload_id"]
-                payload = f"{d['name']},{d['request_type']},{d['body']}"
+                if type(d['body']) == dict:
+                    payload = json.dumps(d['body']) # Take dict and turn to json
+                else:
+                    payload = f"{d['body']}"    # If not dict, store unchanged string
                 print(f"[PAYLOAD] {d['name']}, {d['request_type']}, {d['body']}")
                 # Add new message to queue
                 print(f"[PAYLOAD ADDED] added new payload: {payload}")
                 self.payload_queue.put((self.payload_id, payload))
-                self.send_ack()
+                self.send_ack(payload)
             time.sleep(self.delay)
 
         print("Exiting run " + self.name)
@@ -198,7 +206,10 @@ class TCP_Server(ClientServer):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         try:
-            self.s.bind((IPv4_addr, port))
+            if LOCAL:
+                self.s.bind((IPv4_addr, port))
+            else:
+                self.s.bind(("", port)) # Binds to any available IP Address
             self.s.listen(5)
         except Exception as e:
             print(

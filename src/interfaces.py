@@ -4,8 +4,9 @@
 from threading import Thread, ThreadError
 import inspect
 import time
+import json
 
-__test_interfaces = False
+__test_interfaces = True
 NoneType = type(None)
 
 verbose = True
@@ -138,12 +139,15 @@ class BlockChainEngine:
             print("[ARBITRARY PAYLOAD TRUE]")
             return
         print(f"[CREATE BLOCK] added block with block id {block_id} and block {block}")
-        insertion = f'INSERT INTO chain(round,prevHash,writerID,coordinatorID,payload,winningNumber,writerSignature,hash) VALUES({self.length},"{block[0]}",{block[1]},{block[2]},"{block[3]}",{block[4]},"{block[5]}","{block[6]}");'
+        # insertion = f'INSERT INTO chain(round,prevHash,writerID,coordinatorID,payload,winningNumber,writerSignature,hash) VALUES({self.length},"{block[0]}",{block[1]},{block[2]},"{block[3]}",{block[4]},"{block[5]}","{block[6]}");'
         try:
             cursor = self.connection.cursor()
             if overwrite:
                 cursor.execute(f"DELETE FROM chain WHERE round == {block_id}")
-            cursor.execute(insertion)
+            # cursor.execute(insertion)
+            cursor.execute("insert into chain values (?, ?, ?, ?, ?, ?, ?, ?)",
+            [self.length, block[0], block[1], block[2], block[3], block[4], block[5], block[6]]
+            )
             self.connection.commit()
             if not overwrite:   # Keep record of length for arbitrarypaylaod rounds
                 self.length += 1
@@ -151,7 +155,6 @@ class BlockChainEngine:
         except Exception as e:
             print("Error inserting block to chain db")
             print(e)
-            print(insertion)
 
     def select_entry(self, condition: str, col: str = "*"):
         """ Retrieve block with specific condition
@@ -169,7 +172,12 @@ class BlockChainEngine:
     def dict_factory(self, cursor, row):
         d = {}
         for idx, col in enumerate(cursor.description):
-            d[col[0]] = row[idx]
+            if col[0] == "payload" and row[idx] != "genesis block": 
+                print(row, idx)
+                print("[JSON THE PAYLOAD] ", row[idx])
+                d[col[0]] = json.loads(row[idx])    # Loads payload dict to json 
+            else: 
+                d[col[0]] = row[idx]
         return d
 
     def read_blocks(self, begin, end=None, col="*", getLastRow=False, read_entire_chain=False):
@@ -288,8 +296,11 @@ if __test_interfaces:
     print(f"[DIRECTORY PATH] {os.getcwd()+dbpath}")
     bcdb = BlockChainEngine(connection)
     # insertion = f'INSERT INTO chain(round,prevHash,writerID,coordinatorID,payload,winningNumber,writerSignature,hash) VALUES({block_id},"{block[0]}",{block[1]},{block[2]},"{block[3]}",{block[4]},"{block[5]}","{block[6]}");'
-    the_block = ["prevHash", 1, 2, "the payload", 1, "writer signature", "the hash"]
-    genesis_block = ("0", 0, 0, "genesis block", 0, "0", "0")
+    import json
+    print(json.dumps({"insurance":"john"}))
+    the_block = ("prevHash", 1, 2, json.dumps({"hello":{"sailor":"the sailor"}}), 0, "writer signature", "the hash")
+    # the_block = ("prevHash", 1, 2, json.dumps({"the payload": 1}), 0, "writer signature", "the hash")
+    genesis_block = ("0", 0, 0,  "genesis block", 0, "0", "0")
     bcdb.insert_block(0, genesis_block)
     bcdb.insert_block(1, the_block)
     bcdb.insert_block(2, the_block)
@@ -299,6 +310,9 @@ if __test_interfaces:
     # time.sleep(100)
     msg = bcdb.read_blocks(0, read_entire_chain=True)
     print("READING ENTIRE BLOCKCHAIN", msg, type(msg))
+    to_json = msg[0]["payload"]
+    # print(type(to_json))
+    # print(type(json.loads(to_json)))
 
     # print("Testing ClientServer")
     # clients = ClientServer()
