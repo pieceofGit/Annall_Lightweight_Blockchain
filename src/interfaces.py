@@ -134,7 +134,7 @@ class BlockChainEngine:
         assert isinstance(block[3], str)    # payload
         assert isinstance(block[4], int)    # winningNumber
         assert isinstance(block[5], str)    # writerSignature
-        assert isinstance(block[6], str)    # timestamp
+        assert isinstance(block[6], int)    # timestamp
         assert isinstance(block[7], str)    # hash
         if VERBOSE:
             print(f"[BLOCK] {block} with length {len(block)}")

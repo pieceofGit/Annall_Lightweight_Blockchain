@@ -7,6 +7,7 @@ from queue import Queue
 from threading import Thread
 import struct
 import time
+from datetime import datetime
 import ast
 
 import sqlite3
@@ -158,7 +159,7 @@ class ProtoEngine(interfaces.ProtocolEngine):
         # The id of us the writer
         self.ID = None
         # The first block
-        genesis_block = ("0", 0, 0, "genesis block", 0, "0", "0", "0")
+        genesis_block = ("0", 0, 0, json.dumps({"type": "genesis block"}), 0, "0", self.get_timestamp(), "0")
         # The latest block to be minted
         self.latest_block = genesis_block
         # Messages in our writer's queue
@@ -205,9 +206,8 @@ class ProtoEngine(interfaces.ProtocolEngine):
         self.writer_list = writers
     
     def get_timestamp(self):
-        ts = time.gmtime()
-        return time.strftime("%Y:%m:%d %H:%M:%S", ts)
-
+        # Returns time in Unix epoch time 
+        return round(datetime.timestamp(datetime.now()))
 
     def verify_block(self, block: tuple):
         '''
@@ -480,7 +480,6 @@ class ProtoEngine(interfaces.ProtocolEngine):
         parsed_message = message.split("-")
         winner = ast.literal_eval(parsed_message[4])
         # 
-        print(f"[WINNER MESSAGE] {winner}")
         verified_round = self.verify_round_winner(winner, pad)
         if VERBOSE:
             print(f"[WINNER WRITER] writer with ID {winner[2]} won the round")
