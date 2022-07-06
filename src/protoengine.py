@@ -132,7 +132,7 @@ def hash_block(block: tuple):
     return "0x" + key.hexdigest()
 
 
-class ProtoEngine(interfaces.ProtocolEngine):
+class ProtoEngine(ProtocolEngine):
     # Executes the consensus protocol
     # Communincates with protocolCommunication, via RPC to send and receive messages
     # Need to determine who blocks and where
@@ -140,14 +140,14 @@ class ProtoEngine(interfaces.ProtocolEngine):
     def __init__(
         self,
         keys: tuple,
-        comm: interfaces.ProtocolCommunication,
-        blockchain: interfaces.BlockChainEngine,
-        clients: interfaces.ClientServer,
+        comm: ProtocolCommunication,
+        blockchain: BlockChainEngine,
+        clients: ClientServer,
     ):  # what are the natural arguments
         assert isinstance(keys, tuple)
         assert len(keys) == 3
         # The interface initiates the following attributes
-        interfaces.ProtocolEngine.__init__(self, comm, blockchain, clients)
+        ProtocolEngine.__init__(self, comm, blockchain, clients)
 
         self.keys = keys
 
