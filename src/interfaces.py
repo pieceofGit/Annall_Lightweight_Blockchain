@@ -3,10 +3,9 @@
 
 from threading import Thread, ThreadError
 import inspect
-import time
 import json
 
-__test_interfaces = True
+#__test_interfaces = True
 NoneType = type(None)
 
 verbose = True
@@ -275,7 +274,7 @@ class ProtocolEngine:
 ### what follows does not belong here, is prototyping and testcode
 
 # ## what follows does not belong here, is prototyping and testcode
-if __test_interfaces:
+def __test_interfaces():
     """ test code here
     """
     print("Elementary Testing of Interfaces")
@@ -307,6 +306,7 @@ if __test_interfaces:
     bcdb.insert_block(3, the_block)
     msg = bcdb.read_blocks(0, 4)
     print(f"[MESSAGE READ BLOCKS 1-4] The message: {msg}")
+    # import time
     # time.sleep(100)
     msg = bcdb.read_blocks(0, read_entire_chain=True)
     print("READING ENTIRE BLOCKCHAIN", msg, type(msg))
@@ -314,29 +314,31 @@ if __test_interfaces:
     # print(type(to_json))
     # print(type(json.loads(to_json)))
 
-    # print("Testing ClientServer")
-    # clients = ClientServer()
-    # cthread = Thread(target=clients.run_forever)
-    # cthread.start()
-    # print("ClientServer up and running in thread:", cthread.name)
-    # if clients.retrieve_request() is not None:
-    #     print("surprise - client is a real thing")
-    # else:
-    #     print("nothing to process")
-    # clients.notify_commit("RID:4")
+    print("Testing ClientServer")
+    clients = ClientServer()
+    cthread = Thread(target=clients.run_forever)
+    cthread.start()
+    print("ClientServer up and running in thread:", cthread.name)
+    if clients.retrieve_request() is not None:
+        print("surprise - client is a real thing")
+    else:
+        print("nothing to process")
+    clients.notify_commit("RID:4")
 
-    # print("testing setting up ProtocolEngine")
+    print("testing setting up ProtocolEngine")
 
-    # PE = ProtocolEngine(pComm, bcdb, clients)
-    # PEthread = Thread(target=PE.run_forever)
-    # PEthread.start()
-    # print("Protocol Engine up and running in thread:", PEthread.name)
+    PE = ProtocolEngine(pComm, bcdb, clients)
+    PEthread = Thread(target=PE.run_forever)
+    PEthread.start()
+    print("Protocol Engine up and running in thread:", PEthread.name)
 
-    # pComm.join()
-    # PEthread.join()
-    # cthread.join()
+    pComm.join()
+    PEthread.join()
+    cthread.join()
 
 
 if __name__ == "__main__":
 
     print("Main: Interfaces")
+    __test_interfaces()
+
