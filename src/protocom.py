@@ -20,9 +20,7 @@ from interfaces import (
     verbose_print, 
 )
 
-
-VERBOSE = True
-DEBUG = True
+VERBOSE = False
 # **********************************
 
 # **********************************
@@ -103,7 +101,7 @@ class RemoteEnd:
             del self.socket
             self.socket = None
         except Exception as e:
-            if DEBUG:
+            if VERBOSE:
                 print(f">!! Failed to close socket with exception {e}")
         finally:
             self.is_active = False
@@ -111,10 +109,10 @@ class RemoteEnd:
     def send_bytes(self, b_msg):
         """ Send bytes over socket """
         if self.socket is not None:
-            if DEBUG:
+            if VERBOSE:
                 print("send bytes..")
             self.socket.sendall(b_msg)
-            if DEBUG:
+            if VERBOSE:
                 print("bytes sent")
             self.time_last = time.process_time()
         else:
@@ -130,24 +128,21 @@ class RemoteEnd:
         # TODO handle exception when int fails. Read all message buffer and throw away
         # if self.is_active:
         byte_length = self.socket.recv(4)
-        # print("Read length:", byte_length)
         if byte_length == b"":
             raise Exception(f"> Connection closed. Socket:{self.socket}")
         try:
             length = int.from_bytes(byte_length, "big", signed=False)
-            # print("Received message of length:", length)
         except Exception as e:
-            if DEBUG:
+            if VERBOSE:
                 print(">!! Failed to read length of message")
             return ""
         try:
             # print("Reading message")
             b = self.socket.recv(length)
         except Exception as e:
-            if DEBUG:
+            if VERBOSE:
                 print(">!! Failed to read message with:", e)
         decb = b.decode("utf-8")
-        # print("> Received message:", decb)
         return decb
         # else:
         #    raise Exception("Connection not active")
@@ -179,9 +174,8 @@ class RemoteEnd:
             raise Exception(f"> Connection closed. Socket:{r_socket}")
         try:
             length = int.from_bytes(byte_length, "big", signed=False)
-            # print("Received message of length:", length)
         except Exception as e:
-            if DEBUG:
+            if VERBOSE:
                 print(">!! Failed to read length of message")
             return ""
         try:
@@ -189,7 +183,7 @@ class RemoteEnd:
                 print("Reading message")
             b = r_socket.recv(length)
         except Exception as e:
-            if DEBUG:
+            if VERBOSE:
                 print(">!! Failed to read message with:", e)
         decb = b.decode("utf-8")
         if VERBOSE:
@@ -213,7 +207,7 @@ class RemoteEnd:
                 if tokens[0] == pMsgTyp.c_request:
                     return tokens[1:]
             except Exception as e:
-                if DEBUG:
+                if VERBOSE:
                     print("Failed to split message", e)
             tries += 1
         raise Exception("Failed to read C-ACK")
@@ -226,7 +220,7 @@ class RemoteEnd:
                 msg = self.read_single_msg()
             except Exception as e:
                 # raise e
-                if DEBUG:
+                if VERBOSE:
                     print("Failed to read message:", e)
             # [type], [r_id], [self_id], [secret], optional [something]
             # we cannot unpack because we dont know or assume number of splits
@@ -235,7 +229,7 @@ class RemoteEnd:
                 if tokens[0] == pMsgTyp.c_reply:
                     return tokens[1:]
             except Exception as e:
-                if DEBUG:
+                if VERBOSE:
                     print("Failed to split message", e)
             tries += 1
         raise Exception("Failed to read C-ACK")
@@ -249,19 +243,20 @@ class RemoteEnd:
             try:
                 msg = self.read_single_msg()
             except Exception as e:
-                if DEBUG:
+                if VERBOSE:
                     print("Failed with exception:", e)
                 raise e
             # [type], [r_id], [self_id]
             if VERBOSE:
                 print("Revieved:", msg)
             try:
-                print(f"protocom splitting message: {msg}")
+                if VERBOSE:
+                    print(f"protocom splitting message: {msg}")
                 tokens = msg.split(pMsg.sep, maxsplit=4)
                 if tokens[0] == pMsgTyp.c_ack:
                     return tokens[1:]
             except Exception as e:
-                if DEBUG:
+                if VERBOSE:
                     print("Failed to split message", e)
             tries += 1
         raise Exception("Failed to read C-ACK")
@@ -297,7 +292,6 @@ class ProtoCom(ProtocolCommunication):
         self.msg_lock = threading.RLock()
         # Define number of writers to connect to
         self.num_writers = conf["no_active_writers"]
-        # print(">", self.name, "Number of writers: ", self.num_writers)
         self.rr_selector = None
         # set up lists and stuff
         # dictionary of connected sockets use for storing sockets and stuff
@@ -305,12 +299,11 @@ class ProtoCom(ProtocolCommunication):
         ip = None
         listen_port = None
         # Select out of the writers list who we want to connect to
-        if DEBUG:
+        if VERBOSE:
             print("[PRINTING WRITERS IN SET NO_WRITERS]", conf["active_writer_set"][0:self.num_writers])
         for writer in conf["active_writer_set"][0:self.num_writers]:
-            print("The writer set ", writer["id"])
+            verbose_print("The writer set ", writer["id"])
             if writer["id"] != self.id:
-                print("Inside if in 287 ")
                 self.peers[writer["id"]] = RemoteEnd(
                     writer["id"], writer["hostname"], writer["port"], writer["pub_key"]
                 )
@@ -360,7 +353,7 @@ class ProtoCom(ProtocolCommunication):
         try:
             tokens = RemoteEnd.read_c_request(in_conn)
         except Exception as e:
-            if DEBUG:
+            if VERBOSE:
                 print("Failed to read c-request with exception:", e)
             return
         if len(tokens) == 4:
@@ -390,7 +383,7 @@ class ProtoCom(ProtocolCommunication):
                     # Sends all bytes in buffer to remote writer
                     in_conn.sendall(repl_msg)
                 except Exception as e:
-                    if DEBUG:
+                    if VERBOSE:
                         print("Failed to send reply", e)
                     in_conn.close()
                     return
@@ -401,7 +394,7 @@ class ProtoCom(ProtocolCommunication):
                     if VERBOSE:
                         print(f"Received c-ack message: {tokens}")
                 except Exception as e:
-                    if DEBUG:
+                    if VERBOSE:
                         print("Failed to read ack message closing connection:", e)
                     self.peers[rem_id].close(self.rr_selector)
                     return
@@ -414,7 +407,7 @@ class ProtoCom(ProtocolCommunication):
                         print("Accept incoming connection",
                               self.list_connected_peers())
                 except Exception as e:
-                    if DEBUG:
+                    if VERBOSE:
                         print("Failed to store connection", e)
             else:
                 # TODO: send to other connection refused because already have connection
@@ -461,7 +454,7 @@ class ProtoCom(ProtocolCommunication):
                 if VERBOSE:
                     print("Connected to id:", r_id)
             except Exception as e:
-                if DEBUG:
+                if VERBOSE:
                     print(f">!! Failed to connect with exception: {e}")
                 self.peers[r_id].close(self.rr_selector)
                 return
@@ -469,7 +462,7 @@ class ProtoCom(ProtocolCommunication):
                 req_msg = pMsg.con_requ_msg(self.id, r_id, self.pub_key)
                 self.peers[r_id].send_bytes(req_msg)
             except Exception as e:
-                if DEBUG:
+                if VERBOSE:
                     print(
                         f">!! Failed to send connection request with exception: {e}")
                 self.peers[r_id].close(self.rr_selector)
@@ -481,7 +474,7 @@ class ProtoCom(ProtocolCommunication):
                 if VERBOSE:
                     print("Revieved verification", repl_msg)
             except Exception as e:
-                if DEBUG:
+                if VERBOSE:
                     print(
                         f">!! Failed to receive reply message with exception {e}")
                 self.peers[r_id].close(self.rr_selector)
@@ -521,7 +514,7 @@ class ProtoCom(ProtocolCommunication):
             if VERBOSE:
                 print(f"[REMOTE SOCKET MESSAGE] {msg}")
         except Exception as e:
-            if DEBUG:
+            if VERBOSE:
                 print(">!! ", "Failed to read from socket")
             # this means connection is closed
             # close socket here do not put on a removelist
@@ -530,7 +523,7 @@ class ProtoCom(ProtocolCommunication):
                     print(">", "Removing connection to id: ", r_id)
                 self.peers[r_id].close(self.rr_selector)
             except Exception as e:
-                if DEBUG:
+                if VERBOSE:
                     print(">!! ", "Failed to close socket")
                     print(">!! ", "with exception: ", type(e), e)
             return
@@ -540,7 +533,7 @@ class ProtoCom(ProtocolCommunication):
             return
         # [type], [r_id], [self_id], optional [data]
         msg_typ, rem_id, self_id, msg_data = msg.split(pMsg.sep, maxsplit=3)
-        if DEBUG:
+        if VERBOSE:
             print(msg_typ, rem_id,self_id,msg_data)
         """try:
             rem_id = int(rem_id)
@@ -554,10 +547,10 @@ class ProtoCom(ProtocolCommunication):
         # TODO When receive ECHO request reply with ECHO reply
         # if request contains data reply with that data else send list of connected ids
         if msg_typ == pMsgTyp.data:
-            if DEBUG:
+            if VERBOSE:
                 print("data == data")
             with self.msg_lock:
-                if DEBUG:
+                if VERBOSE:
                     print("adding to queue")
                 self.msg_queue.append((r_id, msg_data))
             rep_msg = pMsg.data_ack_msg(self.id, r_id)
@@ -589,7 +582,8 @@ class ProtoCom(ProtocolCommunication):
             if self.rr_selector != None:
                 events = self.rr_selector.select(timeout=2)
                 for key, mask in events:
-                    print("initial run")
+                    if VERBOSE:
+                        print("initial run")
                     # The listening socket is registered on our id
                     if key.data == self.id:
                         self.accept_con(key.fileobj)
@@ -634,25 +628,28 @@ class ProtoCom(ProtocolCommunication):
                 if self.peers[rem_id].is_active:
                     try:
                         data = pMsg.data_msg(self.id, rem_id, message)
-                        print(">", "Sending: ", data, " to id: ", rem_id)
-                        print(">", "Connection:", self.peers[rem_id])
+                        if VERBOSE:
+                            print(">", "Sending: ", data, " to id: ", rem_id)
+                            print(">", "Connection:", self.peers[rem_id])
                         
                         # TODO: you dont work
                         self.peers[rem_id].send_bytes(data)
 
                         for p in self.peers.values():
-                            print(p)
+                            if VERBOSE:
+                                print(p)
                         # TODO Listen for Acks???
                         id_list.append(rem_id)
                     except Exception as e:
-                        if DEBUG:
+                        if VERBOSE:
                             print(linebreak)
                             print(">!!", "Failed to send to id: ", rem_id)
                             print(">!!", "Whith exception: ", type(e), e)
                         continue
             return id_list
         else:
-            print("send_to", send_to)
+            if VERBOSE:
+                print("send_to", send_to)
             if self.peers[send_to].is_active:
                 try:
                     data = pMsg.data_msg(self.id, send_to, message)
@@ -662,7 +659,7 @@ class ProtoCom(ProtocolCommunication):
                     # TODO Listen for Acks???
                     return [send_to]
                 except Exception as e:
-                    if DEBUG:
+                    if VERBOSE:
                         print(linebreak)
                         print(">!!", "Failed to send to id: ", send_to)
             return []
