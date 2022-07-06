@@ -66,9 +66,9 @@ if __name__ == "__main__":
     dbpath = f"{DB_PATH}/blockchain{id}.db"
     print("Should print here")
     print("The os ", os.getcwd())
-    connection = sqlite3.connect(os.getcwd() + dbpath, check_same_thread=False)
+    connection = sqlite3.connect(dbpath, check_same_thread=False)
     print(connection)
-    print(f"[DIRECTORY PATH] in main, path to db: {os.getcwd()+dbpath}")
+    print(f"[DIRECTORY PATH] in main, path to db: {dbpath}")
     bce = BlockChainEngine(connection)
 
     print("running")

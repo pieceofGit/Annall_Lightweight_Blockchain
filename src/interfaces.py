@@ -110,6 +110,7 @@ class BlockChainEngine:
             payload string,
             winningNumber integer NOT NULL,
             writerSignature string NOT NULL,
+            timestamp integer NOT NULL,
             hash string NOT NULL
         );"""
 
@@ -132,7 +133,8 @@ class BlockChainEngine:
         assert isinstance(block[3], str)    # payload
         assert isinstance(block[4], int)    # winningNumber
         assert isinstance(block[5], str)    # writerSignature
-        assert isinstance(block[6], str)    # hash
+        assert isinstance(block[6], int)    # timestamp
+        assert isinstance(block[7], str)    # hash
         print(f"[ARBITRARY PAYLOAD] {block[3]}")
         if block[3] == "arbitrarypayload":  # Do not write into chain if empty message
             print("[ARBITRARY PAYLOAD TRUE]")
@@ -144,8 +146,8 @@ class BlockChainEngine:
             if overwrite:
                 cursor.execute(f"DELETE FROM chain WHERE round == {block_id}")
             # cursor.execute(insertion)
-            cursor.execute("insert into chain values (?, ?, ?, ?, ?, ?, ?, ?)",
-            [self.length, block[0], block[1], block[2], block[3], block[4], block[5], block[6]]
+            cursor.execute("insert into chain values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [self.length, block[0], block[1], block[2], block[3], block[4], block[5], block[6], block[7]]
             )
             self.connection.commit()
             if not overwrite:   # Keep record of length for arbitrarypaylaod rounds
@@ -271,7 +273,6 @@ class ProtocolEngine:
         pass
 
 
-### what follows does not belong here, is prototyping and testcode
 
 # ## what follows does not belong here, is prototyping and testcode
 def __test_interfaces():

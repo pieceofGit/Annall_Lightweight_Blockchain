@@ -12,7 +12,6 @@ setup(
             "thesispaper",
             "references",
             "blockchain_webinterface",
-            "src/tests",
             "src/txtfiles",
         ]
     ),
