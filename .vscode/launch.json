@@ -23,6 +23,16 @@
       "justMyCode": true,
       //   "args": [""],
       "cwd": "${fileDirname}"
+    },
+    {
+      "name": "Python: GMain",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}//src//main.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": ["-myID", "1", "-r 20", "-conf", "config-l2.json"],
+      "cwd": "${workspaceFolder}"
     }
   ]
 }

@@ -6,15 +6,15 @@ import inspect
 import time
 import json
 
-__test_interfaces = False
+__test_interfaces = True
 NoneType = type(None)
 
-VERBOSE = False
+verbose = True
 vverbose = False
 
 
 def verbose_print(*s):
-    if VERBOSE:
+    if verbose:
         print(" ".join(map(str, s)))
 
 
@@ -111,7 +111,6 @@ class BlockChainEngine:
             payload string,
             winningNumber integer NOT NULL,
             writerSignature string NOT NULL,
-            timestamp string NOT NULL,
             hash string NOT NULL
         );"""
 
@@ -134,28 +133,20 @@ class BlockChainEngine:
         assert isinstance(block[3], str)    # payload
         assert isinstance(block[4], int)    # winningNumber
         assert isinstance(block[5], str)    # writerSignature
-        assert isinstance(block[6], int)    # timestamp
-        assert isinstance(block[7], str)    # hash
-        if VERBOSE:
-            print(f"[BLOCK] {block} with length {len(block)}")
-        if VERBOSE:
-            print(f"[ARBITRARY PAYLOAD] {block[3]}")
+        assert isinstance(block[6], str)    # hash
+        print(f"[ARBITRARY PAYLOAD] {block[3]}")
         if block[3] == "arbitrarypayload":  # Do not write into chain if empty message
-            if VERBOSE:
-                print("[ARBITRARY PAYLOAD TRUE]")
+            print("[ARBITRARY PAYLOAD TRUE]")
             return
-        if VERBOSE:
-            print(f"[CREATE BLOCK] added block with block id {block_id} and block {block}")
+        print(f"[CREATE BLOCK] added block with block id {block_id} and block {block}")
         # insertion = f'INSERT INTO chain(round,prevHash,writerID,coordinatorID,payload,winningNumber,writerSignature,hash) VALUES({self.length},"{block[0]}",{block[1]},{block[2]},"{block[3]}",{block[4]},"{block[5]}","{block[6]}");'
         try:
             cursor = self.connection.cursor()
             if overwrite:
                 cursor.execute(f"DELETE FROM chain WHERE round == {block_id}")
             # cursor.execute(insertion)
-            # ts = time.gmtime()
-            # curr_time = time.strftime("%Y-%m-%d %H:%M:%S", ts)
-            cursor.execute("insert into chain values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [self.length, block[0], block[1], block[2], block[3], block[4], block[5], block[6], block[7]]
+            cursor.execute("insert into chain values (?, ?, ?, ?, ?, ?, ?, ?)",
+            [self.length, block[0], block[1], block[2], block[3], block[4], block[5], block[6]]
             )
             self.connection.commit()
             if not overwrite:   # Keep record of length for arbitrarypaylaod rounds
@@ -182,9 +173,8 @@ class BlockChainEngine:
         d = {}
         for idx, col in enumerate(cursor.description):
             if col[0] == "payload" and row[idx] != "genesis block": 
-                if VERBOSE:
-                    print(row, idx)
-                    print("[JSON THE PAYLOAD] ", row[idx])
+                print(row, idx)
+                print("[JSON THE PAYLOAD] ", row[idx])
                 d[col[0]] = json.loads(row[idx])    # Loads payload dict to json 
             else: 
                 d[col[0]] = row[idx]
@@ -200,9 +190,9 @@ class BlockChainEngine:
         """
         assert isinstance(begin, int)
         assert isinstance(end, (int, NoneType))
-        if VERBOSE:
-            print(f"[GET LAST ROW] {getLastRow}")
-            print(f"[READ ENTIRE CHAIN] {read_entire_chain}")
+
+        print(f"[GET LAST ROW] {getLastRow}")
+        print(f"[READ ENTIRE CHAIN] {read_entire_chain}")
         if getLastRow:  # If discrepancy between round and length of list because of arbitrarypayload
             query = f"SELECT {col} FROM chain WHERE round >= {self.length - 1} ORDER BY round"
         elif read_entire_chain:   # Returns a list of tuples for each transaction
@@ -222,8 +212,7 @@ class BlockChainEngine:
             print("Error retrieving blocks from db")
             print(e)
         to_return = retrieved.fetchall()
-        if VERBOSE:
-            print(f"[RETURN FROM READ BLOCKS] {to_return}")
+        print(f"[RETURN FROM READ BLOCKS] {to_return}")
         return to_return
 
 
@@ -284,6 +273,67 @@ class ProtocolEngine:
 
 
 
+# ## what follows does not belong here, is prototyping and testcode
+if __test_interfaces:
+    """ test code here
+    """
+    print("Elementary Testing of Interfaces")
+
+    print("Testing creating a ProtocolCommunications")
+    pComm = ProtocolCommunication("comm")
+    pComm.start()
+    print("running")
+
+    print("Testing Database")
+    import os
+    import sqlite3
+    from sqlite3 import Error
+
+    dbpath = r"/src/db/blockchain.db"
+    connection = sqlite3.connect(os.getcwd() + dbpath)
+    print(connection)
+    print(f"[DIRECTORY PATH] {os.getcwd()+dbpath}")
+    bcdb = BlockChainEngine(connection)
+    # insertion = f'INSERT INTO chain(round,prevHash,writerID,coordinatorID,payload,winningNumber,writerSignature,hash) VALUES({block_id},"{block[0]}",{block[1]},{block[2]},"{block[3]}",{block[4]},"{block[5]}","{block[6]}");'
+    import json
+    print(json.dumps({"insurance":"john"}))
+    the_block = ("prevHash", 1, 2, json.dumps({"hello":{"sailor":"the sailor"}}), 0, "writer signature", "the hash")
+    # the_block = ("prevHash", 1, 2, json.dumps({"the payload": 1}), 0, "writer signature", "the hash")
+    genesis_block = ("0", 0, 0,  "genesis block", 0, "0", "0")
+    bcdb.insert_block(0, genesis_block)
+    bcdb.insert_block(1, the_block)
+    bcdb.insert_block(2, the_block)
+    bcdb.insert_block(3, the_block)
+    msg = bcdb.read_blocks(0, 4)
+    print(f"[MESSAGE READ BLOCKS 1-4] The message: {msg}")
+    # time.sleep(100)
+    msg = bcdb.read_blocks(0, read_entire_chain=True)
+    print("READING ENTIRE BLOCKCHAIN", msg, type(msg))
+    to_json = msg[0]["payload"]
+    # print(type(to_json))
+    # print(type(json.loads(to_json)))
+
+    # print("Testing ClientServer")
+    # clients = ClientServer()
+    # cthread = Thread(target=clients.run_forever)
+    # cthread.start()
+    # print("ClientServer up and running in thread:", cthread.name)
+    # if clients.retrieve_request() is not None:
+    #     print("surprise - client is a real thing")
+    # else:
+    #     print("nothing to process")
+    # clients.notify_commit("RID:4")
+
+    # print("testing setting up ProtocolEngine")
+
+    # PE = ProtocolEngine(pComm, bcdb, clients)
+    # PEthread = Thread(target=PE.run_forever)
+    # PEthread.start()
+    # print("Protocol Engine up and running in thread:", PEthread.name)
+
+    # pComm.join()
+    # PEthread.join()
+    # cthread.join()
 
 
 if __name__ == "__main__":

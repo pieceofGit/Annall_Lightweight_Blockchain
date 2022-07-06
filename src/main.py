@@ -1,12 +1,13 @@
+from operator import concat
 import os
 from protoengine import ProtoEngine
 import sqlite3
 import argparse
 from threading import Thread
-#comment
 from interfaces import (
     BlockChainEngine,
     ClientServer,
+    verbose_print,
 )
 import json
 from tcpserver import TCP_Server, ClientHandler
@@ -15,10 +16,15 @@ import random
 
 # should put here some elementary command line argument processing
 # EG. parameters for where the config file is, number of writers (for testing), and rounds
-DEBUG = False   # If true, adds randomization to TCP_PORT
+DEBUG = False   # If true, adds randomization to TCP_PORT == How does that make sense??
+
+# Suggest we simply define explicitly the paths
+CWD = os.getcwd()
+CONFIG_PATH = f"{CWD}/src"
+DB_PATH = f"{CWD}/src/db"
 
 # if DEBUG:
-PREPEND = "/src"
+#PREPEND = "/src"
 # else:
 #     PREPEND = ""
 if __name__ == "__main__":
@@ -38,14 +44,13 @@ if __name__ == "__main__":
     ap.add_argument("-conf", default="config-local.json", type=str, help="config file for writers")
     a = ap.parse_args()
     id = a.myID
-    print("[ID]", id)
     rounds = a.r
-    print("[ROUNDS]", rounds)
     conf_file = a.conf
+    verbose_print("[ID]", id, " [ROUNDS]", rounds, " [conf]", a.conf)
 
     # Read config and other init stuff
 
-    with open(f".{PREPEND}/{conf_file}", "r") as f:
+    with open(f"{CONFIG_PATH}/{conf_file}", "r") as f:
         data = json.load(f)
     # Start Communication Engine - maintaining the peer-to-peer network of writers
     print("::> Starting up peer-to-peer network engine with id ", id)
@@ -54,9 +59,11 @@ if __name__ == "__main__":
     pCommThread.daemon = True
     pCommThread.start()
     print("Peer-to-peer network engine up  and running as:", pComm.name)
-    # Initialize database connection
+    
+    # Initialize the local database connection
+    #   -- this is the local copy of the blockchain
     print("::> Starting up BlockChainEngine")
-    dbpath = f"{PREPEND}/db/blockchain{id}.db"
+    dbpath = f"{DB_PATH}/blockchain{id}.db"
     print("Should print here")
     print("The os ", os.getcwd())
     connection = sqlite3.connect(os.getcwd() + dbpath, check_same_thread=False)
@@ -98,6 +105,7 @@ if __name__ == "__main__":
     for i in range(data["no_active_writers"]):
         if (i + 1) != id:
             wlist.append(i)
+    print(wlist)
     PE.set_writers(wlist)
 
     PEthread = Thread(target=PE.run_forever, name="ProtocolEngine")

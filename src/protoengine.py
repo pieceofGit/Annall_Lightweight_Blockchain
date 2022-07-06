@@ -1,4 +1,4 @@
-import interfaces
+#import interfaces
 from queue import Queue
 import hashlib
 
@@ -24,6 +24,7 @@ from interfaces import (
     BlockChainEngine,
     ClientServer,
     ProtocolEngine,
+    verbose_print
 )
 
 NoneType = type(None)
@@ -272,9 +273,8 @@ class ProtoEngine(interfaces.ProtocolEngine):
         # These are the transactions the client 
         # Has sent to our writer
         queue = self.clients.payload_queue
-        if queue.empty():
-            if VERBOSE:
-                print("queue empty...")
+        if queue.empty():        
+            verbose_print("queue empty...")
             # If empty we just return anything
             return "arbitrarypayload"
         else:
@@ -461,28 +461,28 @@ class ProtoEngine(interfaces.ProtocolEngine):
         message = None
         while message is None:
             message = self._recv_msg("request", recv_from=coordinatorID)
+            verbose_print("[REQUEST MESSAGE] Received message of request for OTP from coordinator")
             time.sleep(0.01)
-        if VERBOSE:
-            print("[REQUEST MESSAGE] Received message of request for OTP from coordinator")
+        
         # Step 2 - Generate next number and transmit to Coordinator
-
         pad = self.generate_pad()
         self._send_msg(round, "reply", pad, sent_to=coordinatorID)
 
-        # Step 3 -
+        # Step 3 - Waiting for annoucement from the Coordinator
         message = None
         while message is None:
             message = self._recv_msg("announce", recv_from=coordinatorID)
             time.sleep(0.01)
         if VERBOSE:
             print("[WINNER MESSAGE] received message of winner writer from coordinator")
+        
         # Step 4 - Verify and receive new block from winner
         parsed_message = message.split("-")
         winner = ast.literal_eval(parsed_message[4])
-        # 
         verified_round = self.verify_round_winner(winner, pad)
         if VERBOSE:
             print(f"[WINNER WRITER] writer with ID {winner[2]} won the round")
+        
         if verified_round and self.ID == winner[2]:
             # I WON
             # First check if the previous round was cancelled and I had not seen the message yet
@@ -537,8 +537,8 @@ class ProtoEngine(interfaces.ProtocolEngine):
             if VERBOSE:
                 print("[ROUND CANCEL] round was cancelled because it was not verified")
             self.cancel_round("Round not verified", round)
-        if VERBOSE:
-            print(f"[LATEST BLOCK] the latest block is: {self.latest_block}")
+    
+        verbose_print(f"[LATEST BLOCK] the latest block is: {self.latest_block}")
         self.bcdb.insert_block(round, self.latest_block)
 
     def coordinator_round(self, round: int):
