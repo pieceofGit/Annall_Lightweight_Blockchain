@@ -1,6 +1,6 @@
 from PCommMsg import pMsg
 from PCommMsg import pMsgTyp
-import interfaces
+#import interfaces
 from threading import Thread
 import threading
 import socket
@@ -15,9 +15,14 @@ import random
 import struct
 import inspect
 
+from interfaces import ( 
+    ProtocolCommunication,
+    verbose_print, 
+)
 
-VERBOSE = False
-DEBUG = False
+
+VERBOSE = True
+DEBUG = True
 # **********************************
 
 # **********************************
@@ -279,9 +284,9 @@ class RemoteEnd:
         return f"<{self.rem_id}:{self.listen_address} is active: {self.is_active} {self.socket}>"
 
 
-class ProtoCom(interfaces.ProtocolCommunication):
+class ProtoCom(ProtocolCommunication):
     def __init__(self, self_id: int, conf: dict):
-        interfaces.ProtocolCommunication.__init__(
+        ProtocolCommunication.__init__(
             self, "Protocall communication")
         # set up
         self.id = self_id
@@ -303,7 +308,7 @@ class ProtoCom(interfaces.ProtocolCommunication):
         if DEBUG:
             print("[PRINTING WRITERS IN SET NO_WRITERS]", conf["active_writer_set"][0:self.num_writers])
         for writer in conf["active_writer_set"][0:self.num_writers]:
-            print("The writer set ")
+            print("The writer set ", writer["id"])
             if writer["id"] != self.id:
                 print("Inside if in 287 ")
                 self.peers[writer["id"]] = RemoteEnd(
@@ -578,9 +583,9 @@ class ProtoCom(interfaces.ProtocolCommunication):
         """ The run method. Runs until request_stop is called. """
         # TODO add some checks for time since last revieved
         while self.running:
-            # print(
-            #    ">>> running - connected peers:", self.list_connected_peers(),
-            # )
+            verbose_print(
+               ">>> running - connected peers:", self.list_connected_peers(),
+            )
             if self.rr_selector != None:
                 events = self.rr_selector.select(timeout=2)
                 for key, mask in events:
@@ -679,7 +684,7 @@ class ProtoCom(interfaces.ProtocolCommunication):
             return rl
 
 
-def main_1():
+def test_protocom_1():
     r"""
     In order to test this. Run in two different consoles
     cd C:\Users\thors\Documents\GitHub\Lightweight-Blockchain
@@ -700,37 +705,19 @@ def main_1():
     # print(sys.argv[0], "config: ", a.configfile, "MyID:", a.myID)
     print()
 
-    # read_data = a.configfile.read()
-    # test_data = json.loads(read_data)
-
-    # secret used to verify when connecting
-    # test_conf = {"active_writer_set": {}, "secret": "42"}
-    # test_conf["active_writer_set"][0] = {"ip": "127.0.0.1", "port": 15000}
-    # test_conf["active_writer_set"][1] = {"ip": "127.0.0.1", "port": 15001}
-    # test_conf["active_writer_set"][2] = {"ip": "127.0.0.1", "port": 15002}
-    # test_conf["active_writer_set"][3] = {"ip": "127.0.0.1", "port": 15003}
-    # test_conf["active_writer_set"][4] = {"ip": "127.0.0.1", "port": 15004}
-
     # using
-    with open("config.json", "r") as f:
+    with open("./src/config-l2.json", "r") as f:
         test_conf = json.load(f)
 
     print(repr(test_conf["active_writer_set"]))
     num_writers = len(test_conf["active_writer_set"])
     pc = ProtoCom(a.me, test_conf)
-
-    # time.sleep(2 + random.random() * 2)
-
     pc.start()
-    # make the thread do something in a loop
-    i = 0
-    time_to_connect = 60
-    while pc.num_connection() < 1 and i < time_to_connect:
-        time.sleep(1)
-        i += 1
-
-    # return
-
+    
+    input("Connectivity test. Hit any key to progress")
+    
+    print("Testing some elementary send and recieve")
+    
     time.sleep(2)
     success_msg = 0
     success_send = 0
@@ -758,9 +745,8 @@ def main_1():
     print(linebreak)
     pc.request_stop()
     pc.join()
-    del pc
-    input()
+    input("Message exchange done. Hit any key to progress")
 
 
 if __name__ == "__main__":
-    main_1()
+    test_protocom_1()
