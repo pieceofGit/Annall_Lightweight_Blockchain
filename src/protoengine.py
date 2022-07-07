@@ -21,12 +21,14 @@ from tcpserver import TCP_Server, ClientHandler
 
 from interfaces import (
     ProtocolCommunication,
-    BlockChainEngine,
+
     ClientServer,
     ProtocolEngine,
     verbose_print,
     vverbose_print,
 )
+
+from blockchainDB import BlockchainDB
 
 NoneType = type(None)
 
@@ -142,8 +144,9 @@ class ProtoEngine(ProtocolEngine):
         self,
         keys: tuple,
         comm: ProtocolCommunication,
-        blockchain: BlockChainEngine,
+        blockchain: interfaces.BlockChainEngine,
         clients: ClientServer,
+        
     ):  # what are the natural arguments
         assert isinstance(keys, tuple)
         assert len(keys) == 3
@@ -701,17 +704,18 @@ def test_engine(id: int, rounds: int, no_writers: int):
     with open("./src/config-l2.json", "r") as f:
         data = json.load(f)
 
-    # sqlite db connection
+
+    # bce, blockchain writer to db
+    CWD = os.getcwd()
     dbpath = f"/src/db/blockchain{id}.db"
-    connection = sqlite3.connect(os.getcwd() + dbpath, check_same_thread=False)
+    dbpath = CWD + dbpath
+    print(f"[DIRECTORY PATH] {dbpath}")
+    bce = BlockchainDB(dbpath)
 
     # p2p network
     pcomm = ProtoCom(id, data)
     pcomm.daemon = True
     pcomm.start()
-
-    # bce, blockchain writer to db
-    bce = BlockChainEngine(connection)
 
     # client server thread
     if id == 1:

@@ -5,13 +5,14 @@ import sqlite3
 import argparse
 from threading import Thread
 from interfaces import (
-    BlockChainEngine,
-    ClientServer,
+    #BlockChainEngine,
+    #ClientServer,
     verbose_print,
 )
 import json
 from tcpserver import TCP_Server, ClientHandler
 from protocom import ProtoCom
+from blockchainDB import BlockchainDB
 import random
 
 # should put here some elementary command line argument processing
@@ -49,33 +50,30 @@ if __name__ == "__main__":
     verbose_print("[ID]", id, " [ROUNDS]", rounds, " [conf]", a.conf)
 
     # Read config and other init stuff
-
     with open(f"{CONFIG_PATH}/{conf_file}", "r") as f:
         data = json.load(f)
+    
     # Start Communication Engine - maintaining the peer-to-peer network of writers
     print("::> Starting up peer-to-peer network engine with id ", id)
     pComm = ProtoCom(id, data)
-    pCommThread = Thread(target=pComm.run, name="ProtoComThread")   # NOT IN ORIGINAL CODE
-    pCommThread.daemon = True
-    pCommThread.start()
+    #pCommThread = Thread(target=pComm.run, name="ProtoComThread")   # NOT IN ORIGINAL CODE
+    #pCommThread.daemon = True
+    #pCommThread.start()
+    pComm.daemon = True
+    pComm.start()
     print("Peer-to-peer network engine up  and running as:", pComm.name)
     
     # Initialize the local database connection
     #   -- this is the local copy of the blockchain
-    print("::> Starting up BlockChainEngine")
     dbpath = f"{DB_PATH}/blockchain{id}.db"
-    print("Should print here")
-    print("The os ", os.getcwd())
-    connection = sqlite3.connect(dbpath, check_same_thread=False)
-    print(connection)
-    print(f"[DIRECTORY PATH] in main, path to db: {dbpath}")
-    bce = BlockChainEngine(connection)
-
-    print("running")
+    print("::> Starting up Blockchain DB = using ", dbpath)
+    bce = BlockchainDB(dbpath)
+    print("    Local block chain database successfully initialized")
+    verbose_print("   ", bce)
+ 
+ 
     # Start tcp_server thread for client requests
     # Since it selects a port on the computer, with a hard-coded TCP port, it can only start one 
-
-
     # if id == 1 or id == 2 or id == 3:
     print("THE ID IS 1. THE ID: ", id)
     # See config.json for active_writer_set
