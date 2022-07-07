@@ -141,6 +141,7 @@ class ProtoEngine(ProtocolEngine):
 
     def __init__(
         self,
+        id: int, 
         keys: tuple,
         comm: ProtocolCommunication,
         blockchain: interfaces.BlockChainEngine,
@@ -150,18 +151,24 @@ class ProtoEngine(ProtocolEngine):
         assert isinstance(keys, tuple)
         assert len(keys) == 3
         # The interface initiates the following attributes
-        ProtocolEngine.__init__(self, comm, blockchain, clients)
+        ProtocolEngine.__init__(self, id, comm, blockchain, clients)
 
+        self.ID = id
         self.keys = keys
 
-        self.clients = clients
-
         self.writer_list = []  # list of writer ID's
-        self.max_writers = 4
+        #self.max_writers = 4
+        
         # Defining e
         self.modulus = 65537
-        # The id of us the writer
-        self.ID = None
+        # For how many rounds the blockchain should run for
+        self.rounds = None
+        # Comes from the original config file (config.json) 
+        self.conf = None
+        
+        # Messages in our writer's queue
+        self.message_queue = Queue()
+        
 
         # The first block
         # TODO: Cannot have a genesis block be created on init. What if the chain already exists
@@ -170,14 +177,9 @@ class ProtoEngine(ProtocolEngine):
         genesis_block = ("0", 0, 0, json.dumps({"type": "genesis block"}), 0, "0", self.get_timestamp(), "0")
         # The latest block to be minted
         self.latest_block = genesis_block
-        # Messages in our writer's queue
-        self.message_queue = Queue()
         # Blockhain database: the blockchain engine
         self.bcdb.insert_block(0, genesis_block)
-        # For how many rounds the blockchain should run for
-        self.rounds = None
-        # Comes from the original config file (config.json) 
-        self.conf = None
+
         # maintain a payload
         self.stashed_payload = None
 
@@ -204,9 +206,9 @@ class ProtoEngine(ProtocolEngine):
         signature = pow(D, d, N)
         return hex(signature % N)
 
-    def set_ID(self, id: int):
-        assert isinstance(id, int)
-        self.ID = id
+    #def set_ID(self, id: int):
+    #    assert isinstance(id, int)
+    #    self.ID = id
 
     def set_writers(self, writers: list):
         for w in writers:
@@ -610,7 +612,7 @@ class ProtoEngine(ProtocolEngine):
     def run_forever(self):
         """
         """
-        # Expects all writers to join. Program does not start until writers with ID 1-5 are all connected
+        # Expects all writers to join. Program does not start until all writers are all connected
         self.join_writer_set()
         print("[ALL JOINED] all writers have joined the writer set")
         count = 1
@@ -732,8 +734,7 @@ def test_engine(id: int, rounds: int, no_writers: int):
     keys = data["active_writer_set"][id - 1]["priv_key"]
 
     # run the protocol engine, with all the stuff
-    w = ProtoEngine(tuple(keys), pcomm, bce, clients,)
-    w.set_ID(id)
+    w = ProtoEngine(id, tuple(keys), pcomm, bce, clients,)
     w.set_rounds(rounds)
     w.set_conf(data)
 
@@ -742,7 +743,7 @@ def test_engine(id: int, rounds: int, no_writers: int):
         if (i + 1) != id:
             wlist.append(i + 1)
     w.set_writers(wlist)
-    w.run_forever()
+    w.start
     time.sleep(id)
     global_list.append(w.bcdb.read_blocks(0, 10))
 

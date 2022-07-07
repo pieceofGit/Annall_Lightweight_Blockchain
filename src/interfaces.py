@@ -27,11 +27,16 @@ def method_name():
 
 
 class ProtocolCommunication(Thread):
-    """ Communicaiton module - responsible for all comm related to the consensus protocol
+    """ Communicaiton module - responsible for: 
+        a) Establishing and maintaining p2p network
+        b) All comm related to the consensus protocol
+        
+        Simple API, send and receive, point-to-point or multi
+        
         Implementation should redefine these functions, but honor the semantics
-    
+
         Semantics:
-            if not thre
+            --- perhaps elaborate
     """
 
     def __init__(self, name: str):  # what are the natural arguments
@@ -44,14 +49,6 @@ class ProtocolCommunication(Thread):
         # Accepts a message to be sent to "sent_to". If None, then broadcast to all
         # Takes responsibility for delivering the message.
         # Does not block? if so need a way to report the failure to the sender
-        pass
-
-    def recv_msg(self, recv_from=None):
-        # # receives a message from "recv_from". If None from all
-        # possible semantics: request to receive the next message from "recv_from"
-        #
-        # Need to decide - when is the message received - if from all
-        # If does not block, how to communicate when a message is available
         """ Accepts a message to be sent to "sent_to". If None, then broadcast to all
         Takes responsibility for delivering the message.
         Does not block? if so need a way to report the failure to the sender 
@@ -64,6 +61,15 @@ class ProtocolCommunication(Thread):
             no return value. 
             Exception if ...
         """
+        pass
+
+    def recv_msg(self, recv_from=None):
+        # # receives a message from "recv_from". If None from all
+        # possible semantics: request to receive the next message from "recv_from"
+        #
+        # Need to decide - when is the message received - if from all
+        # If does not block, how to communicate when a message is available
+
         # pass
 
         # def recv_msg(recv_from=None):
