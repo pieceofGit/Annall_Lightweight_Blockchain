@@ -613,25 +613,20 @@ class ProtoEngine(ProtocolEngine):
         """
         """
         # Expects all writers to join. Program does not start until all writers are all connected
+        # TODO: Define a Quorate set, cannot insist on all writers being present
+        #       Note: most likely need a consensus on which writers are present
         self.join_writer_set()
         print("[ALL JOINED] all writers have joined the writer set")
         count = 1
         while True:
             coordinator = self.get_coordinatorID(count)
-            if VERBOSE:
-                print(f"CordinatorId: {coordinator}")
+            verbose_print(f"ID: {self.ID}, CordinatorId: {coordinator}", coordinator == self.ID)
             if coordinator == self.ID:
                 self.coordinator_round(count)
-                if VERBOSE:
-                    print("after coordinator")
             else:
-                if VERBOSE:
-                    print("before writer_round")
                 self.writer_round(count, coordinator)
-                if VERBOSE:
-                    print("after writer_round")
-            if VERBOSE:
-                print(f"[ROUND COMPLETE] round {count} finished with writer with ID {coordinator} as  the coordinator")
+
+            vverbose_print(f"[ROUND COMPLETE] round {count} finished with writer with ID {coordinator} as  the coordinator")
             count += 1
             if count > self.rounds and self.rounds:
                 break   # Stops the program
@@ -743,7 +738,7 @@ def test_engine(id: int, rounds: int, no_writers: int):
         if (i + 1) != id:
             wlist.append(i + 1)
     w.set_writers(wlist)
-    w.start
+    w.run_forever()
     time.sleep(id)
     global_list.append(w.bcdb.read_blocks(0, 10))
 

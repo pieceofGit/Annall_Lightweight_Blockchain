@@ -177,6 +177,7 @@ class ProtocolEngine:
 
     def __init__(
         self,
+        id : int,
         comm: ProtocolCommunication,
         blockchain: BlockChainEngine,
         clients: ClientServer,
@@ -184,9 +185,11 @@ class ProtocolEngine:
         """ Constructor - 
             Depends on service classes, for a) communication, b) blockchain, and c) client requests
         """
+        assert isinstance(id, int)
         assert isinstance(comm, ProtocolCommunication)
         assert isinstance(blockchain, BlockChainEngine)
         assert isinstance(clients, ClientServer)
+        self.ID = id
         self.comm = comm
         self.bcdb = blockchain
         self.clients = clients

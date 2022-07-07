@@ -280,9 +280,9 @@ class RemoteEnd:
 
 
 class ProtoCom(ProtocolCommunication):
-    def __init__(self, self_id: int, conf: dict):
+    def __init__(self, self_id: int, conf: dict, name: str = "Protocall communication" ):
         ProtocolCommunication.__init__(
-            self, "Protocall communication")
+            self, name)
         # set up
         self.id = self_id
         self.conf = conf

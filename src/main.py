@@ -1,33 +1,31 @@
 from operator import concat
 import os
-from protoengine import ProtoEngine
-import sqlite3
 import argparse
 from threading import Thread
+import json
+import random
+
+## Own modules imported
+from protoengine import ProtoEngine
 from interfaces import (
     #BlockChainEngine,
     #ClientServer,
     verbose_print,
 )
-import json
 from tcpserver import TCP_Server, ClientHandler
 from protocom import ProtoCom
 from blockchainDB import BlockchainDB
-import random
+
 
 # should put here some elementary command line argument processing
 # EG. parameters for where the config file is, number of writers (for testing), and rounds
 DEBUG = False   # If true, adds randomization to TCP_PORT == How does that make sense??
 
-# Suggest we simply define explicitly the paths
+# Define explicitly the paths
 CWD = os.getcwd()
 CONFIG_PATH = f"{CWD}/src"
 DB_PATH = f"{CWD}/src/db"
 
-# if DEBUG:
-#PREPEND = "/src"
-# else:
-#     PREPEND = ""
 if __name__ == "__main__":
     print("MAIN STARTED")
     ap = argparse.ArgumentParser()
@@ -91,14 +89,16 @@ if __name__ == "__main__":
     cthread.daemon = True
     cthread.start()
     print("ClientServer up and running as:", cthread.name)
+    
     # Start protocol engine
     print("::> Starting up BlockChainEngine")
     keys = data["active_writer_set"][id - 1]["priv_key"]
-    PE = ProtoEngine(tuple(keys), pComm, bce, clients)
-    PE.set_ID(id)
+    PE = ProtoEngine(id, tuple(keys), pComm, bce, clients)
     PE.set_rounds(rounds)
     PE.set_conf(data)
+
     # Writers set to wait for connecting to until rounds start
+    ## TODO: What is the point of this?
     wlist = []
     for i in range(data["no_active_writers"]):
         if (i + 1) != id:
