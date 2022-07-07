@@ -21,7 +21,6 @@ from tcpserver import TCP_Server, ClientHandler
 
 from interfaces import (
     ProtocolCommunication,
-
     ClientServer,
     ProtocolEngine,
     verbose_print,
@@ -146,7 +145,7 @@ class ProtoEngine(ProtocolEngine):
         comm: ProtocolCommunication,
         blockchain: interfaces.BlockChainEngine,
         clients: ClientServer,
-        
+
     ):  # what are the natural arguments
         assert isinstance(keys, tuple)
         assert len(keys) == 3
