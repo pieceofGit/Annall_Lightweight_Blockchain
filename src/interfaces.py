@@ -3,10 +3,9 @@
 
 from threading import Thread, ThreadError
 import inspect
-import time
 import json
 
-__test_interfaces = False
+#__test_interfaces = True
 NoneType = type(None)
 
 verbose = True
@@ -82,105 +81,51 @@ class BlockChainEngine:
     """ The Database engine operating the raw blockchain
         Only the protocol engine can add to the chain
         More entities probably need read access.
+
+        loal_name = is nema of the file on the local file system (full path) 
+                    The special path name ":memory:" can be provided to connect to a transient in-memory database:
     """
 
-    def __init__(self, dbconnection):
-        ## Missing conditionals and exceptions
-        assert dbconnection is not None
-        self.connection = dbconnection
-        self.create_table()
-        self.length = 0
-        print("DB connection established")
+    # def __init__(self, dbconnection):
+        ## initializing the database connection
+    #    assert dbconnection is not None
+    #    self.connection = dbconnection
+    #    self.create_table()
+    #    self.length = 0
+    #    print("DB connection established")
+
+    def __init__(self, db_path : str = ":memory:"):
+        pass
 
     def __del__(self):
-        # Missing conditionals and exceptions
-        self.connection.commit()    # flushes transactions to disk
-        self.connection.close()  # perhaps this should be out of the class
-        print("DB closed")
+        # shutting down the database
+        pass
 
     def create_table(self):
-
-        drop_chain_table = """DROP TABLE IF EXISTS chain
-        """
-
-        create_chain_table = """CREATE TABLE IF NOT EXISTS chain (
-            round integer PRIMARY KEY,
-            prevHash string NOT NULL,
-            writerID integer NOT NULL,
-            coordinatorID integer NOT NULL,
-            payload string,
-            winningNumber integer NOT NULL,
-            writerSignature string NOT NULL,
-            timestamp integer NOT NULL,
-            hash string NOT NULL
-        );"""
-
-        try:
-            cursor = self.connection.cursor()
-            cursor.execute(drop_chain_table)
-            cursor.execute(create_chain_table)
-            self.connection.commit()
-        except Exception as e:
-            print("Error creating chain table")
-            print(e)
+        pass
 
     def insert_block(
         self, block_id, block, overwrite=False
     ):  # needs defnintion of a block if to be used
-        assert isinstance(block_id, int)    # The round
-        assert isinstance(block[0], str)    # prevHash
-        assert isinstance(block[1], int)    # writerID
-        assert isinstance(block[2], int)    # coordinatorID
-        assert isinstance(block[3], str)    # payload
-        assert isinstance(block[4], int)    # winningNumber
-        assert isinstance(block[5], str)    # writerSignature
-        assert isinstance(block[6], int)    # timestamp
-        assert isinstance(block[7], str)    # hash
-        print(f"[ARBITRARY PAYLOAD] {block[3]}")
-        if block[3] == "arbitrarypayload":  # Do not write into chain if empty message
-            print("[ARBITRARY PAYLOAD TRUE]")
-            return
-        print(f"[CREATE BLOCK] added block with block id {block_id} and block {block}")
-        # insertion = f'INSERT INTO chain(round,prevHash,writerID,coordinatorID,payload,winningNumber,writerSignature,hash) VALUES({self.length},"{block[0]}",{block[1]},{block[2]},"{block[3]}",{block[4]},"{block[5]}","{block[6]}");'
-        try:
-            cursor = self.connection.cursor()
-            if overwrite:
-                cursor.execute(f"DELETE FROM chain WHERE round == {block_id}")
-            # cursor.execute(insertion)
-            cursor.execute("insert into chain values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [self.length, block[0], block[1], block[2], block[3], block[4], block[5], block[6], block[7]]
-            )
-            self.connection.commit()
-            if not overwrite:   # Keep record of length for arbitrarypaylaod rounds
-                self.length += 1
-            
-        except Exception as e:
-            print("Error inserting block to chain db")
-            print(e)
+        # assert isinstance(block_id, int)    # The round
+        # assert isinstance(block[0], str)    # prevHash
+        # assert isinstance(block[1], int)    # writerID
+        # assert isinstance(block[2], int)    # coordinatorID
+        # assert isinstance(block[3], str)    # payload
+        # assert isinstance(block[4], int)    # winningNumber
+        # assert isinstance(block[5], str)    # writerSignature
+        # assert isinstance(block[6], int)    # timestamp
+        # assert isinstance(block[7], str)    # hash
+
+        print(method_name(), " not implemented")
+    
 
     def select_entry(self, condition: str, col: str = "*"):
         """ Retrieve block with specific condition
         """
-        assert isinstance(condition, str)
-        query = f"SELECT {col} FROM chain WHERE {condition}"
-        try:
-            cursor = self.connection.cursor()
-            retrived = cursor.execute(query)
-        except Exception as e:
-            print("Error retriving blocks from db")
-            print(e)
-        return retrived.fetchall()
-
-    def dict_factory(self, cursor, row):
-        d = {}
-        for idx, col in enumerate(cursor.description):
-            if col[0] == "payload" and row[idx] != "genesis block": 
-                print(row, idx)
-                print("[JSON THE PAYLOAD] ", row[idx])
-                d[col[0]] = json.loads(row[idx])    # Loads payload dict to json 
-            else: 
-                d[col[0]] = row[idx]
-        return d
+        # assert isinstance(condition, str)
+        # query = f"SELECT {col} FROM chain WHERE {condition}"
+        pass
 
     def read_blocks(self, begin, end=None, col="*", getLastRow=False, read_entire_chain=False):
         """ Retrieve blocks with from and including start to end
@@ -190,32 +135,9 @@ class BlockChainEngine:
             What if none satisfies?
             What type of exceptions
         """
-        assert isinstance(begin, int)
-        assert isinstance(end, (int, NoneType))
-
-        print(f"[GET LAST ROW] {getLastRow}")
-        print(f"[READ ENTIRE CHAIN] {read_entire_chain}")
-        if getLastRow:  # If discrepancy between round and length of list because of arbitrarypayload
-            query = f"SELECT {col} FROM chain WHERE round >= {self.length - 1} ORDER BY round"
-        elif read_entire_chain:   # Returns a list of tuples for each transaction
-            query = f"SELECT * FROM chain WHERE round >= {0} ORDER BY round"
-        elif end is None:
-            query = f"SELECT {col} FROM chain WHERE round >= {begin} ORDER BY round"
-        else:
-            query = f"SELECT {col} FROM chain WHERE round >= {begin} AND round <= {end} ORDER BY round"
-        try: 
-            if read_entire_chain:     # Get back list of dictionary object for each block
-                self.connection.row_factory = self.dict_factory  
-            else:   # Send back list of tuples
-                self.connection.row_factory = None
-            cursor = self.connection.cursor()
-            retrieved = cursor.execute(query)
-        except Exception as e:
-            print("Error retrieving blocks from db")
-            print(e)
-        to_return = retrieved.fetchall()
-        print(f"[RETURN FROM READ BLOCKS] {to_return}")
-        return to_return
+        #assert isinstance(begin, int)
+        #assert isinstance(end, (int, NoneType))
+        pass
 
 
 class ClientServer:
@@ -276,7 +198,7 @@ class ProtocolEngine:
 
 
 # ## what follows does not belong here, is prototyping and testcode
-if __test_interfaces:
+def __test_interfaces():
     """ test code here
     """
     print("Elementary Testing of Interfaces")
@@ -308,6 +230,7 @@ if __test_interfaces:
     bcdb.insert_block(3, the_block)
     msg = bcdb.read_blocks(0, 4)
     print(f"[MESSAGE READ BLOCKS 1-4] The message: {msg}")
+    # import time
     # time.sleep(100)
     msg = bcdb.read_blocks(0, read_entire_chain=True)
     print("READING ENTIRE BLOCKCHAIN", msg, type(msg))
@@ -315,29 +238,31 @@ if __test_interfaces:
     # print(type(to_json))
     # print(type(json.loads(to_json)))
 
-    # print("Testing ClientServer")
-    # clients = ClientServer()
-    # cthread = Thread(target=clients.run_forever)
-    # cthread.start()
-    # print("ClientServer up and running in thread:", cthread.name)
-    # if clients.retrieve_request() is not None:
-    #     print("surprise - client is a real thing")
-    # else:
-    #     print("nothing to process")
-    # clients.notify_commit("RID:4")
+    print("Testing ClientServer")
+    clients = ClientServer()
+    cthread = Thread(target=clients.run_forever)
+    cthread.start()
+    print("ClientServer up and running in thread:", cthread.name)
+    if clients.retrieve_request() is not None:
+        print("surprise - client is a real thing")
+    else:
+        print("nothing to process")
+    clients.notify_commit("RID:4")
 
-    # print("testing setting up ProtocolEngine")
+    print("testing setting up ProtocolEngine")
 
-    # PE = ProtocolEngine(pComm, bcdb, clients)
-    # PEthread = Thread(target=PE.run_forever)
-    # PEthread.start()
-    # print("Protocol Engine up and running in thread:", PEthread.name)
+    PE = ProtocolEngine(pComm, bcdb, clients)
+    PEthread = Thread(target=PE.run_forever)
+    PEthread.start()
+    print("Protocol Engine up and running in thread:", PEthread.name)
 
-    # pComm.join()
-    # PEthread.join()
-    # cthread.join()
+    pComm.join()
+    PEthread.join()
+    cthread.join()
 
 
 if __name__ == "__main__":
 
     print("Main: Interfaces")
+    __test_interfaces()
+

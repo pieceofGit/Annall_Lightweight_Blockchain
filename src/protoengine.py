@@ -1,4 +1,4 @@
-#import interfaces
+import interfaces
 from queue import Queue
 import hashlib
 
@@ -21,11 +21,14 @@ from tcpserver import TCP_Server, ClientHandler
 
 from interfaces import (
     ProtocolCommunication,
-    BlockChainEngine,
+
     ClientServer,
     ProtocolEngine,
-    verbose_print
+    verbose_print,
+    vverbose_print,
 )
+
+from blockchainDB import BlockchainDB
 
 NoneType = type(None)
 
@@ -141,8 +144,9 @@ class ProtoEngine(ProtocolEngine):
         self,
         keys: tuple,
         comm: ProtocolCommunication,
-        blockchain: BlockChainEngine,
+        blockchain: interfaces.BlockChainEngine,
         clients: ClientServer,
+        
     ):  # what are the natural arguments
         assert isinstance(keys, tuple)
         assert len(keys) == 3
@@ -159,7 +163,11 @@ class ProtoEngine(ProtocolEngine):
         self.modulus = 65537
         # The id of us the writer
         self.ID = None
+
         # The first block
+        # TODO: Cannot have a genesis block be created on init. What if the chain already exists
+        #       Should really have the genesys block record something relevant to this paricular blockchain, e.g.
+        #       Name, owners, purpose etc.
         genesis_block = ("0", 0, 0, json.dumps({"type": "genesis block"}), 0, "0", self.get_timestamp(), "0")
         # The latest block to be minted
         self.latest_block = genesis_block
@@ -279,9 +287,7 @@ class ProtoEngine(ProtocolEngine):
             return "arbitrarypayload"
         else:
             payload = queue.get()
-            if VERBOSE:
-                print(f"INSERTING PAYLOAD TO CHAIN")
-                print(payload)
+            verbose_print(f"INSERTING PAYLOAD TO CHAIN \n", payload)
             self.stashed_payload = payload
             return payload[1]
         # else:
@@ -294,13 +300,12 @@ class ProtoEngine(ProtocolEngine):
         #     else:
         #         return "arbitrarypayload"
 
-    def get_coordinatorID(self, round: int):
+    def get_coordinatorID(self, round: int):  # TODO: See comments below
         """Decides the coordinator for the round
         """
         assert isinstance(round, int)
-        # 8 - 1 % (3+1) 
-        # 7 % 4 = 3
-        # 8 
+        ## NOT SURE WHY THIS IS HERE:  8 - 1 % (3+1) # 7 % 4 = 3
+        ## TODO not clear if this really works, e.g. in the case if some node dies, or if the set of writers changes
         coordinator = (round - 1) % (len(self.writer_list) + 1)
         return coordinator + 1
 
@@ -331,6 +336,8 @@ class ProtoEngine(ProtocolEngine):
         """Bootstrap to the writerset, using comm module
         """
         # TODO: Where is the self.writer_list instantiated?
+        # in __init__ it is set to []
+        ## TODO: More suspicious is, this seems to block if any of the writers is not connected.
         while len(self.comm.list_connected_peers()) != len(self.writer_list):
             time.sleep(1)
         print(f"ID={self.ID} -> connected and ready to build")
@@ -352,13 +359,12 @@ class ProtoEngine(ProtocolEngine):
         prev_hash = str(prev_hash)
         # Returns payload of writer or arbitrary string if there is no payload
         payload = self.get_payload()
-        if VERBOSE:
-            print(f"[PAYLOAD] the payload is: {payload} from the TCP server payload_queue")
+        verbose_print(f"[PAYLOAD] the payload is: {payload} from the TCP server payload_queue")
         signature = self.sign_payload(payload)
         winning_number = pad
         coordinatorID = coordinatorID
         writerID = self.ID
-        timestamp = self.get_timestamp()
+        timestamp = self.get_timestamp() ### hmmmm
 
 
         block = (
@@ -385,25 +391,13 @@ class ProtoEngine(ProtocolEngine):
             hash,
         )
 
-        """if self.ID == 2:
-            block = (
-                prev_hash,
-                writerID,
-                coordinatorID,
-                "wrongpayload",
-                winning_number,
-                signature,
-                timestamp,
-                hash,
-            )"""
-
+        ## TODO: Gisli: What is this, and why is it needed?
         if self.stashed_payload is not None:
             if VERBOSE:
                 print("ADDING PAYLOAD TO CONFIRM QUEUE")
             confirm_payload = (self.stashed_payload[0], self.stashed_payload[1], hash)
             self.clients.confirm_queue.put(confirm_payload)
-            if VERBOSE:
-                print("PAYLOAD CONFIRMATION SENT")
+            verbose_print("PAYLOAD CONFIRMATION SENT")
             self.stashed_payload = None
         if VERBOSE:
             print("[BLOCK] ", block)
@@ -498,25 +492,20 @@ class ProtoEngine(ProtocolEngine):
             while message is None:
                 message = self._recv_msg(type="block", recv_from=winner[2], round=round)
                 time.sleep(0.01)
-            if VERBOSE:
-                print(f"[NEW BLOCK VERIFICATION] {message}")
+            vverbose_print(f"[NEW BLOCK VERIFICATION] {message}")
+           
             parsed_message = message.split("-")
-            if VERBOSE:
-                print(f"[PARSED MESSAGE] {parsed_message}")
+            vverbose_print(f"[PARSED MESSAGE] {parsed_message}")
             block = ast.literal_eval(parsed_message[4]) # The block 
 
             if not self.verify_block(block):
                 self.cancel_round("Block not correct", round)
-                if VERBOSE:
-                    print(block)
-                    print("ERROR, BLOCK NOT CORRECT")
+                verbose_print("ERROR, BLOCK NOT CORRECT \n", block)
             else:
-
                 # Check if cancelled round
                 message = self._recv_msg(type="cancel")
                 if message is not None:
-                    if VERBOSE:
-                        print("[ROUND CANCEL] the round was cancelled because of cancel message")
+                    verbose_print("[ROUND CANCEL] the round was cancelled because of cancel message")
                     parsed_message = message.split("-")
                     cancel_block = self.create_cancel_block(message)
                     # If the block belongs to this round we continue
@@ -528,14 +517,14 @@ class ProtoEngine(ProtocolEngine):
                     else:
                         # The block does not belong to this round
                         # We assign the latest round as a cancel block
+                        verbose_print("[SURPRISE ISNT IT] a previous round was cancelled because of cancel message\n", parsed_message)
                         self.latest_block = cancel_block
                 else:
                     self.latest_block = block
         else:
             # Round is not verified
             # Cancel the round
-            if VERBOSE:
-                print("[ROUND CANCEL] round was cancelled because it was not verified")
+            verbose_print("[ROUND CANCEL] round was cancelled because it was not verified")
             self.cancel_round("Round not verified", round)
     
         verbose_print(f"[LATEST BLOCK] the latest block is: {self.latest_block}")
@@ -712,20 +701,21 @@ def verify_chain(chain):
 
 
 def test_engine(id: int, rounds: int, no_writers: int):
-    with open("./src/config.json", "r") as f:
+    with open("./src/config-l2.json", "r") as f:
         data = json.load(f)
 
-    # sqlite db connection
+
+    # bce, blockchain writer to db
+    CWD = os.getcwd()
     dbpath = f"/src/db/blockchain{id}.db"
-    connection = sqlite3.connect(os.getcwd() + dbpath, check_same_thread=False)
+    dbpath = CWD + dbpath
+    print(f"[DIRECTORY PATH] {dbpath}")
+    bce = BlockchainDB(dbpath)
 
     # p2p network
     pcomm = ProtoCom(id, data)
     pcomm.daemon = True
     pcomm.start()
-
-    # bce, blockchain writer to db
-    bce = BlockChainEngine(connection)
 
     # client server thread
     if id == 1:
