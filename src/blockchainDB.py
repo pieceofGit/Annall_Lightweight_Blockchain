@@ -112,8 +112,8 @@ class BlockchainDB(interfaces.BlockChainEngine):
                 try:
                     d[col[0]] = json.loads(row[idx])    # Loads payload dict to json if json
                 except:
-                    d[col[0]] = row[idx]    
-            else: 
+                    d[col[0]] = row[idx]
+            else:
                 d[col[0]] = row[idx]
         return d
 

@@ -391,17 +391,6 @@ class ProtoEngine(ProtocolEngine):
             timestamp,
             hash,
         )
-
-        ## TODO: Gisli: What is this, and why is it needed?
-        if self.stashed_payload is not None:
-            if VERBOSE:
-                print("ADDING PAYLOAD TO CONFIRM QUEUE")
-            confirm_payload = (self.stashed_payload[0], self.stashed_payload[1], hash)
-            self.clients.confirm_queue.put(confirm_payload)
-            verbose_print("PAYLOAD CONFIRMATION SENT")
-            self.stashed_payload = None
-        if VERBOSE:
-            print("[BLOCK] ", block)
         return block
 
     def create_cancel_block(self, message: str):

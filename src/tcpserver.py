@@ -25,7 +25,7 @@ VERBOSE = False
 class ClientHandler(threading.Thread):
     # noinspection PyPep8Naming
     def __init__(
-        self, connection, payload_q, confirm_q, bcdb, name=None, payload_id=None,
+        self, connection, payload_q, bcdb, name=None, payload_id=None,
     ):
         threading.Thread.__init__(self)
         assert not connection is None
@@ -38,7 +38,6 @@ class ClientHandler(threading.Thread):
         self.delay = 0.1
         self.terminate = False
         self.payload_queue = payload_q
-        self.confirm_queue = confirm_q
         self.bcdb = bcdb
 
     def check_existence(self, hash: str, payload: str):
@@ -209,7 +208,6 @@ class TCP_Server(ClientServer):
         self.max_listeners = max_listeners
         self.threads = []
         self.payload_queue = Queue()
-        self.confirm_queue = Queue()
         self.bcdb = bcdb
 
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -266,7 +264,6 @@ class TCP_Server(ClientServer):
             thread = self.RequestHandlerClass(
                 connection,
                 self.payload_queue,
-                self.confirm_queue,
                 self.bcdb,
                 name=None,
             )

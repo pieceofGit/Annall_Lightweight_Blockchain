@@ -22,8 +22,12 @@ from blockchainDB import BlockchainDB
 # Define explicitly the paths
 CWD = os.getcwd()
 CONFIG_PATH = f"{CWD}/src"
-DB_PATH = f"{CWD}/src/db"
-LOCAL = True    # If True, use local file for private key. 
+LOCAL = True    # If True, use local file for private key and separate databases
+if LOCAL:
+    DB_PATH = f"{CWD}/src"
+else:
+    DB_PATH = f"{CWD}/src/db"
+
 PRIV_KEY_PATH = f"{CWD}/src"
 if __name__ == "__main__":
     print("MAIN STARTED")
@@ -64,7 +68,7 @@ if __name__ == "__main__":
     
     # Initialize the local database connection
     #   -- this is the local copy of the blockchain
-    dbpath = f"{DB_PATH}/blockchain{id}.db"
+    dbpath = f"{DB_PATH}/test_node_{id}/blockchain.db"
     print("::> Starting up Blockchain DB = using ", dbpath)
     bce = BlockchainDB(dbpath)
     print("    Local block chain database successfully initialized")

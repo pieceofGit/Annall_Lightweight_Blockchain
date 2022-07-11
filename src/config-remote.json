@@ -3,6 +3,7 @@
   "no_permitted_writers": 2,
   "writer_set": [
     {
+      "name": "writer_1",
       "id": 1,
       "hostname": "176.58.116.107",
       "protocol_port": 15000,
@@ -15,6 +16,7 @@
       ]
     },
     {
+      "name": "writer_2",
       "id": 2,
       "hostname": "172.104.152.13",
       "protocol_port": 15001,
