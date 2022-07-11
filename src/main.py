@@ -54,9 +54,6 @@ if __name__ == "__main__":
     # Start Communication Engine - maintaining the peer-to-peer network of writers
     print("::> Starting up peer-to-peer network engine with id ", id)
     pComm = ProtoCom(id, data)
-    #pCommThread = Thread(target=pComm.run, name="ProtoComThread")   # NOT IN ORIGINAL CODE
-    #pCommThread.daemon = True
-    #pCommThread.start()
     pComm.daemon = True
     pComm.start()
     print("Peer-to-peer network engine up  and running as:", pComm.name)
@@ -82,7 +79,7 @@ if __name__ == "__main__":
     print(F"TCP PORT: {TCP_PORT}")
     print("::> Starting up ClientServer thread")
     # TCPServer: name, IPv4_addr, port, RequestHandlerClass, bcdb,
-    clients = TCP_Server("the server", TCP_IP, TCP_PORT, ClientHandler, bce)
+    clients = TCP_Server("the server", TCP_IP, TCP_PORT, ClientHandler, bce)    # ClientHandler uses the bce object to read db
     # Socket listening to events
     # The Client Handler thread
     cthread = Thread(target=clients.run, name="TCPServerThread")

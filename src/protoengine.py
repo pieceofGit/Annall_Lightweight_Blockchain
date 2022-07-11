@@ -455,7 +455,7 @@ class ProtoEngine(ProtocolEngine):
         # Step 1 - Receive request from Coordinator
         message = None
         while message is None:
-            message = self._recv_msg("request", recv_from=coordinatorID)
+            message = self._recv_msg("request", recv_from=coordinatorID)    # Gets stuck here if reconnected sometimes
             verbose_print("[REQUEST MESSAGE] Received message of request for OTP from coordinator")
             time.sleep(0.01)
         

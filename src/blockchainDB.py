@@ -21,7 +21,8 @@ class BlockchainDB(interfaces.BlockChainEngine):
         ## Missing conditionals and exceptions
         self.db_path = db_path
         self.length = 0           # really a sequence number as primary key
-        self.db_connection = sqlite3.connect(db_path) #, check_same_thread=False)
+        self.db_connection = sqlite3.connect(db_path, check_same_thread=False) # TODO: How can we circumvent check_same_thread?
+        self.cursor = self.db_connection.cursor()
         self.initilize_table()
         print("DB: Local Blockchain ready for use")
 
@@ -53,9 +54,8 @@ class BlockchainDB(interfaces.BlockChainEngine):
         );"""
 
         try:
-            cursor = self.db_connection.cursor()
-            cursor.execute(drop_chain_table)
-            cursor.execute(create_chain_table)
+            self.cursor.execute(drop_chain_table)
+            self.cursor.execute(create_chain_table)
             self.db_connection.commit()
         except Exception as e:
             print("Error creating chain table ", e)
@@ -75,20 +75,15 @@ class BlockchainDB(interfaces.BlockChainEngine):
         assert isinstance(block[7], str)    # hash
 
         ## TODO: Remove DELETE = this is a blockchain, nothing should be deleted.
-    
-        
         if block[3] == "arbitrarypayload":  # Do not write into chain if empty message
             # TODO: Figure out what and why this is here = looks like crap
-            print("[ARBITRARY PAYLOAD TRUE]")
             return
         verbose_print(f"[CREATE BLOCK] added block with block id {block_id} and block {block}")
-        # insertion = f'INSERT INTO chain(round,prevHash,writerID,coordinatorID,payload,winningNumber,writerSignature,hash) VALUES({self.length},"{block[0]}",{block[1]},{block[2]},"{block[3]}",{block[4]},"{block[5]}","{block[6]}");'
         try:
-            cursor = self.db_connection.cursor()
             if overwrite:
-                cursor.execute(f"DELETE FROM chain WHERE round == {block_id}")
-            # cursor.execute(insertion)
-            cursor.execute("insert into chain values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                self.cursor.execute(f"DELETE FROM chain WHERE round == {block_id}")
+            # self.cursor.execute(insertion)
+            self.cursor.execute("insert into chain values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [self.length, block[0], block[1], block[2], block[3], block[4], block[5], block[6], block[7]]
             )
             self.db_connection.commit()
@@ -104,16 +99,15 @@ class BlockchainDB(interfaces.BlockChainEngine):
         assert isinstance(condition, str)
         query = f"SELECT {col} FROM chain WHERE {condition}"
         try:
-            cursor = self.db_connection.cursor()
-            retrived = cursor.execute(query)
+            retrived = self.cursor.execute(query)
         except Exception as e:
             print("Error retriving blocks from db :", e)
        
         return retrived.fetchall()
 
-    def dict_factory(self, cursor, row):
+    def dict_factory(self, row):
         d = {}
-        for idx, col in enumerate(cursor.description):
+        for idx, col in enumerate(self.cursor.description):
             if col[0] == "payload" and row[idx] != "genesis block": 
                 print(row, idx)
                 print("[JSON THE PAYLOAD] ", row[idx])
@@ -152,8 +146,8 @@ class BlockchainDB(interfaces.BlockChainEngine):
                 self.db_connection.row_factory = self.dict_factory  
             else:   # Send back list of tuples
                 self.db_connection.row_factory = None
-            cursor = self.db_connection.cursor()
-            retrieved = cursor.execute(query)
+            # cursor = self.db_connection.cursor()
+            retrieved = self.cursor.execute(query)
             to_return = retrieved.fetchall()
         except Exception as e:
             print("Error retrieving blocks from db")
@@ -199,4 +193,4 @@ def __test_localDB():
 if __name__ == "__main__":
 
     print("Main: Local Blockchain DB - running elementary tests")
-    __test_localDB()
+    # __test_localDB()
