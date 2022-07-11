@@ -227,7 +227,7 @@ class ProtoEngine(ProtocolEngine):
         writer = block[1]
         payload = block[3]
         signature = int(block[5], 16)
-        writer_pubkey = self.conf["active_writer_set"][int(writer) - 1]["pub_key"]
+        writer_pubkey = self.conf["writer_set"][int(writer) - 1]["pub_key"]
 
         D = bytes_to_long(payload.encode("utf-8")) % writer_pubkey
         res = pow(signature, self.keys[2], writer_pubkey)
@@ -715,7 +715,7 @@ def test_engine(id: int, rounds: int, no_writers: int):
 
     # client server thread
     if id == 1:
-        TCP_IP = data["active_writer_set"][id - 1]["hostname"]
+        TCP_IP = data["writer_set"][id - 1]["hostname"]
         TCP_PORT = 15005
         print("::> Starting up ClientServer thread")
         clients = TCP_Server("the server", TCP_IP, TCP_PORT, ClientHandler, bce)
@@ -726,7 +726,7 @@ def test_engine(id: int, rounds: int, no_writers: int):
     else:
         clients = ClientServer()
 
-    keys = data["active_writer_set"][id - 1]["priv_key"]
+    keys = data["writer_set"][id - 1]["priv_key"]
 
     # run the protocol engine, with all the stuff
     w = ProtoEngine(id, tuple(keys), pcomm, bce, clients,)

@@ -19,13 +19,12 @@ from blockchainDB import BlockchainDB
 
 # should put here some elementary command line argument processing
 # EG. parameters for where the config file is, number of writers (for testing), and rounds
-DEBUG = False   # If true, adds randomization to TCP_PORT == How does that make sense??
-
 # Define explicitly the paths
 CWD = os.getcwd()
 CONFIG_PATH = f"{CWD}/src"
 DB_PATH = f"{CWD}/src/db"
-
+LOCAL = True    # If True, use local file for private key. 
+PRIV_KEY_PATH = f"{CWD}/src"
 if __name__ == "__main__":
     print("MAIN STARTED")
     ap = argparse.ArgumentParser()
@@ -41,15 +40,20 @@ if __name__ == "__main__":
                     help="ID fyrir skrifara, mandatory")
     ap.add_argument("-r", default=0, type=int, help="number of rounds")
     ap.add_argument("-conf", default="config-local.json", type=str, help="config file for writers")
+    ap.add_argument("-privKey", default="priv_key.json", type=str, help="private key file for writer")
     a = ap.parse_args()
     id = a.myID
     rounds = a.r
     conf_file = a.conf
-    verbose_print("[ID]", id, " [ROUNDS]", rounds, " [conf]", a.conf)
-
+    priv_key = a.privKey
+    verbose_print("[ID]", id, " [ROUNDS]", rounds, " [conf]", a.conf, " [privKey]", priv_key)
+    
     # Read config and other init stuff
     with open(f"{CONFIG_PATH}/{conf_file}", "r") as f:
         data = json.load(f)
+    if LOCAL:
+        with open(f"{CONFIG_PATH}/test_node_{id}/priv_key.json", "r") as f:
+            priv_key = json.load(f)
     
     # Start Communication Engine - maintaining the peer-to-peer network of writers
     print("::> Starting up peer-to-peer network engine with id ", id)
@@ -65,17 +69,13 @@ if __name__ == "__main__":
     bce = BlockchainDB(dbpath)
     print("    Local block chain database successfully initialized")
     verbose_print("   ", bce)
- 
- 
     # Start tcp_server thread for client requests
     # Since it selects a port on the computer, with a hard-coded TCP port, it can only start one 
     # if id == 1 or id == 2 or id == 3:
     print("THE ID IS 1. THE ID: ", id)
-    # See config.json for active_writer_set
-    TCP_IP = data["active_writer_set"][id - 1]["hostname"]
-    TCP_PORT = 5000 + id 
-    if DEBUG:
-        TCP_PORT += random.randint(0,30)
+    # See config.json for writer_set
+    TCP_IP = data["writer_set"][id - 1]["hostname"]
+    TCP_PORT = data["writer_set"][id-1]["client_port"] 
     print(F"TCP PORT: {TCP_PORT}")
     print("::> Starting up ClientServer thread")
     # TCPServer: name, IPv4_addr, port, RequestHandlerClass, bcdb,
@@ -89,7 +89,7 @@ if __name__ == "__main__":
     
     # Start protocol engine
     print("::> Starting up BlockChainEngine")
-    keys = data["active_writer_set"][id - 1]["priv_key"]
+    keys = priv_key["priv_key"]
     PE = ProtoEngine(id, tuple(keys), pComm, bce, clients)
     PE.set_rounds(rounds)
     PE.set_conf(data)

@@ -105,9 +105,9 @@ class BlockchainDB(interfaces.BlockChainEngine):
        
         return retrived.fetchall()
 
-    def dict_factory(self, row):
+    def dict_factory(self, cursor, row):
         d = {}
-        for idx, col in enumerate(self.cursor.description):
+        for idx, col in enumerate(cursor.description):
             if col[0] == "payload" and row[idx] != "genesis block": 
                 print(row, idx)
                 print("[JSON THE PAYLOAD] ", row[idx])
@@ -146,8 +146,8 @@ class BlockchainDB(interfaces.BlockChainEngine):
                 self.db_connection.row_factory = self.dict_factory  
             else:   # Send back list of tuples
                 self.db_connection.row_factory = None
-            # cursor = self.db_connection.cursor()
-            retrieved = self.cursor.execute(query)
+            cursor = self.db_connection.cursor()
+            retrieved = cursor.execute(query)
             to_return = retrieved.fetchall()
         except Exception as e:
             print("Error retrieving blocks from db")
@@ -193,4 +193,4 @@ def __test_localDB():
 if __name__ == "__main__":
 
     print("Main: Local Blockchain DB - running elementary tests")
-    # __test_localDB()
+    __test_localDB()

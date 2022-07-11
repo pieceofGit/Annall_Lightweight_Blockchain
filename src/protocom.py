@@ -300,16 +300,16 @@ class ProtoCom(ProtocolCommunication):
         listen_port = None
         # Select out of the writers list who we want to connect to
         if VERBOSE:
-            print("[PRINTING WRITERS IN SET NO_WRITERS]", conf["active_writer_set"][0:self.num_writers])
-        for writer in conf["active_writer_set"][0:self.num_writers]:
+            print("[PRINTING WRITERS IN SET NO_WRITERS]", conf["writer_set"][0:self.num_writers])
+        for writer in conf["writer_set"][0:self.num_writers]:
             verbose_print("The writer set ", writer["id"])
             if writer["id"] != self.id:
                 self.peers[writer["id"]] = RemoteEnd(
-                    writer["id"], writer["hostname"], writer["port"], writer["pub_key"]
+                    writer["id"], writer["hostname"], writer["protocol_port"], writer["pub_key"]
                 )
             elif writer["id"] == self.id:
                 ip = writer["hostname"]
-                listen_port = writer["port"]
+                listen_port = writer["protocol_port"]
                 self.pub_key = writer["pub_key"]
         # set up listening socket
         # Making sure to not run this if either are undefined, unless it crashes
@@ -706,8 +706,8 @@ def test_protocom_1():
     with open("./src/config-l2.json", "r") as f:
         test_conf = json.load(f)
 
-    print(repr(test_conf["active_writer_set"]))
-    num_writers = len(test_conf["active_writer_set"])
+    print(repr(test_conf["writer_set"]))
+    num_writers = len(test_conf["writer_set"])
     pc = ProtoCom(a.me, test_conf)
     pc.start()
     

@@ -32,7 +32,7 @@ class Peers:
             peer_id = int(peer["id"])
             if peer_id != me:
                 host = peer["host"] 
-                port = int(peer["port"])
+                port = int(peer["protocol_port"])
                 list_of_peers[peer_id] = PeerNode(host,port,peer_id)
 
     def accept(self, conn):
@@ -134,7 +134,7 @@ if __name__ == "__main__":
         id = int(peer["id"])
         if id == a.myID:
             host = peer["host"] 
-            port = int(peer["port"])
+            port = int(peer["protocol_port"])
 
     p2p = p2pMesh(me,(host, port))
     p2p.run()

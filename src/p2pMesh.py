@@ -54,7 +54,7 @@ class p2pMesh:
         for peer in list_of_remote_hosts:
             id = int(peer["id"])
             if id != me:
-                self.peer_nodes.append(peerNode(peer["host"], int(peer["port"]), id))
+                self.peer_nodes.append(peerNode(peer["host"], int(peer["protocol_port"]), id))
 
 
     def run(self):
@@ -82,7 +82,7 @@ if __name__ == "__main__":
         id = int(peer["id"])
         if id == a.myID:
             host = peer["host"] 
-            port = int(peer["port"])
+            port = int(peer["protocol_port"])
     
     listen_socket = ListenSocket(host, port, max_listeners=5)
 

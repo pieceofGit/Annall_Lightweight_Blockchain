@@ -8,11 +8,11 @@ import time
 
 # secret used to verify when connecting
 test_conf = {"writerlist": {}, "secret": "42"}
-test_conf["writerlist"][0] = {"ip": "127.0.0.1", "port": 15000}
-test_conf["writerlist"][1] = {"ip": "127.0.0.1", "port": 15001}
-test_conf["writerlist"][2] = {"ip": "127.0.0.1", "port": 15002}
-test_conf["writerlist"][3] = {"ip": "127.0.0.1", "port": 15003}
-# test_conf["writerlist"][4] = {"ip": "127.0.0.1", "port": 15004}
+test_conf["writerlist"][0] = {"ip": "127.0.0.1", "protocol_port": 15000}
+test_conf["writerlist"][1] = {"ip": "127.0.0.1", "protocol_port": 15001}
+test_conf["writerlist"][2] = {"ip": "127.0.0.1", "protocol_port": 15002}
+test_conf["writerlist"][3] = {"ip": "127.0.0.1", "protocol_port": 15003}
+# test_conf["writerlist"][4] = {"ip": "127.0.0.1", "protocol_port": 15004}
 TEST_SERVER_CONNECTION = False
 
 class ServerConnection:
