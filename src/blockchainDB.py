@@ -109,9 +109,10 @@ class BlockchainDB(interfaces.BlockChainEngine):
         d = {}
         for idx, col in enumerate(cursor.description):
             if col[0] == "payload" and row[idx] != "genesis block": 
-                print(row, idx)
-                print("[JSON THE PAYLOAD] ", row[idx])
-                d[col[0]] = json.loads(row[idx])    # Loads payload dict to json 
+                try:
+                    d[col[0]] = json.loads(row[idx])    # Loads payload dict to json if json
+                except:
+                    d[col[0]] = row[idx]    
             else: 
                 d[col[0]] = row[idx]
         return d
@@ -140,7 +141,6 @@ class BlockchainDB(interfaces.BlockChainEngine):
             query = f"SELECT {col} FROM chain WHERE round >= {begin} ORDER BY round"
         else:
             query = f"SELECT {col} FROM chain WHERE round >= {begin} AND round <= {end} ORDER BY round"
- 
         try: 
             if read_entire_chain:     # Get back list of dictionary object for each block
                 self.db_connection.row_factory = self.dict_factory  
@@ -173,11 +173,12 @@ def __test_localDB():
 
      
     the_block = ("prevHash", 1, 2, json.dumps({"hello":{"sailor":"the sailor"}}), 0, "writer signature", 0, "the hash")
+    string_block = ("prevHash", 1, 2, "hello", 0, "writer signature", 0, "the hash")
     # the_block = ("prevHash", 1, 2, json.dumps({"the payload": 1}), 0, "writer signature", "the hash")
     genesis_block = ("0", -1, 0,  "genesis block", 0, "0", -1, "0")
     blocks_db.insert_block(0, genesis_block)
     blocks_db.insert_block(1, the_block)
-    blocks_db.insert_block(2, the_block)
+    blocks_db.insert_block(2, string_block)
     blocks_db.insert_block(3, the_block)
     msg = blocks_db.read_blocks(0, 4)
     print(f"[MESSAGE READ BLOCKS 1-4] The message: {msg}")
