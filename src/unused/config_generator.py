@@ -28,12 +28,12 @@ for w in range(WRITERS):
     w_inf = {}
     w_inf["id"] = w + 1
     w_inf["hostname"] = "127.0.0.1"
-    w_inf["port"] = 15000 + w
+    w_inf["protocol_port"] = 15000 + w
     w_inf["pub_key"] = p * q
     w_inf["priv_key"] = keys
 
     writers.append(w_inf)
-data["active_writer_set"] = writers
+data["writer_set"] = writers
 data["NO_coord"] = 1
 data["modulus"] = 65537
 data["version"] = "1.0"

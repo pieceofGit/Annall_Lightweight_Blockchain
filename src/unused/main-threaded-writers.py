@@ -45,7 +45,7 @@ def run_writer_thread(id: int, rounds: int, writers: int):
     # Start tcp_server thread for client requests
 
     if id == 1:
-        TCP_IP = data["active_writer_set"][id - 1]["hostname"]
+        TCP_IP = data["writer_set"][id - 1]["hostname"]
         TCP_PORT = 5005
         print("::> Starting up ClientServer thread")
         clients = TCP_Server("the server", TCP_IP, TCP_PORT, ClientHandler, bce)
@@ -54,7 +54,7 @@ def run_writer_thread(id: int, rounds: int, writers: int):
         cthread.start()
         print("ClientServer up and running as:", cthread.name)
     else:
-        TCP_IP = data["active_writer_set"][id - 1]["hostname"]
+        TCP_IP = data["writer_set"][id - 1]["hostname"]
         TCP_PORT = 6000 + id
         print("::> Starting up ClientServer thread")
         clients = TCP_Server("the server", TCP_IP, TCP_PORT, ClientHandler, bce)
@@ -65,7 +65,7 @@ def run_writer_thread(id: int, rounds: int, writers: int):
 
     # Start protocol engine
     print("::> Starting up ProtocolEngine")
-    keys = data["active_writer_set"][id - 1]["priv_key"]
+    keys = data["writer_set"][id - 1]["priv_key"]
     PE = ProtoEngine(tuple(keys), pComm, bce, clients)
     PE.set_ID(id)
     PE.set_rounds(rounds)

@@ -21,7 +21,8 @@ class BlockchainDB(interfaces.BlockChainEngine):
         ## Missing conditionals and exceptions
         self.db_path = db_path
         self.length = 0           # really a sequence number as primary key
-        self.db_connection = sqlite3.connect(db_path) #, check_same_thread=False)
+        self.db_connection = sqlite3.connect(db_path, check_same_thread=False) # TODO: How can we circumvent check_same_thread?
+        self.cursor = self.db_connection.cursor()
         self.initilize_table()
         print("DB: Local Blockchain ready for use")
 
@@ -53,9 +54,8 @@ class BlockchainDB(interfaces.BlockChainEngine):
         );"""
 
         try:
-            cursor = self.db_connection.cursor()
-            cursor.execute(drop_chain_table)
-            cursor.execute(create_chain_table)
+            self.cursor.execute(drop_chain_table)
+            self.cursor.execute(create_chain_table)
             self.db_connection.commit()
         except Exception as e:
             print("Error creating chain table ", e)
@@ -75,20 +75,15 @@ class BlockchainDB(interfaces.BlockChainEngine):
         assert isinstance(block[7], str)    # hash
 
         ## TODO: Remove DELETE = this is a blockchain, nothing should be deleted.
-    
-        
         if block[3] == "arbitrarypayload":  # Do not write into chain if empty message
             # TODO: Figure out what and why this is here = looks like crap
-            print("[ARBITRARY PAYLOAD TRUE]")
             return
         verbose_print(f"[CREATE BLOCK] added block with block id {block_id} and block {block}")
-        # insertion = f'INSERT INTO chain(round,prevHash,writerID,coordinatorID,payload,winningNumber,writerSignature,hash) VALUES({self.length},"{block[0]}",{block[1]},{block[2]},"{block[3]}",{block[4]},"{block[5]}","{block[6]}");'
         try:
-            cursor = self.db_connection.cursor()
             if overwrite:
-                cursor.execute(f"DELETE FROM chain WHERE round == {block_id}")
-            # cursor.execute(insertion)
-            cursor.execute("insert into chain values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                self.cursor.execute(f"DELETE FROM chain WHERE round == {block_id}")
+            # self.cursor.execute(insertion)
+            self.cursor.execute("insert into chain values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [self.length, block[0], block[1], block[2], block[3], block[4], block[5], block[6], block[7]]
             )
             self.db_connection.commit()
@@ -104,8 +99,7 @@ class BlockchainDB(interfaces.BlockChainEngine):
         assert isinstance(condition, str)
         query = f"SELECT {col} FROM chain WHERE {condition}"
         try:
-            cursor = self.db_connection.cursor()
-            retrived = cursor.execute(query)
+            retrived = self.cursor.execute(query)
         except Exception as e:
             print("Error retriving blocks from db :", e)
        
@@ -115,10 +109,11 @@ class BlockchainDB(interfaces.BlockChainEngine):
         d = {}
         for idx, col in enumerate(cursor.description):
             if col[0] == "payload" and row[idx] != "genesis block": 
-                print(row, idx)
-                print("[JSON THE PAYLOAD] ", row[idx])
-                d[col[0]] = json.loads(row[idx])    # Loads payload dict to json 
-            else: 
+                try:
+                    d[col[0]] = json.loads(row[idx])    # Loads payload dict to json if json
+                except:
+                    d[col[0]] = row[idx]
+            else:
                 d[col[0]] = row[idx]
         return d
 
@@ -146,7 +141,6 @@ class BlockchainDB(interfaces.BlockChainEngine):
             query = f"SELECT {col} FROM chain WHERE round >= {begin} ORDER BY round"
         else:
             query = f"SELECT {col} FROM chain WHERE round >= {begin} AND round <= {end} ORDER BY round"
- 
         try: 
             if read_entire_chain:     # Get back list of dictionary object for each block
                 self.db_connection.row_factory = self.dict_factory  
@@ -179,11 +173,12 @@ def __test_localDB():
 
      
     the_block = ("prevHash", 1, 2, json.dumps({"hello":{"sailor":"the sailor"}}), 0, "writer signature", 0, "the hash")
+    string_block = ("prevHash", 1, 2, "hello", 0, "writer signature", 0, "the hash")
     # the_block = ("prevHash", 1, 2, json.dumps({"the payload": 1}), 0, "writer signature", "the hash")
     genesis_block = ("0", -1, 0,  "genesis block", 0, "0", -1, "0")
     blocks_db.insert_block(0, genesis_block)
     blocks_db.insert_block(1, the_block)
-    blocks_db.insert_block(2, the_block)
+    blocks_db.insert_block(2, string_block)
     blocks_db.insert_block(3, the_block)
     msg = blocks_db.read_blocks(0, 4)
     print(f"[MESSAGE READ BLOCKS 1-4] The message: {msg}")

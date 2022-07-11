@@ -305,9 +305,9 @@ if __name__ == "__main__":
         id = int(peer["id"])
         if id == a.myID:
             host = peer["host"] 
-            port = int(peer["port"])
+            port = int(peer["protocol_port"])
         else:
-            paddr = peer["host"], int(peer["port"])
+            paddr = peer["host"], int(peer["protocol_port"])
             list_of_peers[id] = paddr
 
     verbose_print(list_of_peers)

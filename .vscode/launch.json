@@ -11,7 +11,7 @@
       "program": "${workspaceFolder}//src//main.py",
       "console": "integratedTerminal",
       "justMyCode": true,
-      "args": ["-myID", "2", "-r 20", "-conf", "config-local.json"],
+      "args": ["-myID", "1", "-r 20", "-conf", "config-local.json"],
       "cwd": "${workspaceFolder}"
     },
     {
@@ -33,6 +33,14 @@
       "justMyCode": true,
       "args": ["-myID", "1", "-r 20", "-conf", "config-l2.json"],
       "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Python: Run current file",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "justMyCode": true
     }
   ]
 }
