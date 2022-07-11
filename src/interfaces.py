@@ -3,7 +3,10 @@
 
 from threading import Thread, ThreadError
 import inspect
-import json
+#import json
+import hashlib
+import ast
+
 
 #__test_interfaces = True
 NoneType = type(None)
@@ -82,6 +85,50 @@ class ProtocolCommunication(Thread):
         """
         return "ERROR: Not properly implemented"
 
+class i_Block:
+    """ Creation and manipulation of a block that goes onto the blockchain.
+        An attempt to encapsulate and figure out, what methods are really needed
+        
+        ## No body other than the protocol engine should need to use any method other than the constructor
+
+        (
+            prev_hash
+            writerID,
+            coordinatorID,
+            winning_number,
+            writer_signature,
+            timestamp,
+            this_hash,
+            payload, 
+        )    
+
+    """
+
+    def __init__(self, 
+                prev_hash : str,
+                writerID : int,
+                coordinatorID : int,
+                winning_number : int,
+                writer_signature : str,
+                timestamp : int,
+                payload : str,
+                ):
+
+        pass
+
+    #def block_from_tuple
+    @classmethod
+    def from_tuple(block_as_tuple : tuple):
+        ## Creates a block from a tuple.
+        pass
+
+    def as_tuple(self):
+        """ Returns the content of the block as a tuple 
+        """
+        return (self.prev_hash, self.writerID, self.coordinatorID, self.winning_number, self.writer_signature, 
+                self.timestamp, self.this_hash, self.payload )
+
+
 
 class BlockChainEngine:
     """ The Database engine operating the raw blockchain
@@ -113,15 +160,8 @@ class BlockChainEngine:
     def insert_block(
         self, block_id, block, overwrite=False
     ):  # needs defnintion of a block if to be used
-        # assert isinstance(block_id, int)    # The round
-        # assert isinstance(block[0], str)    # prevHash
-        # assert isinstance(block[1], int)    # writerID
-        # assert isinstance(block[2], int)    # coordinatorID
-        # assert isinstance(block[3], str)    # payload
-        # assert isinstance(block[4], int)    # winningNumber
-        # assert isinstance(block[5], str)    # writerSignature
-        # assert isinstance(block[6], int)    # timestamp
-        # assert isinstance(block[7], str)    # hash
+        assert isinstance(block_id, int)    # The round
+        #assert isinstance(block, i_Block)       
 
         print(method_name(), " not implemented")
     
@@ -197,6 +237,9 @@ class ProtocolEngine:
     def run_forever(self):
         pass
 
+    def run():
+        print("ERROR = not implemented")
+
     def _send_msg(self, type, message, send_to=None):
         # implements a remote procedure call wrt protocolCommuincation
         pass
@@ -216,23 +259,29 @@ def __test_interfaces():
     pComm = ProtocolCommunication("comm")
     pComm.start()
     print("running")
+    print(pComm)
+
 
     print("Testing Database")
     import os
-    import sqlite3
+#    import sqlite3
     from sqlite3 import Error
 
+
+
     dbpath = r"/src/db/blockchain.db"
-    connection = sqlite3.connect(os.getcwd() + dbpath)
-    print(connection)
-    print(f"[DIRECTORY PATH] {os.getcwd()+dbpath}")
-    bcdb = BlockChainEngine(connection)
+    dbpath = os.getcwd() + dbpath
+    print(f"[DIRECTORY PATH] {dbpath}")
+    bcdb = BlockChainEngine(dbpath)
     # insertion = f'INSERT INTO chain(round,prevHash,writerID,coordinatorID,payload,winningNumber,writerSignature,hash) VALUES({block_id},"{block[0]}",{block[1]},{block[2]},"{block[3]}",{block[4]},"{block[5]}","{block[6]}");'
     import json
     print(json.dumps({"insurance":"john"}))
-    the_block = ("prevHash", 1, 2, json.dumps({"hello":{"sailor":"the sailor"}}), 0, "writer signature", "the hash")
-    # the_block = ("prevHash", 1, 2, json.dumps({"the payload": 1}), 0, "writer signature", "the hash")
-    genesis_block = ("0", 0, 0,  "genesis block", 0, "0", "0")
+
+    #the_block = Block(prev_hash, writerID, coordinatorID, winning_number, signature, timestamp, payload )
+
+    the_block = i_Block("prevHash", 1, 2, 0, "writer signature", 0, json.dumps({"hello":{"sailor":"the sailor"}}),)
+   
+    genesis_block = i_Block("0", 0, 0, 0, "0", 0, "genesis block",)
     bcdb.insert_block(0, genesis_block)
     bcdb.insert_block(1, the_block)
     bcdb.insert_block(2, the_block)
@@ -243,7 +292,8 @@ def __test_interfaces():
     # time.sleep(100)
     msg = bcdb.read_blocks(0, read_entire_chain=True)
     print("READING ENTIRE BLOCKCHAIN", msg, type(msg))
-    to_json = msg[0]["payload"]
+    if msg != None:
+        to_json = msg[0]["payload"]
     # print(type(to_json))
     # print(type(json.loads(to_json)))
 
@@ -260,7 +310,7 @@ def __test_interfaces():
 
     print("testing setting up ProtocolEngine")
 
-    PE = ProtocolEngine(pComm, bcdb, clients)
+    PE = ProtocolEngine(1, pComm, bcdb, clients)
     PEthread = Thread(target=PE.run_forever)
     PEthread.start()
     print("Protocol Engine up and running in thread:", PEthread.name)
