@@ -288,7 +288,7 @@ class ProtoEngine(ProtocolEngine):
         if queue.empty():        
             verbose_print("queue empty...")
             # If empty we just return anything
-            return "arbitrarypayload"
+            return False
         else:
             payload = queue.get()
             verbose_print(f"INSERTING PAYLOAD TO CHAIN \n", payload)
@@ -358,11 +358,12 @@ class ProtoEngine(ProtocolEngine):
     def create_block(self, pad: int, coordinatorID: int, round):
         assert isinstance(pad, int)
         assert isinstance(coordinatorID, int)
-
+        payload = self.get_payload()    # If returns False, should skip the round
+        if not payload: # Writer had nothing to write
+            return False
         prev_hash = self.bcdb.read_blocks(round - 1, col="hash", getLastRow=True)[0][0] 
         prev_hash = str(prev_hash)
         # Returns payload of writer or arbitrary string if there is no payload
-        payload = self.get_payload()    # If returns arbitrarypayload, should skip the round
         verbose_print(f"[PAYLOAD] the payload is: {payload} from the TCP server payload_queue")
         signature = self.sign_payload(payload)
         winning_number = pad
@@ -371,28 +372,27 @@ class ProtoEngine(ProtocolEngine):
         timestamp = self.get_timestamp() ### hmmmm
 
 
-        block = (
+        # block = (
+        #     prev_hash,
+        #     writerID,
+        #     coordinatorID,
+        #     payload,
+        #     winning_number,
+        #     signature,
+        #     timestamp,
+        #     -1,
+        # )
+
+        # hash = hash_block(block)
+
+        block = Block(
             prev_hash,
             writerID,
             coordinatorID,
-            payload,
             winning_number,
             signature,
             timestamp,
-            -1,
-        )
-
-        hash = hash_block(block)
-
-        block = (
-            prev_hash,
-            writerID,
-            coordinatorID,
             payload,
-            winning_number,
-            signature,
-            timestamp,
-            hash,
         )
         return block
 
@@ -407,7 +407,7 @@ class ProtoEngine(ProtocolEngine):
         prev_hash = str(prev_hash)
         timestamp = self.get_timestamp()
          
-        cancel_block = Block(prev_hash, canceller, coordinatorID, 0, "0", timestamp,f"round {round} cancelled by {canceller}")
+        cancel_block = Block(prev_hash, canceller, coor_id, 0, "0", timestamp,f"round {round} cancelled by {canceller}")
 
         self.latest_block = cancel_block
         return cancel_block
@@ -443,7 +443,7 @@ class ProtoEngine(ProtocolEngine):
         while message is None:
             message = self._recv_msg("announce", recv_from=coordinatorID)
             time.sleep(0.01)
-        vverbose_print("[WINNER MESSAGE] received message of winner writer from coordinator")
+        vverbose_print("[SELECTED WINNER MESSAGE] received message of winner writer from coordinator")
         
         # Step 4 - Verify and receive new block from winner
         parsed_message = message.split("-")
@@ -459,7 +459,8 @@ class ProtoEngine(ProtocolEngine):
             self.latest_block = block
             # Broadcast our newest block before writing into chain
             self.broadcast("block", str(block), round)  
-
+            if not block:   # Winning writer had nothing to write
+                return
         elif verified_round:
             # Wait for a block to verify
             message = None
@@ -467,11 +468,13 @@ class ProtoEngine(ProtocolEngine):
                 message = self._recv_msg(type="block", recv_from=winner[2], round=round)
                 time.sleep(0.01)
             vverbose_print(f"[NEW BLOCK VERIFICATION] {message}")
-           
             parsed_message = message.split("-")
             vverbose_print(f"[PARSED MESSAGE] {parsed_message}")
             block = ast.literal_eval(parsed_message[4]) # The block 
-
+            print(f"[BLOCK] {block} {type(block)}")
+            if not block:
+                vverbose_print(f"[FALSE BLOCK TRUE] {block}")
+                return
             if not self.verify_block(block):
                 self.cancel_round("Block not correct", round)
                 verbose_print("ERROR, BLOCK NOT CORRECT \n", block)
@@ -500,7 +503,7 @@ class ProtoEngine(ProtocolEngine):
             # Cancel the round
             verbose_print("[ROUND CANCEL] round was cancelled because it was not verified")
             self.cancel_round("Round not verified", round)
-    
+
         verbose_print(f"[LATEST BLOCK] the latest block is: {self.latest_block}")
         self.bcdb.insert_block(round, self.latest_block)
 
@@ -547,7 +550,12 @@ class ProtoEngine(ProtocolEngine):
             message = self._recv_msg(type="block", recv_from=winner_id, round=round)
             time.sleep(0.01)
         parsed_message = message.split("-")
+        verbose_print(f"[PARSED MESSAGE] {parsed_message}")
         block = ast.literal_eval(parsed_message[4])
+        print(f"[BLOCK] {block} {type(block)}")
+        if not block:
+            verbose_print(f"[FALSE BLOCK] {block}")
+            return
         if not self.verify_block(block):
             self.cancel_round("Round not verified", round)
             

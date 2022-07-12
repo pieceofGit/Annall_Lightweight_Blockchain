@@ -78,8 +78,8 @@ class BlockchainDB(interfaces.BlockChainEngine):
             if overwrite:
                 self.cursor.execute(f"DELETE FROM chain WHERE round == {block_id}")
             self.cursor.execute("insert into chain values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [self.length, self.prev_hash, self.writerID, self.coordinatorID, self.winning_number, self.writer_signature, 
-                self.timestamp, self.this_hash, self.payload]
+            [self.length, block.prev_hash, block.writerID, block.coordinatorID, block.winning_number, block.writer_signature, 
+            block.timestamp, block.this_hash, block.payload]
             )
             self.db_connection.commit()
             if not overwrite:   # Keep record of length for arbitrarypaylaod rounds
