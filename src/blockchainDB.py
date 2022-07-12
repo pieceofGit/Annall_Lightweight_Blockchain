@@ -9,7 +9,7 @@ import json
 import interfaces
 from interfaces import verbose_print
 from block import Block
-#from protoengine_copy import Block
+
 
 class BlockchainDB(interfaces.BlockChainEngine):
     """ The Database engine operating the raw blockchain

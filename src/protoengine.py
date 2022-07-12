@@ -1,4 +1,3 @@
-import interfaces
 from queue import Queue
 import hashlib
 
@@ -19,6 +18,7 @@ import json
 from protocom import ProtoCom
 from tcpserver import TCP_Server, ClientHandler
 
+import interfaces
 from interfaces import (
     ProtocolCommunication,
     ClientServer,
@@ -28,6 +28,7 @@ from interfaces import (
 )
 
 from blockchainDB import BlockchainDB
+from block import Block
 
 NoneType = type(None)
 
@@ -174,7 +175,7 @@ class ProtoEngine(ProtocolEngine):
         # TODO: Cannot have a genesis block be created on init. What if the chain already exists
         #       Should really have the genesys block record something relevant to this paricular blockchain, e.g.
         #       Name, owners, purpose etc.
-        genesis_block = ("0", 0, 0, json.dumps({"type": "genesis block"}), 0, "0", self.get_timestamp(), "0")
+        genesis_block = Block("0", 0, 0, 0, "0", self.get_timestamp(),  json.dumps({"type": "genesis block"}),)
         # The latest block to be minted
         self.latest_block = genesis_block
         # Blockhain database: the blockchain engine
@@ -224,24 +225,26 @@ class ProtoEngine(ProtocolEngine):
         To verify a block both the signature and hash of the block must be correct
         '''
         assert isinstance(block, tuple)
-        writer = block[1]
-        payload = block[3]
-        signature = int(block[5], 16)
-        writer_pubkey = self.conf["writer_set"][int(writer) - 1]["pub_key"]
 
-        D = bytes_to_long(payload.encode("utf-8")) % writer_pubkey
-        res = pow(signature, self.keys[2], writer_pubkey)
-        res = res % writer_pubkey
-        # Get the hash based on what is in the block
-        hash = hash_block(block)
+        new_block = Block.from_tuple(block)
+        if new_block is not None:
+            writer = new_block.writerID
+            payload = new_block.payload
+            signature = int(new_block.writer_signature, 16)
+            writer_pubkey = self.conf["active_writer_set"][int(writer) - 1]["pub_key"]
 
-        signature_correct = res == D
+            D = bytes_to_long(payload.encode("utf-8")) % writer_pubkey
+            res = pow(signature, self.keys[2], writer_pubkey)
+            res = res % writer_pubkey
+            
+            # Get the hash based on what is in the block
+            # hash = hash_block(block)  - invariant, part of new_block construction
+            signature_correct = res == D
+            return signature_correct
+        else:
+            # Only reason new_block is None is that the hash does not match
+            return False ## only reason new_block was not created
 
-        # Verify the hash
-        hash_correct = hash == block[7] # 6 -> 7 because of added timestamp
-
-        # both signature and hash are correct => True else False
-        return signature_correct and hash_correct
 
     def broadcast(self, msg_type: str, msg, round: int):
         assert isinstance(msg_type, str)
@@ -397,32 +400,15 @@ class ProtoEngine(ProtocolEngine):
         ''' Generates a cancel block '''
         assert isinstance(message, str)
         parsed_message = message.split("-")
-        canceller = parsed_message[1]
+        canceller = int(parsed_message[1])
         round = int(parsed_message[0])
         coor_id = self.get_coordinatorID(round)
         prev_hash = self.bcdb.read_blocks(round - 1, col="hash", getLastRow=True)[0][0]
         prev_hash = str(prev_hash)
         timestamp = self.get_timestamp()
-        cancel_block = (
-            prev_hash,
-            0,
-            coor_id,
-            f"round {round} cancelled by {canceller}",
-            0,
-            "0",
-            timestamp,
-            "0",
-        )
-        cancel_block = (
-            prev_hash,
-            0,
-            coor_id,
-            f"round {round} cancelled by {canceller}",
-            0,
-            "0",
-            timestamp,
-            hash_block(cancel_block),
-        )
+         
+        cancel_block = Block(prev_hash, canceller, coordinatorID, 0, "0", timestamp,f"round {round} cancelled by {canceller}")
+
         self.latest_block = cancel_block
         return cancel_block
 
@@ -537,21 +523,11 @@ class ProtoEngine(ProtocolEngine):
         numbers = []
         # Currently waiting for number from all writers in list
         # MSG FORMAT <round nr>-<from id>-<to id>-<msg type>-<msg body>
-        
-        verbose_print("Len numbers:",len(numbers))
-        verbose_print("Len writer_list:",len(self.writer_list))
         count = 1
         while len(numbers) < len(self.writer_list):
-            
-            verbose_print(f"while: {count}")
-            verbose_print("before recv_msg")
-
             count += 1
             message = self._recv_msg(type="reply")
-            
-            verbose_print("after recv_msg")
             if message is not None:
-                
                 verbose_print("message is NOT none")
                 parsed_message = message.split("-")
                 numbers.append([int(parsed_message[1]), int(parsed_message[4])])
