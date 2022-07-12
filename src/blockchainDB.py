@@ -68,11 +68,7 @@ class BlockchainDB(interfaces.BlockChainEngine):
         assert isinstance(block_id, int)    # The round 
         assert isinstance(block, Block)    
 
-        ## TODO: Remove DELETE = this is a blockchain, nothing should be deleted.
-        
-        if block.payload == "arbitrarypayload":  # Do not write into chain if empty message
-            # TODO: Figure out what and why this is here = looks like crap
-            return
+        ## TODO: Remove DELETE = this is a blockchain, nothing should be deleted.        
         verbose_print(f"[INSERT BLOCK] added block with block id {block_id} and block {block}")
         try:
             if overwrite:
