@@ -64,8 +64,8 @@ class BlockchainDB(interfaces.BlockChainEngine):
             #raise e
 
     def insert_block(self, block_id : int, block : Block, overwrite=False ):  
-    
-        assert isinstance(block_id, int)    # The round
+        # TODO: Separate from blockchain length and thus degraded.
+        assert isinstance(block_id, int)    # The round 
         assert isinstance(block, Block)    
 
         ## TODO: Remove DELETE = this is a blockchain, nothing should be deleted.
@@ -74,11 +74,9 @@ class BlockchainDB(interfaces.BlockChainEngine):
             # TODO: Figure out what and why this is here = looks like crap
             return
         verbose_print(f"[INSERT BLOCK] added block with block id {block_id} and block {block}")
-        # insertion = f'INSERT INTO chain(round,prevHash,writerID,coordinatorID,payload,winningNumber,writerSignature,hash) VALUES({self.length},"{block[0]}",{block[1]},{block[2]},"{block[3]}",{block[4]},"{block[5]}","{block[6]}");'
         try:
             if overwrite:
                 self.cursor.execute(f"DELETE FROM chain WHERE round == {block_id}")
-           
             self.cursor.execute("insert into chain values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [self.length, self.prev_hash, self.writerID, self.coordinatorID, self.winning_number, self.writer_signature, 
                 self.timestamp, self.this_hash, self.payload]
@@ -90,7 +88,7 @@ class BlockchainDB(interfaces.BlockChainEngine):
         except Exception as e:
             print("Error inserting block to chain db ", e)
 
-    def select_entry(self, condition: str, col: str = "*"):
+    def select_entry(self, condition: str, col: str = "*"): 
         """ Retrieve block with specific condition
         """
         assert isinstance(condition, str)
@@ -102,7 +100,7 @@ class BlockchainDB(interfaces.BlockChainEngine):
        
         return retrived.fetchall()
 
-    def dict_factory(self, cursor, row):
+    def dict_factory(self, cursor, row):    #TODO: Adjust for Block objects
         d = {}
         for idx, col in enumerate(cursor.description):
             if col[0] == "payload" and row[idx] != "genesis block": 

@@ -359,7 +359,7 @@ class ProtoEngine(ProtocolEngine):
         prev_hash = self.bcdb.read_blocks(round - 1, col="hash", getLastRow=True)[0][0] 
         prev_hash = str(prev_hash)
         # Returns payload of writer or arbitrary string if there is no payload
-        payload = self.get_payload()
+        payload = self.get_payload()    # If returns arbitrarypayload, should skip the round
         verbose_print(f"[PAYLOAD] the payload is: {payload} from the TCP server payload_queue")
         signature = self.sign_payload(payload)
         winning_number = pad
@@ -457,15 +457,13 @@ class ProtoEngine(ProtocolEngine):
         while message is None:
             message = self._recv_msg("announce", recv_from=coordinatorID)
             time.sleep(0.01)
-        if VERBOSE:
-            print("[WINNER MESSAGE] received message of winner writer from coordinator")
+        vverbose_print("[WINNER MESSAGE] received message of winner writer from coordinator")
         
         # Step 4 - Verify and receive new block from winner
         parsed_message = message.split("-")
         winner = ast.literal_eval(parsed_message[4])
         verified_round = self.verify_round_winner(winner, pad)
-        if VERBOSE:
-            print(f"[WINNER WRITER] writer with ID {winner[2]} won the round")
+        vverbose_print(f"[WINNER WRITER] writer with ID {winner[2]} won the round")
         
         if verified_round and self.ID == winner[2]:
             # I WON
@@ -521,41 +519,40 @@ class ProtoEngine(ProtocolEngine):
         self.bcdb.insert_block(round, self.latest_block)
 
     def coordinator_round(self, round: int):
-        if VERBOSE:
-            print(f"Round: {round} and ID={self.ID}")
+        
+        verbose_print(f"Round: {round} and ID={self.ID}")
 
         assert isinstance(round, int)
 
         # Step 1 -
         self.check_for_old_cancel_message(round=round)
-        if VERBOSE:
-            print("done with check_for_old_cancel_message")
+        
+        verbose_print("done with check_for_old_cancel_message")
 
         self.broadcast(msg_type="request", msg=round, round=round)
-        if VERBOSE:
-            print("done broadcast")
+        
+        verbose_print("done broadcast")
 
         # Step 2 - Wait for numbers reply from all
         numbers = []
         # Currently waiting for number from all writers in list
         # MSG FORMAT <round nr>-<from id>-<to id>-<msg type>-<msg body>
-        if VERBOSE:
-            print("Len numbers:",len(numbers))
-            print("Len writer_list:",len(self.writer_list))
+        
+        verbose_print("Len numbers:",len(numbers))
+        verbose_print("Len writer_list:",len(self.writer_list))
         count = 1
         while len(numbers) < len(self.writer_list):
-            if VERBOSE:
-                print(f"while: {count}")
-                print("before recv_msg")
+            
+            verbose_print(f"while: {count}")
+            verbose_print("before recv_msg")
 
             count += 1
             message = self._recv_msg(type="reply")
-            if VERBOSE:        
-                print("after recv_msg")
-                print(message)
+            
+            verbose_print("after recv_msg")
             if message is not None:
-                if VERBOSE:
-                    print("message is NOT none")
+                
+                verbose_print("message is NOT none")
                 parsed_message = message.split("-")
                 numbers.append([int(parsed_message[1]), int(parsed_message[4])])
             # if count == 2:
@@ -577,8 +574,8 @@ class ProtoEngine(ProtocolEngine):
         block = ast.literal_eval(parsed_message[4])
         if not self.verify_block(block):
             self.cancel_round("Round not verified", round)
-            if VERBOSE:
-                print("ERROR, NOT CORRECT BLOCK")
+            
+            verbose_print("ERROR, NOT CORRECT BLOCK")
         else:
             # Finally - write new block to the chain (DB)
             # Check if cancelled round
@@ -639,8 +636,8 @@ class ProtoEngine(ProtocolEngine):
             self.message_queue.put(message[1])
         
         if self.message_queue.empty():
-            if VERBOSE:
-                print("message queue empty")
+            
+            verbose_print("message queue empty")
             return None
         # TODO: Why do we take the first message off of the queue when we have a list?
         mess = self.message_queue.get()

@@ -622,7 +622,7 @@ class ProtoCom(ProtocolCommunication):
             2. Wait for data acknowledge
             3. confirm successfull send
             """
-        if send_to is None:
+        if send_to is None: # Broadcast message
             id_list = []
             for rem_id in self.peers:
                 if self.peers[rem_id].is_active:
