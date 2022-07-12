@@ -44,7 +44,7 @@ if __name__ == "__main__":
                     help="ID fyrir skrifara, mandatory")
     ap.add_argument("-r", default=0, type=int, help="number of rounds")
     ap.add_argument("-conf", default="config-local.json", type=str, help="config file for writers")
-    ap.add_argument("-privKey", default="priv_key.json", type=str, help="private key file for writer")
+    ap.add_argument("-privKey", default="priv_key.json", type=str, help="private key file for writer under /src")
     a = ap.parse_args()
     id = a.myID
     rounds = a.r
