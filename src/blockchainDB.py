@@ -8,6 +8,8 @@ import json
 
 import interfaces
 from interfaces import verbose_print
+from block import Block
+#from protoengine_copy import Block
 
 class BlockchainDB(interfaces.BlockChainEngine):
     """ The Database engine operating the raw blockchain
@@ -61,30 +63,25 @@ class BlockchainDB(interfaces.BlockChainEngine):
             print("Error creating chain table ", e)
             #raise e
 
-    def insert_block(
-        self, block_id, block, overwrite=False
-    ):  # needs defnintion of a block if to be used
+    def insert_block(self, block_id : int, block : Block, overwrite=False ):  
+    
         assert isinstance(block_id, int)    # The round
-        assert isinstance(block[0], str)    # prevHash
-        assert isinstance(block[1], int)    # writerID
-        assert isinstance(block[2], int)    # coordinatorID
-        assert isinstance(block[3], str)    # payload
-        assert isinstance(block[4], int)    # winningNumber
-        assert isinstance(block[5], str)    # writerSignature
-        assert isinstance(block[6], int)    # timestamp
-        assert isinstance(block[7], str)    # hash
+        assert isinstance(block, Block)    
 
         ## TODO: Remove DELETE = this is a blockchain, nothing should be deleted.
-        if block[3] == "arbitrarypayload":  # Do not write into chain if empty message
+        
+        if block.payload == "arbitrarypayload":  # Do not write into chain if empty message
             # TODO: Figure out what and why this is here = looks like crap
             return
-        verbose_print(f"[CREATE BLOCK] added block with block id {block_id} and block {block}")
+        verbose_print(f"[INSERT BLOCK] added block with block id {block_id} and block {block}")
+        # insertion = f'INSERT INTO chain(round,prevHash,writerID,coordinatorID,payload,winningNumber,writerSignature,hash) VALUES({self.length},"{block[0]}",{block[1]},{block[2]},"{block[3]}",{block[4]},"{block[5]}","{block[6]}");'
         try:
             if overwrite:
                 self.cursor.execute(f"DELETE FROM chain WHERE round == {block_id}")
-            # self.cursor.execute(insertion)
+           
             self.cursor.execute("insert into chain values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [self.length, block[0], block[1], block[2], block[3], block[4], block[5], block[6], block[7]]
+            [self.length, self.prev_hash, self.writerID, self.coordinatorID, self.winning_number, self.writer_signature, 
+                self.timestamp, self.this_hash, self.payload]
             )
             self.db_connection.commit()
             if not overwrite:   # Keep record of length for arbitrarypaylaod rounds
@@ -159,12 +156,6 @@ class BlockchainDB(interfaces.BlockChainEngine):
 
 def __test_localDB():
 
-
-    # dbpath = r"/src/db/blockchain.db"
-    #3connection = sqlite3.connect(os.getcwd() + dbpath)
-    #print(connection)
-    #print(f"[DIRECTORY PATH] {os.getcwd()+dbpath}")
-    #bcdb = BlockChainEngine(connection)
     CWD = os.getcwd()
     db_path = CWD + "/src/db/test_blockchain.db"
     print(f"[DIRECTORY PATH] {db_path}")
@@ -172,13 +163,13 @@ def __test_localDB():
     blocks_db = BlockchainDB(db_path)
 
      
-    the_block = ("prevHash", 1, 2, json.dumps({"hello":{"sailor":"the sailor"}}), 0, "writer signature", 0, "the hash")
-    string_block = ("prevHash", 1, 2, "hello", 0, "writer signature", 0, "the hash")
+    the_block = Block("prevHash", 1, 2, 0, "writer signature", 0, "the hash")
     # the_block = ("prevHash", 1, 2, json.dumps({"the payload": 1}), 0, "writer signature", "the hash")
-    genesis_block = ("0", -1, 0,  "genesis block", 0, "0", -1, "0")
+
+    #Block(prev_hash, writerID, coordinatorID, winning_number, signature, timestamp, payload )
+    genesis_block = Block("0", 0, 0, 0, "0", 0,  json.dumps({"type": "genesis block"}),)
     blocks_db.insert_block(0, genesis_block)
     blocks_db.insert_block(1, the_block)
-    blocks_db.insert_block(2, string_block)
     blocks_db.insert_block(3, the_block)
     msg = blocks_db.read_blocks(0, 4)
     print(f"[MESSAGE READ BLOCKS 1-4] The message: {msg}")
