@@ -7,7 +7,7 @@ from sqlite3 import Error
 import json
 
 import interfaces
-from interfaces import verbose_print
+from interfaces import verbose_print, vverbose_print
 from block import Block
 
 
@@ -95,7 +95,7 @@ class BlockchainDB(interfaces.BlockChainEngine):
        
         return retrived.fetchall()
 
-    def dict_factory(self, cursor, row):    #TODO: Adjust for Block objects
+    def dict_factory(self, cursor, row):
         d = {}
         for idx, col in enumerate(cursor.description):
             if col[0] == "payload" and row[idx] != "genesis block": 
