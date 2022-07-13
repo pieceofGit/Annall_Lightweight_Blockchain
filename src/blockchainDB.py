@@ -80,7 +80,7 @@ class BlockchainDB(interfaces.BlockChainEngine):
                 self.cursor.execute(f"DELETE FROM chain WHERE round == {block_id}")
            
             self.cursor.execute("insert into chain values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [self.length, self.prev_hash, self.writerID, self.coordinatorID, self.winning_number, self.writer_signature, 
+            [self.length, self.prev_hash, self.writerID, self.coordinatorID, self.winning_number, self.writer_signature, ## This cannot be correct
                 self.timestamp, self.this_hash, self.payload]
             )
             self.db_connection.commit()
