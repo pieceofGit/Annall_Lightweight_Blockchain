@@ -84,7 +84,7 @@ class ProtoEngine(ProtocolEngine):
     def __init__(
         self,
         id: int, 
-        keys: tuple,
+        keys: tuple,    
         comm: ProtocolCommunication,
         blockchain: interfaces.BlockChainEngine,
         clients: ClientServer,
@@ -111,17 +111,12 @@ class ProtoEngine(ProtocolEngine):
         # Messages in our writer's queue
         self.message_queue = Queue()
         
+        self.latest_block = None
 
         # The first block
         # TODO: Cannot have a genesis block be created on init. What if the chain already exists
         #       Should really have the genesys block record something relevant to this paricular blockchain, e.g.
         #       Name, owners, purpose etc.
-        genesis_block = Block("0", 0, 0, 0, "0", self.get_timestamp(),  json.dumps({"type": "genesis block"}),)
-        # The latest block to be minted
-        self.latest_block = genesis_block
-        # Blockhain database: the blockchain engine
-        self.bcdb.insert_block(0, genesis_block)
-
         # maintain a payload
         self.stashed_payload = None
 
@@ -161,35 +156,36 @@ class ProtoEngine(ProtocolEngine):
         # Returns time in Unix epoch time 
         return round(datetime.timestamp(datetime.now()))
 
-    def verify_block(self, block: tuple):
+    def verify_block(self, block: Block):
         '''
         To verify a block both the signature and hash of the block must be correct
         '''
-        assert isinstance(block, tuple)
+        assert isinstance(block, Block)
 
-        new_block = Block.from_tuple(block)
-        if new_block is not None:
-            writer = new_block.writerID
-            payload = new_block.payload
-            signature = int(new_block.writer_signature, 16)
-            writer_pubkey = self.conf["active_writer_set"][int(writer) - 1]["pub_key"]
+        # new_block = Block.from_tuple(block)
+        if block is not None:
+            writer = block.writerID
+            payload = block.payload
+            signature = int(block.writer_signature, 16)
+            writer_pubkey = self.conf["writer_set"][int(writer) - 1]["pub_key"]
 
             D = bytes_to_long(payload.encode("utf-8")) % writer_pubkey
             res = pow(signature, self.keys[2], writer_pubkey)
             res = res % writer_pubkey
             
             # Get the hash based on what is in the block
-            # hash = hash_block(block)  - invariant, part of new_block construction
+            # hash = hash_block(block)  - invariant, part of block construction
             signature_correct = res == D
             return signature_correct
         else:
             # Only reason new_block is None is that the hash does not match
-            return False ## only reason new_block was not created
+            return False ## only reason block was not created
 
 
     def broadcast(self, msg_type: str, msg, round: int):
         assert isinstance(msg_type, str)
         assert isinstance(msg, (int, str, list))
+        print(type(round))
         assert isinstance(round, int)
         self._send_msg(round=round, type=msg_type, message=msg, sent_to=None)
 
@@ -219,20 +215,27 @@ class ProtoEngine(ProtocolEngine):
         # correct case here would return True, True, True
         return same_pad and same_winner and my_numb_exists
 
-    def get_payload(self):
+    def get_payload(self, round: int):
         """Retrieves payload from the client server part
         """
         # Get the queue we have from the clients
         # These are the transactions the client 
         # Has sent to our writer
+        if round == 0:    # Write genesis block
+            genesis_block = {
+                "name": "Annáll Blockchain",
+                "owners": "Reykjavík University and Gísli Hjálmtýsson",
+                "purpose": "A lightweight and secure blockchain for whatever you want"
+            }
+            return json.dumps(genesis_block)
         queue = self.clients.payload_queue
         if queue.empty():        
-            verbose_print("queue empty...")
+            vverbose_print("[PAYLOAD QUEUE ] empty")
             # If empty we just return anything
-            return "arbitrarypayload"
+            return False
         else:
             payload = queue.get()
-            verbose_print(f"INSERTING PAYLOAD TO CHAIN \n", payload)
+            vverbose_print(f"INSERTING PAYLOAD TO CHAIN \n", payload)
             self.stashed_payload = payload
             return payload[1]
         # else:
@@ -299,21 +302,32 @@ class ProtoEngine(ProtocolEngine):
     def create_block(self, pad: int, coordinatorID: int, round : int):
         assert isinstance(pad, int)
         assert isinstance(coordinatorID, int)
-
-        prev_hash = self.bcdb.read_blocks(round - 1, col="hash", getLastRow=True)[0][0] 
+        payload = self.get_payload(round)    # If returns False, should skip the round
+        if not payload: # Writer had nothing to write
+            return False
+        if round == 0:
+            prev_hash = 0
+        else:
+            prev_hash = self.bcdb.read_blocks(round - 1, col="hash", getLastRow=True)[0][0] 
         prev_hash = str(prev_hash)
         # Returns payload of writer or arbitrary string if there is no payload
-        payload = self.get_payload()
-        verbose_print(f"[PAYLOAD] the payload is: {payload} from the TCP server payload_queue")
+        vverbose_print(f"[PAYLOAD] the payload is: {payload} from the TCP server payload_queue")
         signature = self.sign_payload(payload)
         winning_number = pad
         coordinatorID = coordinatorID
         writerID = self.ID
         timestamp = self.get_timestamp() 
 
-        new_block = Block(prev_hash, writerID, coordinatorID, winning_number, signature, timestamp, payload )
-
-        return new_block
+        block = Block(
+            prev_hash=prev_hash,
+            writerID=writerID,
+            coordinatorID=coordinatorID,
+            winning_number=winning_number,
+            writer_signature=signature,
+            timestamp=timestamp,
+            payload=payload,
+        )
+        return block
 
     def create_cancel_block(self, message: str):
         ''' Generates a cancel block '''
@@ -326,7 +340,14 @@ class ProtoEngine(ProtocolEngine):
         prev_hash = str(prev_hash)
         timestamp = self.get_timestamp()
          
-        cancel_block = Block(prev_hash, canceller, coordinatorID, 0, "0", timestamp,f"round {round} cancelled by {canceller}")
+        cancel_block = Block(
+            prev_hash=prev_hash, 
+            writerID=canceller, 
+            coordinatorID=coordinatorID, 
+            winning_number=0,
+            writer_signature="0",
+            timestamp=timestamp,
+            payload=f"round {round} cancelled by {canceller}")
 
         self.latest_block = cancel_block
         return cancel_block
@@ -350,7 +371,7 @@ class ProtoEngine(ProtocolEngine):
         message = None
         while message is None:
             message = self._recv_msg("request", recv_from=coordinatorID)    # Gets stuck here if reconnected sometimes
-            verbose_print("[REQUEST MESSAGE] Received message of request for OTP from coordinator")
+            vverbose_print("[REQUEST MESSAGE] Received message of request for OTP from coordinator")
             time.sleep(0.01)
         
         # Step 2 - Generate next number and transmit to Coordinator
@@ -361,48 +382,46 @@ class ProtoEngine(ProtocolEngine):
         message = None
         while message is None:
             message = self._recv_msg("announce", recv_from=coordinatorID)
-            time.sleep(0.01)
-        if VERBOSE:
-            print("[WINNER MESSAGE] received message of winner writer from coordinator")
-        
+            time.sleep(0.01)        
         # Step 4 - Verify and receive new block from winner
         parsed_message = message.split("-")
         winner = ast.literal_eval(parsed_message[4])
         verified_round = self.verify_round_winner(winner, pad)
-        if VERBOSE:
-            print(f"[WINNER WRITER] writer with ID {winner[2]} won the round")
+        vverbose_print(f"[WINNER WRITER] writer with ID {winner[2]} won the round")
         
         if verified_round and self.ID == winner[2]:
             # I WON
             # First check if the previous round was cancelled and I had not seen the message yet
             self.check_for_old_cancel_message(round)
             block = self.create_block(pad, coordinatorID, round)
-            self.latest_block = block
+            
             # Broadcast our newest block before writing into chain
-            self.broadcast("block", str(block), round)  
+            if not block:   # Winning writer had nothing to write
+                self.broadcast("block", str(block), round)  
+                return
+                
+            self.latest_block = block
+            self.broadcast("block", str(block.as_tuple()), round)  
 
         elif verified_round:
             # Wait for a block to verify
             message = None
             while message is None:
-                message = self._recv_msg(type="block", recv_from=winner[2], round=round)
+                message = self._recv_msg(type="block", recv_from=winner[2], round=round)    # Gets back tuple block
                 time.sleep(0.01)
-            vverbose_print(f"[NEW BLOCK VERIFICATION] {message}")
-           
             parsed_message = message.split("-")
-            vverbose_print(f"[PARSED MESSAGE] {parsed_message}")
-            block = ast.literal_eval(parsed_message[4]) # The block 
-
+            block = Block.from_tuple(ast.literal_eval(parsed_message[4])) # Converts tuple block to block object
+            if not block:   # Winner had nothing to write. Round skipped
+                return
             if not self.verify_block(block):
                 self.cancel_round("Block not correct", round)
-                verbose_print("ERROR, BLOCK NOT CORRECT \n", block)
             else:
                 # Check if cancelled round
                 message = self._recv_msg(type="cancel")
                 if message is not None:
                     verbose_print("[ROUND CANCEL] the round was cancelled because of cancel message")
                     parsed_message = message.split("-")
-                    cancel_block = self.create_cancel_block(message)
+                    cancel_block = self.create_cancel_block(message)    # Block object
                     # If the block belongs to this round we continue
                     if int(parsed_message[0]) != round:
                         self.bcdb.insert_block(
@@ -412,71 +431,62 @@ class ProtoEngine(ProtocolEngine):
                     else:
                         # The block does not belong to this round
                         # We assign the latest round as a cancel block
-                        verbose_print("[SURPRISE ISNT IT] a previous round was cancelled because of cancel message\n", parsed_message)
+                        verbose_print("[ROUND CANCEL] a previous round was cancelled because of cancel message\n", parsed_message)
                         self.latest_block = cancel_block
-                else:
+                else:   # Verified and ready
                     self.latest_block = block
         else:
             # Round is not verified
             # Cancel the round
             verbose_print("[ROUND CANCEL] round was cancelled because it was not verified")
             self.cancel_round("Round not verified", round)
-    
-        verbose_print(f"[LATEST BLOCK] the latest block is: {self.latest_block}")
+
+        vverbose_print(f"[LATEST BLOCK] the latest block is: {self.latest_block}")
         self.bcdb.insert_block(round, self.latest_block)
 
     def coordinator_round(self, round: int):
-        if VERBOSE:
-            print(f"Round: {round} and ID={self.ID}")
+        
+        vverbose_print(f"Round: {round} and ID={self.ID}")
 
         assert isinstance(round, int)
 
         # Step 1 -
         self.check_for_old_cancel_message(round=round)
-        if VERBOSE:
-            print("done with check_for_old_cancel_message")
+        
 
         self.broadcast(msg_type="request", msg=round, round=round)
-        if VERBOSE:
-            print("done broadcast")
-
         # Step 2 - Wait for numbers reply from all
         numbers = []
-        # Currently waiting for number from all writers in list
+        # Currently waiting for a number from all active writers
         # MSG FORMAT <round nr>-<from id>-<to id>-<msg type>-<msg body>
-        count = 1
         while len(numbers) < len(self.writer_list):
-            count += 1
             message = self._recv_msg(type="reply")
             if message is not None:
-                verbose_print("message is NOT none")
                 parsed_message = message.split("-")
                 numbers.append([int(parsed_message[1]), int(parsed_message[4])])
-            # if count == 2:
-            #     break
             time.sleep(0.01)
 
         # Step 3 - Declare and announce winner
 
         winner = self.calculate_sum(numbers)
         self.broadcast("announce", winner, round)
-
+        winner_id = winner[2]
         # Step 4 - Receive new block (from winner)
         message = None
-        winner_id = winner[2]
         while message is None:
             message = self._recv_msg(type="block", recv_from=winner_id, round=round)
             time.sleep(0.01)
         parsed_message = message.split("-")
-        block = ast.literal_eval(parsed_message[4])
+        payload = ast.literal_eval(parsed_message[4])
+        if not payload: # Winner had nothing to write
+            return
+        block = Block.from_tuple(payload)
         if not self.verify_block(block):
-            self.cancel_round("Round not verified", round)
-            if VERBOSE:
-                print("ERROR, NOT CORRECT BLOCK")
+            self.cancel_round("Round not verified", round)  #TODO: should this not give back a block for insert?
+            verbose_print("ERROR, NOT CORRECT BLOCK")
         else:
             # Finally - write new block to the chain (DB)
-            # Check if cancelled round
-            message = self._recv_msg(type="cancel")
+            message = self._recv_msg(type="cancel") # Check if cancelled round
             if message is not None:
                 parsed_message = message.split("-")
                 cancel_block = self.create_cancel_block(message)
@@ -500,18 +510,18 @@ class ProtoEngine(ProtocolEngine):
         #       Note: most likely need a consensus on which writers are present
         self.join_writer_set()
         print("[ALL JOINED] all writers have joined the writer set")
-        count = 1
+        round = 0
         while True:
-            coordinator = self.get_coordinatorID(count)
-            verbose_print(f"ID: {self.ID}, CordinatorId: {coordinator}", coordinator == self.ID)
+            coordinator = self.get_coordinatorID(round)
+            vverbose_print(f"ID: {self.ID}, CordinatorId: {coordinator}", coordinator == self.ID)
             if coordinator == self.ID:
-                self.coordinator_round(count)
+                self.coordinator_round(round)
             else:
-                self.writer_round(count, coordinator)
+                self.writer_round(round, coordinator)
 
-            vverbose_print(f"[ROUND COMPLETE] round {count} finished with writer with ID {coordinator} as  the coordinator")
-            count += 1
-            if count > self.rounds and self.rounds:
+            vverbose_print(f"[ROUND COMPLETE] round {round} finished with writer with ID {coordinator} as  the coordinator")
+            round += 1
+            if round > self.rounds and self.rounds:
                 break   # Stops the program
 
     # MSG FORMAT <round nr>-<from id>-<to id>-<msg type>-<msg body>
@@ -533,8 +543,8 @@ class ProtoEngine(ProtocolEngine):
             self.message_queue.put(message[1])
         
         if self.message_queue.empty():
-            if VERBOSE:
-                print("message queue empty")
+            
+            verbose_print("message queue empty")
             return None
         # TODO: Why do we take the first message off of the queue when we have a list?
         mess = self.message_queue.get()
@@ -573,9 +583,9 @@ if __name__ == "__main__":
     rounds = a.r
     threads = []
 
-    for i in range(no_writers):
-        thread = Thread(target=test_engine, args=[i + 1, rounds, no_writers])
-        threads.append(thread)
+    #for i in range(no_writers):
+    #    thread = Thread(target=test_engine, args=[i + 1, rounds, no_writers])
+    #    threads.append(thread)
 
     for t in threads:
         t.start()
