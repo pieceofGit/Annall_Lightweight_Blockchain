@@ -48,13 +48,12 @@ class BlockchainDB(interfaces.BlockChainEngine):
             prevHash string NOT NULL,
             writerID integer NOT NULL,
             coordinatorID integer NOT NULL,
-            payload string,
             winningNumber integer NOT NULL,
             writerSignature string NOT NULL,
             timestamp integer NOT NULL,
-            hash string NOT NULL
+            hash string NOT NULL,
+            payload string
         );"""
-
         try:
             self.cursor.execute(drop_chain_table)
             self.cursor.execute(create_chain_table)
