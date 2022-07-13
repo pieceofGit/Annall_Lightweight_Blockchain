@@ -15,7 +15,7 @@ from interfaces import (
 from tcpserver import TCP_Server, ClientHandler
 from protocom import ProtoCom
 from blockchainDB import BlockchainDB
-
+from annall_globals import gMasterConfig, gMyDetails, init_config
 
 # should put here some elementary command line argument processing
 # EG. parameters for where the config file is, number of writers (for testing), and rounds
@@ -29,6 +29,8 @@ else:
     DB_PATH = f"{CWD}/src/db"
 
 PRIV_KEY_PATH = f"{CWD}/src"
+
+
 if __name__ == "__main__":
     print("MAIN STARTED")
     ap = argparse.ArgumentParser()
@@ -55,10 +57,20 @@ if __name__ == "__main__":
     # Read config and other init stuff
     with open(f"{CONFIG_PATH}/{conf_file}", "r") as f:
         data = json.load(f)
+
+    init_config(id, f"{CONFIG_PATH}/{conf_file}")
+
     if LOCAL:
         with open(f"{CONFIG_PATH}/test_node_{id}/priv_key.json", "r") as f:
             priv_key = json.load(f)
+        gMyDetails.priv_key = priv_key
     
+    
+    verbose_print(gMasterConfig)
+    verbose_print(gMasterConfig.list_of_writers)
+    verbose_print(gMyDetails)
+
+
     # Start Communication Engine - maintaining the peer-to-peer network of writers
     print("::> Starting up peer-to-peer network engine with id ", id)
     pComm = ProtoCom(id, data)
@@ -73,6 +85,7 @@ if __name__ == "__main__":
     bce = BlockchainDB(dbpath)
     print("    Local block chain database successfully initialized")
     verbose_print("   ", bce)
+
     # Start tcp_server thread for client requests
     # Since it selects a port on the computer, with a hard-coded TCP port, it can only start one 
     # if id == 1 or id == 2 or id == 3:
