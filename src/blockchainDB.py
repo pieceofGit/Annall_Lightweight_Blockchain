@@ -7,7 +7,7 @@ from sqlite3 import Error
 import json
 
 import interfaces
-from interfaces import verbose_print
+from interfaces import verbose_print, vverbose_print
 from block import Block
 
 
@@ -38,7 +38,6 @@ class BlockchainDB(interfaces.BlockChainEngine):
     def initilize_table(self):
         #TODO treat the case when the DB exists, and we want to continue.
         self.create_table()
-        pass
         # If database exists, set self.length and initialize db
 
     def create_table(self):
@@ -51,13 +50,12 @@ class BlockchainDB(interfaces.BlockChainEngine):
             prevHash string NOT NULL,
             writerID integer NOT NULL,
             coordinatorID integer NOT NULL,
-            payload string,
             winningNumber integer NOT NULL,
             writerSignature string NOT NULL,
             timestamp integer NOT NULL,
-            hash string NOT NULL
+            hash string NOT NULL,
+            payload string
         );"""
-
         try:
             # self.cursor.execute(drop_chain_table)
             self.cursor.execute(create_chain_table)
@@ -67,25 +65,17 @@ class BlockchainDB(interfaces.BlockChainEngine):
             #raise e
 
     def insert_block(self, block_id : int, block : Block, overwrite=False ):  
-    
-        assert isinstance(block_id, int)    # The round
+        # TODO: Separate from blockchain length and thus degraded.
+        assert isinstance(block_id, int)    # The round 
         assert isinstance(block, Block)    
 
-        ## TODO: Remove DELETE = this is a blockchain, nothing should be deleted.
-        
-        if block.payload == "arbitrarypayload":  # Do not write into chain if empty message
-            # TODO: Figure out what and why this is here = looks like crap
-            return
+        ## TODO: Remove DELETE = this is a blockchain, nothing should be deleted.        
         verbose_print(f"[INSERT BLOCK] added block with block id {block_id} and block {block}")
-        # insertion = f'INSERT INTO chain(round,prevHash,writerID,coordinatorID,payload,winningNumber,writerSignature,hash) VALUES({self.length},"{block[0]}",{block[1]},{block[2]},"{block[3]}",{block[4]},"{block[5]}","{block[6]}");'
         try:
             if overwrite:
                 self.cursor.execute(f"DELETE FROM chain WHERE round == {block_id}")
-           
             self.cursor.execute("insert into chain values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            #[self.length, self.prev_hash, self.writerID, self.coordinatorID, self.winning_number, self.writer_signature,
-            #    self.timestamp, self.this_hash, self.payload]
-            [self.length, block.prev_hash, block.writerID, block.coordinatorID, block.winning_number, block.writer_signature,
+            [self.length, block.prev_hash, block.writerID, block.coordinatorID, block.winning_number, block.writer_signature, 
             block.timestamp, block.this_hash, block.payload]
             )
             self.db_connection.commit()
@@ -98,10 +88,11 @@ class BlockchainDB(interfaces.BlockChainEngine):
     def get_last_round_id(self):
         try:
             query = "SELECT MAX (round) FROM chain"
-            last_round_id = self.cursor.execute(query)
-            self.length = last_round_id + 1 
+            last_round_id_query = self.cursor.execute(query)
+            last_round_id = last_round_id_query.fetchall() 
+            return last_round_id[0][0] + 1
         except:
-            self.length = 0
+            return 0
 
     def select_entry(self, condition: str, col: str = "*"):
         """ Retrieve block with specific condition
@@ -161,9 +152,7 @@ class BlockchainDB(interfaces.BlockChainEngine):
             to_return = retrieved.fetchall()
         except Exception as e:
             print("Error retrieving blocks from db")
-            print(e)
-        
-        print(f"[RETURN FROM READ BLOCKS] {to_return}")
+            print(e)        
         return to_return
 
 
@@ -188,7 +177,7 @@ def __test_localDB():
     blocks_db.insert_block(4, the_block)
     blocks_db.insert_block(5, the_block)
     blocks_db.insert_block(6, the_block)
-    msg = len(blocks_db.read_blocks(0, 4))
+    reading_blocks = len(blocks_db.read_blocks(0, 4))
     # print(f"[MESSAGE READ BLOCKS 1-4] The message: {msg}")
     # import time
     # time.sleep(100)
