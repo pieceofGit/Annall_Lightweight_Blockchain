@@ -22,11 +22,12 @@ class BlockchainDB(interfaces.BlockChainEngine):
     def __init__(self, db_path : str = ":memory:"):
         ## Missing conditionals and exceptions
         self.db_path = db_path
-        self.length = 0           # really a sequence number as primary key
         self.db_connection = sqlite3.connect(db_path, check_same_thread=False) # TODO: How can we circumvent check_same_thread?
         self.cursor = self.db_connection.cursor()
         self.initilize_table()
         print("DB: Local Blockchain ready for use")
+        self.length = self.get_last_round_id()           # really a sequence number as primary key
+
 
     def __del__(self):
         # Missing conditionals and exceptions
@@ -37,11 +38,13 @@ class BlockchainDB(interfaces.BlockChainEngine):
     def initilize_table(self):
         #TODO treat the case when the DB exists, and we want to continue.
         self.create_table()
+        pass
+        # If database exists, set self.length and initialize db
 
     def create_table(self):
 
-        drop_chain_table = """DROP TABLE IF EXISTS chain
-        """
+        # drop_chain_table = """DROP TABLE IF EXISTS chain
+        # # """
 
         create_chain_table = """CREATE TABLE IF NOT EXISTS chain (
             round integer PRIMARY KEY,
@@ -56,7 +59,7 @@ class BlockchainDB(interfaces.BlockChainEngine):
         );"""
 
         try:
-            self.cursor.execute(drop_chain_table)
+            # self.cursor.execute(drop_chain_table)
             self.cursor.execute(create_chain_table)
             self.db_connection.commit()
         except Exception as e:
@@ -91,6 +94,14 @@ class BlockchainDB(interfaces.BlockChainEngine):
             
         except Exception as e:
             print("Error inserting block to chain db ", e)
+
+    def get_last_round_id(self):
+        try:
+            query = "SELECT MAX (round) FROM chain"
+            last_round_id = self.cursor.execute(query)
+            self.length = last_round_id + 1 
+        except:
+            self.length = 0
 
     def select_entry(self, condition: str, col: str = "*"):
         """ Retrieve block with specific condition
@@ -170,15 +181,19 @@ def __test_localDB():
 
     #Block(prev_hash, writerID, coordinatorID, winning_number, signature, timestamp, payload )
     genesis_block = Block("0", 0, 0, 0, "0", 0,  json.dumps({"type": "genesis block"}),)
-    # blocks_db.insert_block(0, genesis_block)
-    # blocks_db.insert_block(1, the_block)
-    # blocks_db.insert_block(3, the_block)
-    msg = blocks_db.read_blocks(0, 4)
-    print(f"[MESSAGE READ BLOCKS 1-4] The message: {msg}")
+    blocks_db.insert_block(0, genesis_block)
+    blocks_db.insert_block(1, the_block)
+    blocks_db.insert_block(2, the_block)
+    blocks_db.insert_block(3, the_block)
+    blocks_db.insert_block(4, the_block)
+    blocks_db.insert_block(5, the_block)
+    blocks_db.insert_block(6, the_block)
+    msg = len(blocks_db.read_blocks(0, 4))
+    # print(f"[MESSAGE READ BLOCKS 1-4] The message: {msg}")
     # import time
     # time.sleep(100)
-    msg = blocks_db.read_blocks(0, read_entire_chain=True)
-    print("READING ENTIRE BLOCKCHAIN", msg, type(msg))
+    msg = len(blocks_db.read_blocks(0, read_entire_chain=True))
+    print("Blockchain length: ", msg)
     #to_json = msg[0]["payload"]
 
 

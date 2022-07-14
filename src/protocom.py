@@ -63,13 +63,13 @@ class RemoteEnd:
         # self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
     def connect(self):
-        """ Check wether connection tries exceed max\n
+        """ Check whether connection tries exceed max\n
             if not try to connect """
         self.try_conn += 1
         if self.try_conn == RemoteEnd.max_try_conn:
             self.time_last = time.process_time()
             raise Exception("Max tries reached")
-        elif self.try_conn > RemoteEnd.max_try_conn:
+        elif self.try_conn > RemoteEnd.max_try_conn:    
             # if timeout for tryin to reconnect is reached
             if time.process_time() - self.time_last > RemoteEnd.wait_conn:
                 # allow one more try
@@ -416,7 +416,7 @@ class ProtoCom(ProtocolCommunication):
                 vverbose_print("Connected to id:", r_id)
             except Exception as e:
                 vverbose_print(f">!! Failed to connect with exception: {e}")
-                self.peers[r_id].close(self.rr_selector)
+                self.peers[r_id].close(self.rr_selector)    # TODO: Fails on Socket = None on close()
                 return
             try:
                 req_msg = pMsg.con_requ_msg(self.id, r_id, self.pub_key)
@@ -465,7 +465,7 @@ class ProtoCom(ProtocolCommunication):
         try:
             msg = self.peers[r_id].read_single_msg()
         except Exception as e:
-            verbose_print(">!! ", "Failed to read from socket")
+            verbose_print(">!! ", "Failed to read from socket ", e)
             # this means connection is closed
             # close socket here do not put on a removelist
             try:
