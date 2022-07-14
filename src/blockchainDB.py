@@ -26,7 +26,7 @@ class BlockchainDB(interfaces.BlockChainEngine):
         self.cursor = self.db_connection.cursor()
         self.initilize_table()
         print("DB: Local Blockchain ready for use")
-        self.length = self.get_last_round_id()           # really a sequence number as primary key
+        self.length = self.get_round_number()           # really a sequence number as primary key
 
 
     def __del__(self):
@@ -85,7 +85,7 @@ class BlockchainDB(interfaces.BlockChainEngine):
         except Exception as e:
             print("Error inserting block to chain db ", e)
 
-    def get_last_round_id(self):
+    def get_round_number(self):
         try:
             query = "SELECT MAX (round) FROM chain"
             last_round_id_query = self.cursor.execute(query)

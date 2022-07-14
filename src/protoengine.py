@@ -567,7 +567,7 @@ class ProtoEngine(ProtocolEngine):
         #       Note: most likely need a consensus on which writers are present
         self.join_writer_set()
         print("[ALL JOINED] all writers have joined the writer set")
-        round = 0
+        round = self.bcdb.length
         while True:
             coordinator = self.get_coordinatorID(round)
             vverbose_print(f"ID: {self.ID}, CordinatorId: {coordinator}", coordinator == self.ID)
