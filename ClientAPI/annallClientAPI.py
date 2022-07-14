@@ -1,5 +1,5 @@
 """ 
-An API for Annáll using Flask and Gunicorn.
+A ClientAPI for Annáll using Flask and Gunicorn.
 """
 import json
 import argparse
@@ -8,7 +8,7 @@ import sys
 from connectToServer import ServerConnection
 from exceptionHandler import InvalidUsage
 # import sys
-print("Starting annallAPI Flask application server")
+print("Starting annallClientAPI Flask application server")
 app = Flask(__name__)
 # Connect to server
 TCP_PORT = 5001 # Connects to port of writer 1

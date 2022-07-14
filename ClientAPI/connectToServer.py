@@ -23,7 +23,7 @@ class ServerConnection:
         # Try ten times to connect to writer
         self.connect_to_writer()
 
-    # connection writer to API and retry 
+    # connection writer to ClientAPI and retry 
     def connect_to_writer(self):
         running = False
         count = 0

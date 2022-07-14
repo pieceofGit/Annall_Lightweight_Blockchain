@@ -4,8 +4,8 @@ __pycache__/
 *.db
 *.sqliterc
 .DS_Store
-API/test_api_client_websockets.py
-API/test_writer_server_websockets.py
+ClientAPI/test_api_client_websockets.py
+ClientAPI/test_writer_server_websockets.py
 src/test_dict_json.py
 /src/config.json
 src/test_json.py
