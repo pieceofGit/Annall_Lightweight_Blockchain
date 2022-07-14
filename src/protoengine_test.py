@@ -72,7 +72,8 @@ def hash_block(block: tuple):
 
 
 global_list = []
-
+ 
+#ADSF
 
 def verify_chain(chain):
     correct_hash_chain = True
@@ -85,7 +86,7 @@ def verify_chain(chain):
 
     same_writer_coord = not any(block[2] == block[3] for block in chain[1:])
 
-    #correctly_hashed = all(hash_block(block[1:]) == block[7] for block in chain[1:])
+    correctly_hashed = all(hash_block(block[1:]) == block[7] for block in chain[1:])
 
     return correct_hash_chain and same_writer_coord and correctly_hashed
 

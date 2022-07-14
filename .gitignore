@@ -9,3 +9,5 @@ API/test_writer_server_websockets.py
 src/test_dict_json.py
 /src/config.json
 src/test_json.py
+src/oldMaster
+src/Errors or strange scenarios

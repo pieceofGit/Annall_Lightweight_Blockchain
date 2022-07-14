@@ -24,4 +24,3 @@ print(type(insert_time))
 def getTimeStamp(date):
     return datetime.timestamp(date)
 print(getTimeStamp(datetime.now()))
-print("False" == 'False')

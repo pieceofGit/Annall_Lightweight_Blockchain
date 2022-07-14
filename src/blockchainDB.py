@@ -7,7 +7,7 @@ from sqlite3 import Error
 import json
 
 import interfaces
-from interfaces import verbose_print, vverbose_print
+from interfaces import verbose_print
 from block import Block
 
 
@@ -48,12 +48,13 @@ class BlockchainDB(interfaces.BlockChainEngine):
             prevHash string NOT NULL,
             writerID integer NOT NULL,
             coordinatorID integer NOT NULL,
+            payload string,
             winningNumber integer NOT NULL,
             writerSignature string NOT NULL,
             timestamp integer NOT NULL,
-            hash string NOT NULL,
-            payload string
+            hash string NOT NULL
         );"""
+
         try:
             self.cursor.execute(drop_chain_table)
             self.cursor.execute(create_chain_table)
@@ -63,17 +64,25 @@ class BlockchainDB(interfaces.BlockChainEngine):
             #raise e
 
     def insert_block(self, block_id : int, block : Block, overwrite=False ):  
-        # TODO: Separate from blockchain length and thus degraded.
-        assert isinstance(block_id, int)    # The round 
+    
+        assert isinstance(block_id, int)    # The round
         assert isinstance(block, Block)    
 
-        ## TODO: Remove DELETE = this is a blockchain, nothing should be deleted.        
+        ## TODO: Remove DELETE = this is a blockchain, nothing should be deleted.
+        
+        if block.payload == "arbitrarypayload":  # Do not write into chain if empty message
+            # TODO: Figure out what and why this is here = looks like crap
+            return
         verbose_print(f"[INSERT BLOCK] added block with block id {block_id} and block {block}")
+        # insertion = f'INSERT INTO chain(round,prevHash,writerID,coordinatorID,payload,winningNumber,writerSignature,hash) VALUES({self.length},"{block[0]}",{block[1]},{block[2]},"{block[3]}",{block[4]},"{block[5]}","{block[6]}");'
         try:
             if overwrite:
                 self.cursor.execute(f"DELETE FROM chain WHERE round == {block_id}")
+           
             self.cursor.execute("insert into chain values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [self.length, block.prev_hash, block.writerID, block.coordinatorID, block.winning_number, block.writer_signature, 
+            #[self.length, self.prev_hash, self.writerID, self.coordinatorID, self.winning_number, self.writer_signature,
+            #    self.timestamp, self.this_hash, self.payload]
+            [self.length, block.prev_hash, block.writerID, block.coordinatorID, block.winning_number, block.writer_signature,
             block.timestamp, block.this_hash, block.payload]
             )
             self.db_connection.commit()
@@ -83,7 +92,7 @@ class BlockchainDB(interfaces.BlockChainEngine):
         except Exception as e:
             print("Error inserting block to chain db ", e)
 
-    def select_entry(self, condition: str, col: str = "*"): 
+    def select_entry(self, condition: str, col: str = "*"):
         """ Retrieve block with specific condition
         """
         assert isinstance(condition, str)

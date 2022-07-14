@@ -11,7 +11,6 @@ from interfaces import (
     #BlockChainEngine,
     #ClientServer,
     verbose_print,
-    vverbose_print
 )
 from tcpserver import TCP_Server, ClientHandler
 from protocom import ProtoCom
@@ -72,12 +71,16 @@ if __name__ == "__main__":
     dbpath = f"{DB_PATH}/test_node_{id}/blockchain.db"
     print("::> Starting up Blockchain DB = using ", dbpath)
     bce = BlockchainDB(dbpath)
-    print("Local block chain database successfully initialized")
-    verbose_print("THE ID: ", id)
+    print("    Local block chain database successfully initialized")
+    verbose_print("   ", bce)
+    # Start tcp_server thread for client requests
+    # Since it selects a port on the computer, with a hard-coded TCP port, it can only start one 
+    # if id == 1 or id == 2 or id == 3:
+    print("THE ID IS 1. THE ID: ", id)
     # See config.json for writer_set
     TCP_IP = data["writer_set"][id - 1]["hostname"]
     TCP_PORT = data["writer_set"][id-1]["client_port"] 
-    print(f"TCP PORT: {TCP_PORT}")
+    print(F"TCP PORT: {TCP_PORT}")
     print("::> Starting up ClientServer thread")
     # TCPServer: name, IPv4_addr, port, RequestHandlerClass, bcdb,
     clients = TCP_Server("the server", TCP_IP, TCP_PORT, ClientHandler, bce)    # ClientHandler uses the bce object to read db
@@ -87,6 +90,7 @@ if __name__ == "__main__":
     cthread.daemon = True
     cthread.start()
     print("ClientServer up and running as:", cthread.name)
+    
     # Start protocol engine
     print("::> Starting up BlockChainEngine")
     keys = priv_key["priv_key"]
