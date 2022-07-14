@@ -1,32 +1,4 @@
-import time
-from datetime import datetime
-import json
-the_dict = {"hello":"john"}
-if type(the_dict) == dict:
-    print("IS DICT")
-print(the_dict)
-json_dict = json.dumps(the_dict) # Dict to json
-print(json.dumps(json_dict))
-print(f"{json_dict}")
-print(json_dict)
-# dict_json = json.loads(json_dict)
-# print(dict_json)    # json to dict
-# print(json_dict)
-# json_dict = json.dumps(json_dict)
-# print(json_dict)
-# print(json.dumps(json_dict))
-
-ts = time.gmtime()
-insert_time = time.strftime("%Y:%m:%d %H:%M:%S", ts)
-
-print(insert_time)
-print(type(insert_time))
-def getTimeStamp(date):
-    return datetime.timestamp(date)
-print(getTimeStamp(datetime.now()))
-print("False" == 'False')
-
-config = {
+{
   "no_active_writers": 2,
   "no_permitted_writers": 5,
   "writer_set": [
@@ -75,15 +47,3 @@ config = {
   "modulus": 65537,
   "version": "1.0"
 }
-
-new_writer = {
-  "name": "writaaaafFROMTHASIDEE",
-  "id": 5,
-  "hostname": "127.0.0.1",
-  "protocol_port": 15004,
-  "client_port": 5005,
-  "pub_key": 5201436109692264160381491489256447438599177742267677213582409586036574854460390077866591556888766373006402781686515565938838507128202395078557421943547813
-}
-
-config["writer_set"].append(new_writer)
-print(config)

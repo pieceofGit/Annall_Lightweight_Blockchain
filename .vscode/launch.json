@@ -25,6 +25,16 @@
       "cwd": "${fileDirname}"
     },
     {
+      "name": "Python: WriterAPI",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      //   "args": [""],
+      "cwd": "${fileDirname}"
+    },
+    {
       "name": "Python: GMain",
       "type": "python",
       "request": "launch",
