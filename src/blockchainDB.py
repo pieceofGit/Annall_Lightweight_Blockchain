@@ -161,9 +161,9 @@ def __test_localDB():
 
     #Block(prev_hash, writerID, coordinatorID, winning_number, signature, timestamp, payload )
     genesis_block = Block("0", 0, 0, 0, "0", 0,  json.dumps({"type": "genesis block"}),)
-    blocks_db.insert_block(0, genesis_block)
-    blocks_db.insert_block(1, the_block)
-    blocks_db.insert_block(3, the_block)
+    # blocks_db.insert_block(0, genesis_block)
+    # blocks_db.insert_block(1, the_block)
+    # blocks_db.insert_block(3, the_block)
     msg = blocks_db.read_blocks(0, 4)
     print(f"[MESSAGE READ BLOCKS 1-4] The message: {msg}")
     # import time
