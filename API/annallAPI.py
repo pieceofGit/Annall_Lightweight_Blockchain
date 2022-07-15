@@ -40,19 +40,24 @@ def handle_invalid_usage(error):
 @app.route("/publishandsubscribe", methods=["GET"])
 def createSmartContracts():
     # Asks for blockchain and gets it back
-    try:
-        resp_obj = server.send_msg(json.dumps({"request_type": "read_chain"}))
-        # print("The resp object ", resp_obj)
-        print("THe length of resp ", len(resp_obj))
-        obj = json.loads(resp_obj)
-        for res in obj:
-            print("Hey ", res)        
-        return Response(resp_obj, mimetype="application/json")
-
-    except Exception:
-        raise InvalidUsage("Failed to read from writer", status_code=500)
-    
-
+    requestObject = getJson(request)
+    typeToGet = requestObject['type']
+    typeToGet = typeToGet.lower()
+    print("type to get ", typeToGet)
+    resp_obj = server.send_msg(json.dumps({"request_type": "read_chain"}))
+    print("THe length of resp ", len(resp_obj))
+    obj = json.loads(resp_obj)
+    lis = []
+    for res in obj:
+        try:
+            print(res['payload']['headers']['type'], " versus ", typeToGet)
+            if res['payload']['headers']['type'] == typeToGet:
+                lis.append(res)
+                
+        except:
+            print("Couldnt find a type")
+    print("Return list for the given type ", lis)
+    return Response(lis, mimetype="application/json")
 
 
 @app.route("/blocks", methods=["GET"])
@@ -69,7 +74,7 @@ def get_blockchain():
 def insert_block():
     # Decode the JSON
     print("[REQUEST OBJECT POST]", request.data)
-    request_object = get_json(request)
+    request_object = getJson(request)
     
     # Get the object 
     if "body" in request_object:
@@ -89,11 +94,11 @@ def insert_block():
 # TODO: Get all blocks for a wallet
 # @app.route("/block/<blockid>", methods=["GET"])
 # def get_block():
-#     request_object = get_json(request)
+#     request_object = getJson(request)
     
 #     # return json.dumps({"message":"verified"})
 
-def get_json(request):
+def getJson(request):
     try:
         return json.loads(request.data) 
     except Exception:
