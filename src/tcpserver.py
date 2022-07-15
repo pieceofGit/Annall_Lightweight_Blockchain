@@ -7,7 +7,7 @@ import argparse
 import time
 import hashlib
 
-from interfaces import ClientServer
+from interfaces import ClientServer, verbose_print, vverbose_print
 from queue import Queue
 
 """
@@ -20,7 +20,6 @@ from queue import Queue
 
 BUFFER_SIZE = 4096
 LOCAL = True   # Connect to specific socket or any available
-VERBOSE = False
 
 class ClientHandler(threading.Thread):
     # noinspection PyPep8Naming
@@ -47,11 +46,7 @@ class ClientHandler(threading.Thread):
 
     def format_msg(self, msg: str) -> bytes:
         """ Format message to be sent over socket """
-        if VERBOSE:
-            print(">", self.format_msg.__name__, "Length: ", len(msg), "Message: ", msg)
         b = len(msg).to_bytes(4, "big", signed=False) + bytes(msg, "utf-8")
-        if VERBOSE:
-            print(">", self.format_msg.__name__, "Message in bytes: ", b)
         return b
     
     def send_message_to_client(self, msg):
@@ -72,16 +67,16 @@ class ClientHandler(threading.Thread):
             # Get message length as integer
             length = int.from_bytes(byte_length, "big", signed=False)
         except Exception as e:
-            print(">!! Failed to read length of message")
+            verbose_print(">!! Failed to read length of message")
             return ""
         if length > BUFFER_SIZE:
-            print(">!! Message size too large")
+            verbose_print(">!! Message size too large")
             return ""
         try:
             # Get the message data
             b = self.connection.recv(length)
         except Exception as e:
-            print(">!! Failed to read message with:", e)
+            verbose_print(">!! Failed to read message with:", e)
         try:
             json_msg = json.loads(b)
             return json_msg
@@ -91,30 +86,24 @@ class ClientHandler(threading.Thread):
     def send_ack(self, payload=None):
         acc = json.dumps({"message_received": True, "payload_id": self.payload_id})
         try:
-            if VERBOSE:
-                print("Sending message_received ack")
+            verbose_print("Sending message_received ack")
             if payload:
                 self.send_message_to_client(payload)
             else:
                 self.send_message_to_client(acc)
         except Exception as e:  # should really be more specific
-            print("exception", type(e), e)
+            verbose_print("exception", type(e), e)
             self.terminate = True
     
     def run(self):
         # After initial handshake.
         # Where service of the client request takes place
-        if VERBOSE:
-            print(f"[CLIENT START]: The thread: {self.name}")
+        vverbose_print(f"[CLIENT START]: The thread: {self.name}")
         # initial handshake with client
         msg = json.dumps({"Server": "Hello", "name": self.name})
-        if VERBOSE:
-            print(f"[MESSAGE TO CLIENT] the message: {msg}")
         self.send_message_to_client(msg)
         # Only receive the first message. Use message length        
         data = self.get_message_from_client()
-        if VERBOSE:
-            print(f"[RECEIVED DATA FROM CLIENT] {data}")
         self.name = data["name"]
         self.payload_id = data["payload_id"]
         self.send_ack()
@@ -123,28 +112,20 @@ class ClientHandler(threading.Thread):
             try:
                 d = self.get_message_from_client() # Blocks on waiting for data from client and loads into dict
             except Exception as e:  
-                print("exception", type(e), e)
+                verbose_print("exception", type(e), e)
                 self.terminate = True
                 break
-            if VERBOSE:
-                print("[DECODE MESSAGE] decoding message from client")
-                print("Received: ", d)
             if d["request_type"] == "verify":
-                print("[VERIFICATION REQUEST]")
                 payload = f"{d['name']},{d['request_type']},{d['body']}"
                 if self.check_existence(d["hash"], payload):
                     resp = json.dumps({"verified": True,})
                 else:
                     resp = json.dumps({"verified": False,})
-                if VERBOSE:
-                    print("Sending to client verification: " + resp)
                 self.send_message_to_client(resp)
             elif d["request_type"] == "read_chain":
                 # Gets back chain in a list of dictionaries
                 blockchain = self.bcdb.read_blocks(0, read_entire_chain=True)
                 # Send back entire blockchain json object
-                if VERBOSE:
-                    print("[SENDING BLOCKCHAIN] ", blockchain, type(blockchain))
                 self.send_message_to_client(json.dumps(blockchain))
             else:   # "request_type == "block"
                 # Add new message to payload queue and send back ACK
@@ -153,11 +134,7 @@ class ClientHandler(threading.Thread):
                     payload = json.dumps(d['body']) # Take dict and turn to json
                 else:
                     payload = f"{d['body']}"    # If not dict, store unchanged string
-                if VERBOSE:
-                    print(f"[PAYLOAD] {d['name']}, {d['request_type']}, {d['body']}")
                 # Add new message to queue
-                if VERBOSE:
-                    print(f"[PAYLOAD ADDED] added new payload: {payload}")
                 self.payload_queue.put((self.payload_id, payload))
                 self.send_ack(payload)
             time.sleep(self.delay)
@@ -219,12 +196,12 @@ class TCP_Server(ClientServer):
                 self.s.bind(("", port)) # Binds to any available IP Address
             self.s.listen(5)
         except Exception as e:
-            print(
+            verbose_print(
                 "Error: Cannot setup socket - no point in continuing", type(e), e.args
             )
             raise
 
-        print("Server started - listening at", IPv4_addr, ":", port)
+        verbose_print("Server started - listening at", IPv4_addr, ":", port)
 
     def accept(self):
         try:
@@ -254,7 +231,7 @@ class TCP_Server(ClientServer):
         # cleanup terminated threads
         self._cleanup_terminated_threads()
 
-        print(
+        vverbose_print(
             "Handle Client",
             TCP_Server.NumConnections,
             "total threads",
@@ -284,7 +261,7 @@ class TCP_Server(ClientServer):
                 # Calls accept to get connection
                 self.accept()   # Blocks on waiting for a new connection
         except Exception as e:
-            print("Error:", type(e), e.args)
+            verbose_print("Error:", type(e), e.args)
             request, client_address = None, None
             handle_error(request, client_address)
         finally:

@@ -33,6 +33,23 @@ from block import Block
 NoneType = type(None)
 
 
+transactions = [
+    ["none", "WALLET1", "500", "init"],
+    ["none", "WALLET1", "500", "commit"],
+    ["none", "WALLET2", "500", "init"],
+    ["none", "WALLET2", "500", "commit"],
+    ["none", "WALLET3", "500", "init"],
+    ["none", "WALLET3", "500", "commit"],
+    ["none", "WALLET4", "500", "init"],
+    ["none", "WALLET4", "500", "commit"],
+    ["WALLET2", "WALLET4", "100", "init"],
+    ["WALLET2", "WALLET4", "100", "commit"],
+    ["WALLET2", "WALLET1", "50", "init"],
+    ["WALLET2", "WALLET1", "50", "commit"],
+    ["WALLET3", "WALLET1", "150", "init"],
+    ["WALLET3", "WALLET1", "150", "commit"],
+]
+
 VERBOSE = False
 
 def bytes_to_long(s: str):
@@ -74,6 +91,48 @@ def mod_inverse(a, m):
         return x % m
 
 
+# calculates the hash for a given block
+def hash_block(block: tuple):
+    '''
+    Creates a hash for a given block
+    
+    Block is a 8 item tuple containing the following attributes:
+        prev_hash,
+        writerID,
+        coordinatorID,
+        payload,
+        winning_number,
+        writer_signature,
+        timestamp,
+        _ (current hash?)
+    '''
+    assert isinstance(block, tuple)
+    assert len(block) == 8  # Added timestamp
+    # create a SHA-256 hash object
+    key = hashlib.sha256()
+
+    # Extract these variables from block
+    (
+        prev_hash,
+        writerID,
+        coordinatorID,
+        payload,
+        winning_number,
+        writer_signature,
+        timestamp,
+        _,
+    ) = block
+    # The update is feeding the object with bytes-like objects (typically bytes)
+    # Using update
+    key.update(str(prev_hash).encode("utf-8"))
+    key.update(str(writerID).encode("utf-8"))
+    key.update(str(coordinatorID).encode("utf-8"))
+    key.update(str(payload).encode("utf-8"))
+    key.update(str(winning_number).encode("utf-8"))
+    key.update(str(writer_signature).encode("utf-8"))
+    key.update(str(timestamp).encode("utf-8"))
+    # 0x + the key hex string
+    return "0x" + key.hexdigest()
 
 
 class ProtoEngine(ProtocolEngine):
@@ -96,7 +155,7 @@ class ProtoEngine(ProtocolEngine):
         ProtocolEngine.__init__(self, id, comm, blockchain, clients)
 
         self.ID = id
-        self.keys = keys
+        self.keys = keys    # Private keys
 
         self.writer_list = []  # list of writer ID's
         #self.max_writers = 4
@@ -299,7 +358,7 @@ class ProtoEngine(ProtocolEngine):
         fake_message = f"{round}-{self.ID}-0-cancel-hehe"
         self.create_cancel_block(fake_message)
 
-    def create_block(self, pad: int, coordinatorID: int, round : int):
+    def create_block(self, pad: int, coordinatorID: int, round):
         assert isinstance(pad, int)
         assert isinstance(coordinatorID, int)
         payload = self.get_payload(round)    # If returns False, should skip the round
@@ -316,7 +375,7 @@ class ProtoEngine(ProtocolEngine):
         winning_number = pad
         coordinatorID = coordinatorID
         writerID = self.ID
-        timestamp = self.get_timestamp() 
+        timestamp = self.get_timestamp() ### hmmmm
 
         block = Block(
             prev_hash=prev_hash,
@@ -335,7 +394,7 @@ class ProtoEngine(ProtocolEngine):
         parsed_message = message.split("-")
         canceller = int(parsed_message[1])
         round = int(parsed_message[0])
-        coordinatorID = self.get_coordinatorID(round)
+        coor_id = self.get_coordinatorID(round)
         prev_hash = self.bcdb.read_blocks(round - 1, col="hash", getLastRow=True)[0][0]
         prev_hash = str(prev_hash)
         timestamp = self.get_timestamp()
@@ -343,7 +402,7 @@ class ProtoEngine(ProtocolEngine):
         cancel_block = Block(
             prev_hash=prev_hash, 
             writerID=canceller, 
-            coordinatorID=coordinatorID, 
+            coordinatorID=coor_id, 
             winning_number=0,
             writer_signature="0",
             timestamp=timestamp,
@@ -394,13 +453,11 @@ class ProtoEngine(ProtocolEngine):
             # First check if the previous round was cancelled and I had not seen the message yet
             self.check_for_old_cancel_message(round)
             block = self.create_block(pad, coordinatorID, round)
-            
+            self.latest_block = block
             # Broadcast our newest block before writing into chain
             if not block:   # Winning writer had nothing to write
                 self.broadcast("block", str(block), round)  
                 return
-                
-            self.latest_block = block
             self.broadcast("block", str(block.as_tuple()), round)  
 
         elif verified_round:
@@ -570,7 +627,72 @@ class ProtoEngine(ProtocolEngine):
         return None
 
 
-## A small elementary test
+global_list = []
+
+
+def verify_chain(chain):
+    correct_hash_chain = True
+    for index in range(len(chain)):
+        if index != 0:
+            if chain[index][1] != chain[index - 1][7]:
+                print("Incorrect part in chain 1/2" , chain[index][1])
+                print("Incorrect part in chain 2/2" , chain[index - 1][7])
+                correct_hash_chain = False
+
+    same_writer_coord = not any(block[2] == block[3] for block in chain[1:])
+
+    correctly_hashed = all(hash_block(block[1:]) == block[7] for block in chain[1:])
+
+    return correct_hash_chain and same_writer_coord and correctly_hashed
+
+
+def test_engine(id: int, rounds: int, no_writers: int):
+    with open("./src/config-l2.json", "r") as f:
+        data = json.load(f)
+
+
+    # bce, blockchain writer to db
+    CWD = os.getcwd()
+    dbpath = f"/src/db/blockchain{id}.db"
+    dbpath = CWD + dbpath
+    print(f"[DIRECTORY PATH] {dbpath}")
+    bce = BlockchainDB(dbpath)
+
+    # p2p network
+    pcomm = ProtoCom(id, data)
+    pcomm.daemon = True
+    pcomm.start()
+
+    # client server thread
+    if id == 1:
+        TCP_IP = data["writer_set"][id - 1]["hostname"]
+        TCP_PORT = 15005
+        print("::> Starting up ClientServer thread")
+        clients = TCP_Server("the server", TCP_IP, TCP_PORT, ClientHandler, bce)
+        cthread = Thread(target=clients.run, name="ClientServerThread")
+        cthread.daemon = True
+        cthread.start()
+        print("ClientServer up and running as:", cthread.name)
+    else:
+        clients = ClientServer()
+
+    keys = data["writer_set"][id - 1]["priv_key"]
+
+    # run the protocol engine, with all the stuff
+    w = ProtoEngine(id, tuple(keys), pcomm, bce, clients,)
+    w.set_rounds(rounds)
+    w.set_conf(data)
+
+    wlist = []
+    for i in range(no_writers):
+        if (i + 1) != id:
+            wlist.append(i + 1)
+    w.set_writers(wlist)
+    w.run_forever()
+    time.sleep(id)
+    global_list.append(w.bcdb.read_blocks(0, 10))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("-w", default=5, type=int, help="number of writers")
@@ -583,9 +705,9 @@ if __name__ == "__main__":
     rounds = a.r
     threads = []
 
-    #for i in range(no_writers):
-    #    thread = Thread(target=test_engine, args=[i + 1, rounds, no_writers])
-    #    threads.append(thread)
+    for i in range(no_writers):
+        thread = Thread(target=test_engine, args=[i + 1, rounds, no_writers])
+        threads.append(thread)
 
     for t in threads:
         t.start()
@@ -593,4 +715,10 @@ if __name__ == "__main__":
     for t in threads:
         t.join()
     # Here we verify if the chain is stil lintact
-
+    correctness = all(verify_chain(chain) for chain in global_list)
+    if correctness:
+        print("THE CHAIN IS INTACT")
+    else:
+        print("The chain failed somewhere")
+        for chain in global_list:
+            print(chain)
