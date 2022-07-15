@@ -18,7 +18,7 @@ if LOCAL:
 else:
     config_path = "config-remote.json"
 
-with open(config_path) as config_file:
+with open(config_path, "r") as config_file:
   config = json.load(config_file)
 
 
@@ -87,6 +87,9 @@ def add_new_writer(writer):
             new_writer["client_port"] = 5000
             new_writer["protocol_port"] = 5000
         config["writer_set"].append(new_writer)
+        with open(config_path, "w") as file:
+            json.dump(config, file, indent=4)
+
     except Exception as e:
         raise InvalidUsage(f"Could not decode JSON {e}", status_code=400)
 
@@ -108,5 +111,5 @@ def get_json():
 
 if __name__ == "__main__":
     app.run(debug=True)
-
+    print(config)
 
