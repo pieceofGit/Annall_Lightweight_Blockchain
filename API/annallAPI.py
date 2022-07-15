@@ -13,12 +13,13 @@ app = Flask(__name__)
 # Connect to server
 TCP_PORT = 5001 # Connects to port of writer 1
 # if len(sys.argv) > 1:
-#     TCP_PORT = int(sys.argv[1])
+#     TCP_PORT = int(sys.ar gv[1])
 # ap = argparse.ArgumentParser()
 # help="input data file (default stdin)",
 # ap.add_argument("-conf", default="config-local.json", type=str, help="config file for writers")
 # a = ap.parse_args()
 # conf_file = a.conf
+
 
 with open(f'../src/config-local.json') as config_file:   # If in top directory for debug
   config = json.load(config_file)
@@ -33,6 +34,25 @@ def handle_invalid_usage(error):
     response = jsonify(error.to_dict())
     response.status_code = error.status_code
     return response
+
+
+
+@app.route("/publishandsubscribe", methods=["GET"])
+def createSmartContracts():
+    # Asks for blockchain and gets it back
+    try:
+        resp_obj = server.send_msg(json.dumps({"request_type": "read_chain"}))
+        # print("The resp object ", resp_obj)
+        print("THe length of resp ", len(resp_obj))
+        obj = json.loads(resp_obj)
+        for res in obj:
+            print("Hey ", res)        
+        return Response(resp_obj, mimetype="application/json")
+
+    except Exception:
+        raise InvalidUsage("Failed to read from writer", status_code=500)
+    
+
 
 
 @app.route("/blocks", methods=["GET"])
