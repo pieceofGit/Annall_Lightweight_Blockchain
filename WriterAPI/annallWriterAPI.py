@@ -11,14 +11,14 @@ from exceptionHandler import InvalidUsage
 print("Starting annallClientAPI Flask application server")
 app = Flask(__name__)
 # Connect to server
-print("WORKING DIRECTORY", os.getcwd())
+print("WORKING DIRECTORY: ", os.getcwd())
 LOCAL = True
 if LOCAL:
-    config_path = "config-local.json"
+    CONFIG_PATH = "config-local.json"
 else:
-    config_path = "config-remote.json"
+    CONFIG_PATH = "config-remote.json"
 
-with open(config_path, "r") as config_file:
+with open(CONFIG_PATH, "r") as config_file:
   config = json.load(config_file)
 
 
@@ -28,13 +28,9 @@ def handle_invalid_usage(error):
     response.status_code = error.status_code
     return response
 
-
 @app.route("/config", methods=["GET"])
 def get_config():    
-    # Returns the config file 
-    # TODO: Authentication of writer. Probably check if IP address is in the json
-    print(request.environ.get('HTTP_X_REAL_IP', request.remote_addr))
-    print(config)
+    # Returns the config file if writer is authenticated
     if authenticate_writer():
         return json.dumps(config)
     else:
@@ -43,8 +39,6 @@ def get_config():
 @app.route("/config", methods=["POST"])
 def add_writer_to_set():
     # Sends in its name, ip address, and public key
-    #TODO: Initial authentication
-    
     # Gets back entire config
     writer_to_add = get_json()
     if not LOCAL:
@@ -57,11 +51,9 @@ def add_writer_to_set():
     #TODO: The API should share info about new writer to other writers
     try:
         add_new_writer(writer_to_add)
-        return json.dumps(config)
+        return Response(status=200, mimetype="application/json")
     except:
         raise(InvalidUsage("Failed to add writer to config", status_code=500))
-
-
 
 @app.route("/blockchain", methods=["GET"])
 def get_blockchain():
@@ -69,6 +61,12 @@ def get_blockchain():
     # Should the API be a constant blockchain reader? We can define separate sets for sending information
     # Reader set, active writer set, writer set, 
     ...
+
+@app.route("/blocks", methods=["GET"])
+def get_missing_blocks():
+    # Gets the latest block of the writer's blockchain. Sends it missing blocks in the chain
+    ...
+
 
 def add_new_writer(writer):
     # Create new writer object
@@ -86,14 +84,15 @@ def add_new_writer(writer):
         else:
             new_writer["client_port"] = 5000
             new_writer["protocol_port"] = 5000
+        # Add writer to writer set and save    
         config["writer_set"].append(new_writer)
-        with open(config_path, "w") as file:
+        with open(CONFIG_PATH, "w") as file:
             json.dump(config, file, indent=4)
-
     except Exception as e:
         raise InvalidUsage(f"Could not decode JSON {e}", status_code=400)
 
 def authenticate_writer():
+    # Checks if public ip address of request is in writer list
     ip_address = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
     for obj in config["writer_set"]:
         if ip_address in obj["hostname"]:
@@ -111,5 +110,4 @@ def get_json():
 
 if __name__ == "__main__":
     app.run(debug=True)
-    print(config)
 

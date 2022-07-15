@@ -4,7 +4,7 @@ import argparse
 from threading import Thread
 import json
 import random
-
+import requests
 ## Own modules imported
 from protoengine import ProtoEngine
 from interfaces import (
@@ -30,6 +30,10 @@ else:
     DB_PATH = f"{CWD}/src/db"
 
 PRIV_KEY_PATH = f"{CWD}/src"
+
+WRITER_API_PATH = "http://127.0.0.1:8000/"
+
+
 if __name__ == "__main__":
     print("MAIN STARTED")
     ap = argparse.ArgumentParser()
@@ -54,8 +58,14 @@ if __name__ == "__main__":
     verbose_print("[ID]", id, " [ROUNDS]", rounds, " [conf]", a.conf, " [privKey]", priv_key)
     
     # Read config and other init stuff
-    with open(f"{CONFIG_PATH}/{conf_file}", "r") as f:
-        data = json.load(f)
+    try:
+        response = requests.get(WRITER_API_PATH + "config", {})
+        data = response.json()
+        verbose_print("[CONFIG WRITER API] Got config from writer API")
+    except:
+        verbose_print("[CONFIG LOCAL] Failed to get config from writer")
+        with open(f"{CONFIG_PATH}/{conf_file}", "r") as f:
+            data = json.load(f)
     if LOCAL:
         with open(f"{CONFIG_PATH}/test_node_{id}/priv_key.json", "r") as f:
             priv_key = json.load(f)

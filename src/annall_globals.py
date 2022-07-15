@@ -35,7 +35,6 @@ class MyDetails:
     me : Writer
     private_key : str
 
-
 ##Two global variables 
 gMasterConfig = Global_Config(
         "Annáll - Permitted Blockchain", "127.0.0.1", 3000, 5, 5)

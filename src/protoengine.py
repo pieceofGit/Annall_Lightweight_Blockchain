@@ -377,7 +377,7 @@ class ProtoEngine(ProtocolEngine):
         writerID = self.ID
         timestamp = self.get_timestamp() ### hmmmm
 
-        block = Block(
+        block = Block( 
             prev_hash=prev_hash,
             writerID=writerID,
             coordinatorID=coordinatorID,

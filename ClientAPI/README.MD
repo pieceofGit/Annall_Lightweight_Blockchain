@@ -17,7 +17,7 @@ The API tries ten times over ten seconds to connect to the TCP socket of the wri
 
 The API can run using gunicorn. Gunicorn is a WSGI server that can run in a production environment and supports multiple workers.
 
-- gunicorn -w <no. of workers> annallClientAPI:app
+- gunicorn -w <no. of workers> -b <ip_address:port> annallClientAPI:app
 - gunicorn annallClientAPI:app
 
   The API has a class for the writer connection and a class for exception handling.
