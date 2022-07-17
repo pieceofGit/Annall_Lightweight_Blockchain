@@ -57,7 +57,9 @@ def createSmartContracts():
         except:
             print("Couldnt find a type")
     print("Return list for the given type ", lis)
-    return Response(lis, mimetype="application/json")
+    # lis = json.loads(lis)
+    print("Objects here ", obj)
+    return jsonify(lis)
 
 
 @app.route("/blocks", methods=["GET"])
