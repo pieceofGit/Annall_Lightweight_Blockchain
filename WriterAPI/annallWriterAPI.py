@@ -71,7 +71,7 @@ def get_missing_blocks():
 def add_new_writer(writer):
     # Create new writer object
     try:
-        id = len(config["writer_set"]) + 1
+        id = len(config["node_set"]) + 1
         new_writer = {
             "name": writer["name"],
             "id": id,
@@ -85,7 +85,7 @@ def add_new_writer(writer):
             new_writer["client_port"] = 5000
             new_writer["protocol_port"] = 5000
         # Add writer to writer set and save    
-        config["writer_set"].append(new_writer)
+        config["node_set"].append(new_writer)
         with open(CONFIG_PATH, "w") as file:
             json.dump(config, file, indent=4)
     except Exception as e:
@@ -94,7 +94,7 @@ def add_new_writer(writer):
 def authenticate_writer():
     # Checks if public ip address of request is in writer list
     ip_address = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
-    for obj in config["writer_set"]:
+    for obj in config["node_set"]:
         if ip_address in obj["hostname"]:
             return True
     return False

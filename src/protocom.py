@@ -274,32 +274,23 @@ class ProtoCom(ProtocolCommunication):
         # set up lists and stuff
         # dictionary of connected sockets use for storing sockets and stuff
         self.peers = {}
-        ip = None
-        listen_port = None
-        # Select out of the writers list who we want to connect to
-        # vverbose_print("[PRINTING WRITERS IN SET NO_WRITERS]", conf["writer_set"][0:self.num_writers])
-        # 
-        for i in conf["active_writer_set_id_list"]:
-            writer = conf["writer_set"][i-1]
-            if i != self.id:
-                self.peers[i] = RemoteEnd(
-                writer["id"], writer["hostname"], writer["protocol_port"], writer["pub_key"]
-                )
-            elif i == self.id:
-                ip = writer["hostname"]
-                listen_port = writer["protocol_port"]
-                self.pub_key = writer["pub_key"]
+        self.ip = None
+        self.listen_port = None
+        # Setup two-way communication with active writers and readers
+        self.connect_to_nodes_in_conf_by_key("active_writer_set_id_list")
+        self.connect_to_nodes_in_conf_by_key("active_reader_set_id_list")
+
         # set up listening socket
         # Making sure to not run this if either are undefined, unless it crashes
-        if (ip != None) or (listen_port != None):
+        if (self.ip != None) or (self.listen_port != None):
             self.listen_sock = socket.socket(
                 socket.AF_INET, socket.SOCK_STREAM)
             # Prevents error Address already in use. Socket not in TIME_WAIT state
             self.listen_sock.setsockopt(
                 socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.listen_sock.setblocking(False)
-            verbose_print(f"Listening on port: {listen_port}")
-            self.listen_sock.bind((ip, listen_port))
+            verbose_print(f"Listening on port: {self.listen_port}")
+            self.listen_sock.bind((self.ip, self.listen_port))
             # TODO decide what number - lets not decide and k make it big
             self.listen_sock.listen(100)
             # TODO for all sockets conn.setblocking(False) when using selectors
@@ -307,9 +298,21 @@ class ProtoCom(ProtocolCommunication):
             self.rr_selector = selectors.DefaultSelector()
             self.rr_selector.register(
                 self.listen_sock, selectors.EVENT_READ, self.id)
-
             # Received messages are added to this queue and removed when recv_msg() is called
             self.msg_queue = []
+
+    def connect_to_nodes_in_conf_by_key(self, list_key):
+        for i in self.conf[list_key]:
+            node = self.conf["node_set"][i-1]
+            if i != self.id:
+                self.peers[i] = RemoteEnd(
+                node["id"], node["hostname"], node["protocol_port"], node["pub_key"]
+                )
+            elif i == self.id:
+                self.ip = node["hostname"]
+                self.listen_port = node["protocol_port"]
+                self.pub_key = node["pub_key"]
+                
 
     def accept_con(self, listen_sock: socket.socket):
         """ callback method for listening socket
@@ -631,8 +634,8 @@ def test_protocom_1():
     with open("./src/config-local.json", "r") as f:
         test_conf = json.load(f)    #TODO: The test is broken with the changes
 
-    print(repr(test_conf["writer_set"]))
-    num_writers = len(test_conf["writer_set"])
+    print(repr(test_conf["node_set"]))
+    num_writers = len(test_conf["node_set"])
     pc = ProtoCom(a.me, test_conf)
     pc.start()
     

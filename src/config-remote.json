@@ -1,7 +1,7 @@
 {
   "no_active_writers": 2,
   "no_permitted_writers": 2,
-  "writer_set": [
+  "node_set": [
     {
       "name": "writer_1",
       "id": 1,

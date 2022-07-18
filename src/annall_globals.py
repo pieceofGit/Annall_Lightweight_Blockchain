@@ -55,7 +55,7 @@ def init_config(myID : int, config_file : str = "src/config-local.json"):
     gMasterConfig.permitted_writers = int(data["no_active_writers"])    #TODO: This fails with changes to config
     gMasterConfig.total_members = gMasterConfig.permitted_writers
 
-    writer_list = data["writer_set"]
+    writer_list = data["node_set"]
     for w in writer_list:
         cw = Writer(
             name = w["name"],

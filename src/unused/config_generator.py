@@ -33,7 +33,7 @@ for w in range(WRITERS):
     w_inf["priv_key"] = keys
 
     writers.append(w_inf)
-data["writer_set"] = writers
+data["node_set"] = writers
 data["NO_coord"] = 1
 data["modulus"] = 65537
 data["version"] = "1.0"

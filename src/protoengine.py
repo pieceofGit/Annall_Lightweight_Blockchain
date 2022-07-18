@@ -158,7 +158,7 @@ class ProtoEngine(ProtocolEngine):
         self.keys = keys    # Private keys
 
         self.writer_list = []  # list of writer ID's
-        #self.max_writers = 4
+        self.reader_list = [] # list of reader ID's
         
         # Defining e
         self.modulus = 65537
@@ -171,11 +171,6 @@ class ProtoEngine(ProtocolEngine):
         self.message_queue = Queue()
         
         self.latest_block = None
-
-        # The first block
-        # TODO: Cannot have a genesis block be created on init. What if the chain already exists
-        #       Should really have the genesys block record something relevant to this paricular blockchain, e.g.
-        #       Name, owners, purpose etc.
         # maintain a payload
         self.stashed_payload = None
 
@@ -189,7 +184,6 @@ class ProtoEngine(ProtocolEngine):
         ''' Assign config  '''
         assert isinstance(data, object)
         self.conf = data
-
 
     def sign_payload(self, payload: str):
         # keys of form [p, q, e]
@@ -207,6 +201,11 @@ class ProtoEngine(ProtocolEngine):
             assert isinstance(w, int)
         self.writer_list = writers
     
+    def set_readers(self, readers: list):
+        for r in readers:
+            assert isinstance(r, int)
+        self.reader_list = readers
+    
     def get_timestamp(self):
         # Returns time in Unix epoch time 
         return round(datetime.timestamp(datetime.now()))
@@ -222,8 +221,7 @@ class ProtoEngine(ProtocolEngine):
             writer = block.writerID
             payload = block.payload
             signature = int(block.writer_signature, 16)
-            writer_pubkey = self.conf["writer_set"][int(writer) - 1]["pub_key"]
-
+            writer_pubkey = self.conf["node_set"][int(writer) - 1]["pub_key"]
             D = bytes_to_long(payload.encode("utf-8")) % writer_pubkey
             res = pow(signature, self.keys[2], writer_pubkey)
             res = res % writer_pubkey
@@ -338,8 +336,6 @@ class ProtoEngine(ProtocolEngine):
     def join_writer_set(self):
         """Bootstrap to the writerset, using comm module
         """
-        # TODO: Where is the self.writer_list instantiated?
-        # in __init__ it is set to []
         ## TODO: More suspicious is, this seems to block if any of the writers is not connected.
         while len(self.comm.list_connected_peers()) != len(self.writer_list) - 1:
             time.sleep(1)
@@ -661,7 +657,7 @@ def test_engine(id: int, rounds: int, no_writers: int):
 
     # client server thread
     if id == 1:
-        TCP_IP = data["writer_set"][id - 1]["hostname"]
+        TCP_IP = data["node_set"][id - 1]["hostname"]
         TCP_PORT = 15005
         print("::> Starting up ClientServer thread")
         clients = TCP_Server("the server", TCP_IP, TCP_PORT, ClientHandler, bce)
@@ -672,7 +668,7 @@ def test_engine(id: int, rounds: int, no_writers: int):
     else:
         clients = ClientServer()
 
-    keys = data["writer_set"][id - 1]["priv_key"]
+    keys = data["node_set"][id - 1]["priv_key"]
 
     # run the protocol engine, with all the stuff
     w = ProtoEngine(id, tuple(keys), pcomm, bce, clients,)
