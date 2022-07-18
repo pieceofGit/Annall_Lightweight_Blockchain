@@ -29,7 +29,6 @@ def getKeys():
 
 def signTransaction(privateKey, message = 'no message'):
     ''' Takes in a private key and signs a transaction'''
-    print("Here I will sign a transaction")
     # key = RSA.import_key(open('private.pem').read())
     key = RSA.import_key(privateKey)
     message = b'message'

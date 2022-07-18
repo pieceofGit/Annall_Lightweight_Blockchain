@@ -7,7 +7,7 @@ from flask import Flask, request, jsonify, Response
 import sys
 from connectToServer import ServerConnection
 from exceptionHandler import InvalidUsage
-from Crypto.Hash import SHA256
+# from Crypto.Hash import SHA256
 
 
 # import sys
@@ -45,14 +45,8 @@ def createSmartContracts():
         except:
             print("Couldnt find a type")
     print("Return list for the given type ", lis)
-<<<<<<< Updated upstream
-    # lis = json.loads(lis)
-    print("Objects here ", obj)
-    return jsonify(lis)
-=======
     lis = jsonify(lis)
     return Response(lis, mimetype="application/json")
->>>>>>> Stashed changes
 
 
 @app.route("/walletTest", methods=["GET"])
