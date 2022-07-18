@@ -270,7 +270,6 @@ class ProtoCom(ProtocolCommunication):
         # lock is used to put on to and take off of msg_queue
         self.msg_lock = threading.RLock()
         # Define number of writers to connect to
-        self.num_writers = conf["no_active_writers"]
         self.rr_selector = None
         # set up lists and stuff
         # dictionary of connected sockets use for storing sockets and stuff
@@ -278,13 +277,15 @@ class ProtoCom(ProtocolCommunication):
         ip = None
         listen_port = None
         # Select out of the writers list who we want to connect to
-        vverbose_print("[PRINTING WRITERS IN SET NO_WRITERS]", conf["writer_set"][0:self.num_writers])
-        for writer in conf["writer_set"][0:self.num_writers]:
-            if writer["id"] != self.id:
-                self.peers[writer["id"]] = RemoteEnd(
-                    writer["id"], writer["hostname"], writer["protocol_port"], writer["pub_key"]
+        # vverbose_print("[PRINTING WRITERS IN SET NO_WRITERS]", conf["writer_set"][0:self.num_writers])
+        # 
+        for i in conf["active_writer_set_id_list"]:
+            writer = conf["writer_set"][i-1]
+            if i != self.id:
+                self.peers[i] = RemoteEnd(
+                writer["id"], writer["hostname"], writer["protocol_port"], writer["pub_key"]
                 )
-            elif writer["id"] == self.id:
+            elif i == self.id:
                 ip = writer["hostname"]
                 listen_port = writer["protocol_port"]
                 self.pub_key = writer["pub_key"]
@@ -627,8 +628,8 @@ def test_protocom_1():
     print()
 
     # using
-    with open("./src/config-l2.json", "r") as f:
-        test_conf = json.load(f)
+    with open("./src/config-local.json", "r") as f:
+        test_conf = json.load(f)    #TODO: The test is broken with the changes
 
     print(repr(test_conf["writer_set"]))
     num_writers = len(test_conf["writer_set"])

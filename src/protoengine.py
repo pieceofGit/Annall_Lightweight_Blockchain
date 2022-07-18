@@ -202,10 +202,6 @@ class ProtoEngine(ProtocolEngine):
         signature = pow(D, d, N)
         return hex(signature % N)
 
-    #def set_ID(self, id: int):
-    #    assert isinstance(id, int)
-    #    self.ID = id
-
     def set_writers(self, writers: list):
         for w in writers:
             assert isinstance(w, int)
@@ -313,7 +309,7 @@ class ProtoEngine(ProtocolEngine):
         assert isinstance(round, int)
         ## NOT SURE WHY THIS IS HERE:  8 - 1 % (3+1) # 7 % 4 = 3
         ## TODO not clear if this really works, e.g. in the case if some node dies, or if the set of writers changes
-        coordinator = (round - 1) % (len(self.writer_list) + 1)
+        coordinator = (round - 1) % (len(self.writer_list))
         return coordinator + 1
 
     def calculate_sum(self, numbers: list):
@@ -345,7 +341,7 @@ class ProtoEngine(ProtocolEngine):
         # TODO: Where is the self.writer_list instantiated?
         # in __init__ it is set to []
         ## TODO: More suspicious is, this seems to block if any of the writers is not connected.
-        while len(self.comm.list_connected_peers()) != len(self.writer_list):
+        while len(self.comm.list_connected_peers()) != len(self.writer_list) - 1:
             time.sleep(1)
         print(f"ID={self.ID} -> connected and ready to build")
         return None
@@ -516,7 +512,7 @@ class ProtoEngine(ProtocolEngine):
         numbers = []
         # Currently waiting for a number from all active writers
         # MSG FORMAT <round nr>-<from id>-<to id>-<msg type>-<msg body>
-        while len(numbers) < len(self.writer_list):
+        while len(numbers) < len(self.writer_list) - 1:
             message = self._recv_msg(type="reply")
             if message is not None:
                 parsed_message = message.split("-")

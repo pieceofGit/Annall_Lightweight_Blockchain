@@ -23,7 +23,8 @@ TCP_PORT = 5001 # Connects to port of writer 1
 
 with open(f'../src/config-local.json') as config_file:   # If in top directory for debug
   config = json.load(config_file)
-  IP_ADDR = config["writer_set"][0]["hostname"]
+  #TODO: Should get config from WriterAPI and attempt to connect as a client to the first available active writer
+  IP_ADDR = config["writer_set"][0]["hostname"] 
   TCP_PORT = config["writer_set"][0]["client_port"]
 print(TCP_PORT)
 server = ServerConnection(IP_ADDR, TCP_PORT)
