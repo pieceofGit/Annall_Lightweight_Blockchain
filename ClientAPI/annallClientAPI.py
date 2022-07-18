@@ -66,13 +66,14 @@ def get_blockchain():
         raise InvalidUsage("Failed to read from writer", status_code=500)
     
 
-@app.route("/block", methods=["POST"])
+@app.route("/blocks", methods=["POST"])
 def insert_block():
     # Decode the JSON
-    print("[REQUEST OBJECT POST]", request.data)
+    print("[the data sent to server", request.data)
     request_object = getJson(request)
     
     # Get the object 
+    
     if "body" in request_object:
         print("request data", request.data)
         print(f"[REQUEST] {request_object}")
