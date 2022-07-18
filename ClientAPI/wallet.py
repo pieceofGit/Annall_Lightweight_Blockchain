@@ -34,18 +34,19 @@ def verifySignature(pubKey, hash, signature):
     pkcsObj = pkcs1_15.new(pubKey)
     return pkcsObj.verify(hash, signature)
 
-# A dictionary of public and private keys
-# userKeys = getKeys()
-# message = 'My message to you'
-# hash, signature = signTransaction(userKeys['privateKey'])
-# pubKey = RSA.import_key(userKeys['publicKey'])
-# # key = RSA.import_key(open('receiver.pem').read())
-# print("The hash ", hash.hexdigest())
-# try:
-#     verifySignature(pubKey, hash, signature)
-#     print("The signature is valid.")
-# except (ValueError, TypeError):
-#    print("The signature is not valid.")
+def trash():
+    # A dictionary of public and private keys
+    userKeys = getKeys()
+    message = 'My message to you'
+    hash, signature = signTransaction(userKeys['privateKey'])
+    pubKey = RSA.import_key(userKeys['publicKey'])
+    # key = RSA.import_key(open('receiver.pem').read())
+    print("The hash ", hash.hexdigest())
+    try:
+        verifySignature(pubKey, hash, signature)
+        print("The signature is valid.")
+    except (ValueError, TypeError):
+        print("The signature is not valid.")
 
 # userKeys = getKeys()
 
@@ -72,6 +73,8 @@ if __name__ == "__main__":
         key = getKeys()
         printKeys(key)
     while guard:
+        pubKey = key.public_key().export_key()
+        privKey = key.export_key()
         printTerminal()
         command = input('command? ').strip()
         # command = '2'
@@ -90,10 +93,33 @@ if __name__ == "__main__":
         elif command == '3':
             print('Doing something else')
             # r = requests.post(url = 'http://185.3.94.49:80/block' , data = {'body': {"insurance":2}})
-            dict = {"Body": {"insurance":2}}
-            # r = requests.post(url = 'http://185.3.94.49:80/blocks' , json = dict )
-            dictToSend = {'question':'what is the answer?'}
-            r = requests.post(BASE + "blocks", json.dumps({"body":"blockisamerica"}))
+            theHash, signature = signTransaction(privKey )
+            pubKey = RSA.import_key(key.public_key().export_key())
+            
+            print("The pub ", type(pubKey))
+            print("The theHash ", type(theHash))
+            print("The sign ", type(signature))
+            try:
+                verifySignature(pubKey, theHash, signature)
+                print("The signature is valid.")
+            except (ValueError, TypeError):
+                print("The signature is not valid.")
+            dict = {
+                    "body": {
+                    "headers" : {
+                        "type" : "document",
+                        "pubKey" : str(pubKey),
+                        "hash": str(theHash),
+                        "signature" : str(signature)
+                    }, 
+                    "body": {
+                        "userId" : 13,
+                        "documentId" : 8
+                        }
+                    }
+            }
+            # r = requests.post(url = 'http://185.3.94.49:80/blocks' , json = dict 
+            r = requests.post(BASE + "blocks", json.dumps(dict))
             print("THe r ", r.status_code)
             if r.status_code == 200:
                 print("It worked")

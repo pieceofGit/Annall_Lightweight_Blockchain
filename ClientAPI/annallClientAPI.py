@@ -7,8 +7,9 @@ from flask import Flask, request, jsonify, Response
 import sys
 from connectToServer import ServerConnection
 from exceptionHandler import InvalidUsage
-# from Crypto.Hash import SHA256
 
+
+# from Crypto.Hash import SHA256
 
 # import sys
 print("Starting annallClientAPI Flask application server")
@@ -76,8 +77,10 @@ def insert_block():
     
     if "body" in request_object:
         print("request data", request.data)
-        print(f"[REQUEST] {request_object}")
+        # print(f"[REQUEST] {request_object}")
+        print("The body ", request_object['body'] )
         block = json.dumps({"request_type": "block", "name": "name", "body": request_object["body"], "payload_id": 1})
+        
         try:
             resp_obj = server.send_msg(block)
             return Response(resp_obj, mimetype="application/json")
