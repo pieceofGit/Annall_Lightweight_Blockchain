@@ -7,8 +7,10 @@ from flask import Flask, request, jsonify, Response
 import sys
 from connectToServer import ServerConnection
 from exceptionHandler import InvalidUsage
-
-
+from Crypto.PublicKey import RSA 
+from Crypto.Signature import PKCS1_v1_5 
+from Crypto.Hash import SHA256 
+from base64 import b64decode 
 # from Crypto.Hash import SHA256
 
 # import sys
@@ -70,15 +72,30 @@ def get_blockchain():
 @app.route("/blocks", methods=["POST"])
 def insert_block():
     # Decode the JSON
-    print("[the data sent to server", request.data)
     request_object = getJson(request)
     
     # Get the object 
     
     if "body" in request_object:
-        print("request data", request.data)
+        # print("request data", request.data)
         # print(f"[REQUEST] {request_object}")
-        print("The body ", request_object['body'] )
+        print("The pub ", type(request_object['body']['headers']['pubKey']), '\n' )
+        print("The hash ", request_object['body']['headers']['hash'], '\n' )
+        print("The sig ", request_object['body']['headers']['signature'] )
+        pubKey = request_object['body']['headers']['pubKey']
+        theHash = request_object['body']['headers']['hash']
+        sig = request_object['body']['headers']['signature']
+        rsakey = RSA.importKey(pubKey) 
+        signer = PKCS1_v1_5.new(rsakey) 
+        digest = SHA256.new() 
+        # Assumes the data is base64 encoded to begin with
+        # digest.update(b64decode(data)) 
+        if signer.verify(digest, b64decode(sig)):
+            print("True ")
+        else:
+            print("False")
+        
+        
         block = json.dumps({"request_type": "block", "name": "name", "body": request_object["body"], "payload_id": 1})
         
         try:
