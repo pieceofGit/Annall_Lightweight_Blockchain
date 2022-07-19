@@ -11,6 +11,8 @@ To run the API:
     3. pip install -r requirements.txt
     4. python annallClientAPI.py <local writer port>
 
+    For auto flask run this command: FLASK_APP=annallClientAPI.py FLASK_ENV=development flask run
+
 NOTE: A writer has to be running for the API to service requests.
 
 The API tries ten times over ten seconds to connect to the TCP socket of the writer on the selected port. If it fails ten times, the API remains running but none of the requests are handled.

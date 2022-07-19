@@ -7,19 +7,15 @@ from flask import Flask, request, jsonify, Response
 import sys
 from connectToServer import ServerConnection
 from exceptionHandler import InvalidUsage
+
+
+# from Crypto.Hash import SHA256
+
 # import sys
 print("Starting annallClientAPI Flask application server")
 app = Flask(__name__)
 # Connect to server
 TCP_PORT = 5001 # Connects to port of writer 1
-# if len(sys.argv) > 1:
-#     TCP_PORT = int(sys.ar gv[1])
-# ap = argparse.ArgumentParser()
-# help="input data file (default stdin)",
-# ap.add_argument("-conf", default="config-local.json", type=str, help="config file for writers")
-# a = ap.parse_args()
-# conf_file = a.conf
-
 
 with open(f'../src/config-local.json') as config_file:   # If in top directory for debug
   config = json.load(config_file)
@@ -29,14 +25,11 @@ with open(f'../src/config-local.json') as config_file:   # If in top directory f
 print(TCP_PORT)
 server = ServerConnection(IP_ADDR, TCP_PORT)
 
-
 @app.errorhandler(InvalidUsage)
 def handle_invalid_usage(error):
     response = jsonify(error.to_dict())
     response.status_code = error.status_code
     return response
-
-
 
 @app.route("/publishandsubscribe", methods=["GET"])
 def createSmartContracts():
@@ -44,22 +37,26 @@ def createSmartContracts():
     requestObject = getJson(request)
     typeToGet = requestObject['type']
     typeToGet = typeToGet.lower()
-    print("type to get ", typeToGet)
     resp_obj = server.send_msg(json.dumps({"request_type": "read_chain"}))
-    print("THe length of resp ", len(resp_obj))
     obj = json.loads(resp_obj)
     lis = []
     for res in obj:
         try:
-            print(res['payload']['headers']['type'], " versus ", typeToGet)
             if res['payload']['headers']['type'] == typeToGet:
                 lis.append(res)
-                
         except:
             print("Couldnt find a type")
     print("Return list for the given type ", lis)
+    lis = jsonify(lis)
     return Response(lis, mimetype="application/json")
 
+
+@app.route("/walletTest", methods=["GET"])
+def testWallet():
+    # Asks for blockchain and gets it back
+    requestObject = getJson(request)
+    
+    return Response({}, mimetype="application/json")
 
 @app.route("/blocks", methods=["GET"])
 def get_blockchain():
@@ -71,17 +68,20 @@ def get_blockchain():
         raise InvalidUsage("Failed to read from writer", status_code=500)
     
 
-@app.route("/block", methods=["POST"])
+@app.route("/blocks", methods=["POST"])
 def insert_block():
     # Decode the JSON
-    print("[REQUEST OBJECT POST]", request.data)
+    print("[the data sent to server", request.data)
     request_object = getJson(request)
     
     # Get the object 
+    
     if "body" in request_object:
         print("request data", request.data)
-        print(f"[REQUEST] {request_object}")
+        # print(f"[REQUEST] {request_object}")
+        print("The body ", request_object['body'] )
         block = json.dumps({"request_type": "block", "name": "name", "body": request_object["body"], "payload_id": 1})
+        
         try:
             resp_obj = server.send_msg(block)
             return Response(resp_obj, mimetype="application/json")
