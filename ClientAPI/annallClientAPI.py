@@ -80,12 +80,12 @@ def insert_block():
     if "payload" in request_object:
         # print("request data", request.data)
         # print(f"[REQUEST] {request_object}")
-        print("The pub ", type(request_object['body']['headers']['pubKey']), '\n' )
-        print("The hash ", request_object['body']['headers']['hash'], '\n' )
-        print("The sig ", request_object['body']['headers']['signature'] )
-        pubKey = request_object['body']['headers']['pubKey']
-        theHash = request_object['body']['headers']['hash']
-        sig = request_object['body']['headers']['signature']
+        print("The pub ", type(request_object['payload']['headers']['pubKey']), '\n' )
+        print("The hash ", request_object['payload']['headers']['hash'], '\n' )
+        print("The sig ", request_object['payload']['headers']['signature'] )
+        pubKey = request_object['payload']['headers']['pubKey']
+        theHash = request_object['payload']['headers']['hash']
+        sig = request_object['payload']['headers']['signature']
         rsakey = RSA.importKey(pubKey) 
         signer = PKCS1_v1_5.new(rsakey) 
         digest = SHA256.new() 
@@ -95,7 +95,7 @@ def insert_block():
             print("True ")
         else:
             print("False")
-        
+   
         
         block = json.dumps({"request_type": "block", "name": "name", "body": request_object["body"], "payload_id": 1})
         print("request data", request.data)
