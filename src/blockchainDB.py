@@ -118,7 +118,7 @@ class BlockchainDB(interfaces.BlockChainEngine):
                 d[col[0]] = row[idx]
         return d
 
-    def read_blocks(self, begin, end=None, col="*", getLastRow=False, read_entire_chain=False):
+    def read_blocks(self, begin, end=None, col="*", get_last_row=False, read_entire_chain=False):
         """ Retrieve blocks with from and including start to end
             If end is None, retrieve only the one block
             Returns a list of blocks retrieved
@@ -130,10 +130,10 @@ class BlockchainDB(interfaces.BlockChainEngine):
         if end is not None:
             assert isinstance(end, int)
 
-        verbose_print("read_blocks ", begin, end, col, getLastRow, read_entire_chain)
+        verbose_print("read_blocks ", begin, end, col, get_last_row, read_entire_chain)
         to_return = []
 
-        if getLastRow:  # If discrepancy between round and length of list because of arbitrarypayload
+        if get_last_row:  # If discrepancy between round and length of list because of arbitrarypayload
             # TODO:  remove arbitrarypayload special treatment
             query = f"SELECT {col} FROM chain WHERE round >= {self.length - 1} ORDER BY round"
         elif read_entire_chain:   # Returns a list of tuples for each transaction

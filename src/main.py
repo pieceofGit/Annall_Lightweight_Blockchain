@@ -104,6 +104,7 @@ if __name__ == "__main__":
     PE.set_conf(data)
     # Writers set to wait for connecting to until rounds start
     PE.set_writers(data["active_writer_set_id_list"])
+    PE.set_readers(data["active_reader_set_id_list"])
 
     PEthread = Thread(target=PE.run_forever, name="ProtocolEngine")
     PEthread.start()
