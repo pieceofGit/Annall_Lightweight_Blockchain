@@ -12,7 +12,7 @@ import ast
 NoneType = type(None)
 
 verbose = True
-vverbose = False
+vverbose = True
 
 
 def verbose_print(*s):
@@ -173,7 +173,7 @@ class BlockChainEngine:
         # query = f"SELECT {col} FROM chain WHERE {condition}"
         pass
 
-    def read_blocks(self, begin, end=None, col="*", getLastRow=False, read_entire_chain=False):
+    def read_blocks(self, begin, end=None, col="*", get_last_row=False, read_entire_chain=False):
         """ Retrieve blocks with from and including start to end
             If end is None, retrieve only the one block
             Returns a list of blocks retrieved
@@ -293,7 +293,7 @@ def __test_interfaces():
     msg = bcdb.read_blocks(0, read_entire_chain=True)
     print("READING ENTIRE BLOCKCHAIN", msg, type(msg))
     if msg != None:
-        to_json = msg[0]["payload"]
+        to_json = msg[0]['payload']
     # print(type(to_json))
     # print(type(json.loads(to_json)))
 

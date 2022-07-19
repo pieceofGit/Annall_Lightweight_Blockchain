@@ -106,15 +106,15 @@ if TEST_SERVER_CONNECTION:
     ack = server.send_msg(msg)  # No ack here
     print(f"[ACK FROM SERVER] {ack}")
     # Send message to blockchain
-    msg = json.dumps({"request_type": "block", "name": name, "body": "fjolnir1", "payload_id": 1})
+    msg = json.dumps({"request_type": "block", "name": name, "payload": "fjolnir1", "payload_id": 1})
     ack = server.send_msg(msg)
     print(f"[ACK FROM BLOCK ADDED] {ack}")
-    msg = json.dumps({"request_type": "read_chain", "name": name, "body": "fjolnir1", "payload_id": 1})
+    msg = json.dumps({"request_type": "read_chain", "name": name, "payload": "fjolnir1", "payload_id": 1})
     chain = server.send_msg(msg)
     print(chain)
     # Verification message only sent after asking for something
     # msg = server.read_msg()
     # print(f"[MESSAGE VERIFICATION REPLY] {msg}")
-    # msg = json.dumps({"request_type": "verify", "name": name, "body": "fjolnir1", "payload_id": 3})
+    # msg = json.dumps({"request_type": "verify", "name": name, "payload": "fjolnir1", "payload_id": 3})
     # print(server.verify_msg(msg))
 

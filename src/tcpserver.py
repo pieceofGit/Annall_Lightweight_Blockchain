@@ -116,7 +116,7 @@ class ClientHandler(threading.Thread):
                 self.terminate = True
                 break
             if d["request_type"] == "verify":
-                payload = f"{d['name']},{d['request_type']},{d['body']}"
+                payload = f"{d['name']},{d['request_type']},{d['payload']}"
                 if self.check_existence(d["hash"], payload):
                     resp = json.dumps({"verified": True,})
                 else:
@@ -130,10 +130,10 @@ class ClientHandler(threading.Thread):
             else:   # "request_type == "block"
                 # Add new message to payload queue and send back ACK
                 self.payload_id = d["payload_id"]
-                if type(d['body']) == dict:
-                    payload = json.dumps(d['body']) # Take dict and turn to json
+                if type(d['payload']) == dict:
+                    payload = json.dumps(d['payload']) # Take dict and turn to json
                 else:
-                    payload = f"{d['body']}"    # If not dict, store unchanged string
+                    payload = f"{d['payload']}"    # If not dict, store unchanged string
                 # Add new message to queue
                 self.payload_queue.put((self.payload_id, payload))
                 self.send_ack(payload)

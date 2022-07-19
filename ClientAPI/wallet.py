@@ -83,8 +83,8 @@ if __name__ == "__main__":
             printKeys(key)
         elif command == '2':
             print('Doing something else')
-            # r = requests.post(url = 'http://185.3.94.49:80/block' , data = {'body': {"insurance":2}})
-            r = requests.get(url = 'http://185.3.94.49:80/blocks' , data = {'body': {"insurance":2}})
+            # r = requests.post(url = 'http://185.3.94.49:80/block' , data = {"payload": {"insurance":2}})
+            r = requests.get(url = 'http://185.3.94.49:80/blocks' , data = {"payload": {"insurance":2}})
             print("THe r ", r.status_code)
             if r.status_code == 200:
                 print("It worked")
@@ -92,7 +92,7 @@ if __name__ == "__main__":
             # print("The resp ", r.json())
         elif command == '3':
             print('Doing something else')
-            # r = requests.post(url = 'http://185.3.94.49:80/block' , data = {'body': {"insurance":2}})
+            # r = requests.post(url = 'http://185.3.94.49:80/block' , data = {"payload": {"insurance":2}})
             theHash, signature = signTransaction(privKey )
             pubKey = RSA.import_key(key.public_key().export_key())
             
@@ -105,14 +105,14 @@ if __name__ == "__main__":
             except (ValueError, TypeError):
                 print("The signature is not valid.")
             dict = {
-                    "body": {
+                    "payload": {
                     "headers" : {
                         "type" : "document",
                         "pubKey" : str(pubKey),
                         "hash": str(theHash),
                         "signature" : str(signature)
                     }, 
-                    "body": {
+                    "payload": {
                         "userId" : 13,
                         "documentId" : 8
                         }

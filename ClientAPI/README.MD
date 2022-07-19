@@ -1,8 +1,8 @@
 annallClientAPI is a Python Flask gateway API intermediary between a client and the Annáll blockchain. On start, the API sets up two way communication to a writer on the Annáll blockchain using a TCP socket.
 The API gets incoming requests of type:
 a. GET /blocks
-b. POST /block {"body": payload}
-For a POST /block, the API expects a key "body" and payload in a JSON object.
+b. POST /block {"payload": payload}
+For a POST /block, the API expects a key "payload" and payload in a JSON object.
 
 To run the API:
 

@@ -9,7 +9,12 @@ There are two optional environmental variables
 -r: Sets the number of rounds. If not set, the writers run indefinitely.
 command:
 python src/main.py -myID <id> -r <number of rounds>
-The program executes the rounds when all the set writers are connected. The no. of writers can be changed in main.py with the NUM_WRITERS variable. To send POST and GET requests, you run the ClientAPI/annallClientAPI.py or you can just run src/tests/testclient.py <port no.> without the ClientAPI which connects and sends transactions directly to the blockchain.
+
+The program has writers and readers of the blockchain, both writing to their own database.
+The program executes the rounds when all writers and readers are connected.
+The program's writers and readers are either set by starting the WriterAPI or with a local config file.
+The writers and readers required to start are kept in the config under "active_writer_set_id_list" and "active_reader_set_id_list".
+To send POST and GET requests, you run the ClientAPI/annallClientAPI.py or you can just run src/tests/testclient.py <port no.> without the ClientAPI which connects and sends transactions directly to the blockchain.
 
 ### Installing
 

@@ -109,7 +109,7 @@ def test_engine(id: int, rounds: int, no_writers: int):
 
     # client server thread
     if id == 1:
-        TCP_IP = data["writer_set"][id - 1]["hostname"]
+        TCP_IP = data["node_set"][id - 1]["hostname"]
         TCP_PORT = 15005
         print("::> Starting up ClientServer thread")
         clients = TCP_Server("the server", TCP_IP, TCP_PORT, ClientHandler, bce)
@@ -120,7 +120,7 @@ def test_engine(id: int, rounds: int, no_writers: int):
     else:
         clients = ClientServer()
 
-    keys = data["writer_set"][id - 1]["priv_key"]
+    keys = data["node_set"][id - 1]["priv_key"]
 
     # run the protocol engine, with all the stuff
     w = ProtocolEngine(id, tuple(keys), pcomm, bce, clients,)
@@ -239,7 +239,7 @@ def test_engine(id: int, rounds: int, no_writers: int):
 
     # client server thread
     if id == 1:
-        TCP_IP = data["writer_set"][id - 1]["hostname"]
+        TCP_IP = data["node_set"][id - 1]["hostname"]
         TCP_PORT = 15005
         print("::> Starting up ClientServer thread")
         clients = TCP_Server("the server", TCP_IP, TCP_PORT, ClientHandler, bce)
@@ -250,7 +250,7 @@ def test_engine(id: int, rounds: int, no_writers: int):
     else:
         clients = ClientServer()
 
-    keys = data["writer_set"][id - 1]["priv_key"]
+    keys = data["node_set"][id - 1]["priv_key"]
 
     # run the protocol engine, with all the stuff
     w = ProtoEngine(id, tuple(keys), pcomm, bce, clients,)

@@ -21,8 +21,9 @@ TCP_PORT = 5001 # Connects to port of writer 1
 
 with open(f'../src/config-local.json') as config_file:   # If in top directory for debug
   config = json.load(config_file)
-  IP_ADDR = config["writer_set"][0]["hostname"]
-  TCP_PORT = config["writer_set"][0]["client_port"]
+  #TODO: Should get config from WriterAPI and attempt to connect as a client to the first available active writer
+  IP_ADDR = config["node_set"][0]["hostname"] 
+  TCP_PORT = config["node_set"][0]["client_port"]
 print(TCP_PORT)
 server = ServerConnection(IP_ADDR, TCP_PORT)
 
@@ -76,7 +77,7 @@ def insert_block():
     
     # Get the object 
     
-    if "body" in request_object:
+    if "payload" in request_object:
         # print("request data", request.data)
         # print(f"[REQUEST] {request_object}")
         print("The pub ", type(request_object['body']['headers']['pubKey']), '\n' )
@@ -97,6 +98,10 @@ def insert_block():
         
         
         block = json.dumps({"request_type": "block", "name": "name", "body": request_object["body"], "payload_id": 1})
+        print("request data", request.data)
+        # print(f"[REQUEST] {request_object}")
+        print("The body ", request_object['payload'] )
+        block = json.dumps({"request_type": "block", "name": "name", "payload": request_object['payload'], "payload_id": 1})
         
         try:
             resp_obj = server.send_msg(block)
@@ -104,7 +109,7 @@ def insert_block():
         except Exception:
             raise InvalidUsage("Unable to post to writer", status_code=500)
     else:
-        raise InvalidUsage("The JSON object key has to be named 'body'", status_code=400)
+        raise InvalidUsage("The JSON object key has to be named payload", status_code=400)
 
 # Get back block if on blockchain and verified
 # TODO: Add get block by blockid

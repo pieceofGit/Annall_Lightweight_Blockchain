@@ -84,9 +84,8 @@ if __name__ == "__main__":
     bce = BlockchainDB(dbpath)
     print("Local block chain database successfully initialized")
     verbose_print("THE ID: ", id)
-    # See config.json for writer_set
-    TCP_IP = data["writer_set"][id - 1]["hostname"]
-    TCP_PORT = data["writer_set"][id-1]["client_port"] 
+    TCP_IP = data["node_set"][id - 1]["hostname"]
+    TCP_PORT = data["node_set"][id - 1]["client_port"] 
     print(f"TCP PORT: {TCP_PORT}")
     print("::> Starting up ClientServer thread")
     # TCPServer: name, IPv4_addr, port, RequestHandlerClass, bcdb,
@@ -103,15 +102,9 @@ if __name__ == "__main__":
     PE = ProtoEngine(id, tuple(keys), pComm, bce, clients)
     PE.set_rounds(rounds)
     PE.set_conf(data)
-
     # Writers set to wait for connecting to until rounds start
-    ## TODO: What is the point of this?
-    wlist = []
-    for i in range(data["no_active_writers"]):
-        if (i + 1) != id:
-            wlist.append(i)
-    print(wlist)
-    PE.set_writers(wlist)
+    PE.set_writers(data["active_writer_set_id_list"])
+    PE.set_readers(data["active_reader_set_id_list"])
 
     PEthread = Thread(target=PE.run_forever, name="ProtocolEngine")
     PEthread.start()

@@ -40,7 +40,7 @@ print(f"[MESSAGE READ BLOCKS 1-4] The message: {msg}")
 # time.sleep(100)
 msg = bcdb.read_blocks(0, read_entire_chain=True)
 print("READING ENTIRE BLOCKCHAIN", msg, type(msg))
-to_json = msg[0]["payload"]
+to_json = msg[0]['payload']
 # print(type(to_json))
 # print(type(json.loads(to_json)))
 

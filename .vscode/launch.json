@@ -5,13 +5,33 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python: Main",
+      "name": "Python: Main 1",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}//src//main.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": ["-myID", "1", "-r 0", "-conf", "config-local.json"],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Python: Main 2",
       "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}//src//main.py",
       "console": "integratedTerminal",
       "justMyCode": true,
       "args": ["-myID", "2", "-r 0", "-conf", "config-local.json"],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Python: Main 3",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}//src//main.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": ["-myID", "3", "-r 0", "-conf", "config-local.json"],
       "cwd": "${workspaceFolder}"
     },
     {

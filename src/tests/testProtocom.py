@@ -28,7 +28,7 @@ def create_event(me, send_to):
         )  # input format Type Name Text - where Each are a single word
         # t, n, txt = m.split(" ")
     except KeyboardInterrupt:
-        return json.dumps({name: {"type": "Error", "name": "N/A", "body": "Error"}})
+        return json.dumps({name: {"type": "Error", "name": "N/A", "payload": "Error"}})
     except Exception as e:
         print("ERROR:", type(e), e)
         raise

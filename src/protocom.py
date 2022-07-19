@@ -1,3 +1,4 @@
+from sympy import rem
 from PCommMsg import pMsg
 from PCommMsg import pMsgTyp
 #import interfaces
@@ -48,11 +49,12 @@ class RemoteEnd:
     # if we reach max connection tries we wait 60 seconds until next try
     wait_conn = 60
 
-    def __init__(self, rem_id: int, host: str, port: int, pub_key):
+    def __init__(self, rem_id: int, host: str, port: int, pub_key, is_writer: bool):
         self.rem_id = rem_id
         self.listen_address = (host, port)
         self.pub_key = pub_key
         self.is_active = False
+        self.is_writer = is_writer
         # Number of tries to connect to
         self.try_conn = 0
         # time_last is either time since connection tries reach max
@@ -270,35 +272,28 @@ class ProtoCom(ProtocolCommunication):
         # lock is used to put on to and take off of msg_queue
         self.msg_lock = threading.RLock()
         # Define number of writers to connect to
-        self.num_writers = conf["no_active_writers"]
         self.rr_selector = None
         # set up lists and stuff
         # dictionary of connected sockets use for storing sockets and stuff
         self.peers = {}
-        ip = None
-        listen_port = None
-        # Select out of the writers list who we want to connect to
-        vverbose_print("[PRINTING WRITERS IN SET NO_WRITERS]", conf["writer_set"][0:self.num_writers])
-        for writer in conf["writer_set"][0:self.num_writers]:
-            if writer["id"] != self.id:
-                self.peers[writer["id"]] = RemoteEnd(
-                    writer["id"], writer["hostname"], writer["protocol_port"], writer["pub_key"]
-                )
-            elif writer["id"] == self.id:
-                ip = writer["hostname"]
-                listen_port = writer["protocol_port"]
-                self.pub_key = writer["pub_key"]
+        self.ip = None
+        self.listen_port = None
+        self.is_writer = self.check_if_writer(self.id)
+        # Setup two-way communication with active writers and readers
+        self.connect_to_nodes_in_conf_by_key("active_writer_set_id_list")
+        self.connect_to_nodes_in_conf_by_key("active_reader_set_id_list")
+        verbose_print(f"[IS WRITER] node with id: {self.id} is a writer: {self.is_writer}")
         # set up listening socket
         # Making sure to not run this if either are undefined, unless it crashes
-        if (ip != None) or (listen_port != None):
+        if (self.ip != None) or (self.listen_port != None):
             self.listen_sock = socket.socket(
                 socket.AF_INET, socket.SOCK_STREAM)
             # Prevents error Address already in use. Socket not in TIME_WAIT state
             self.listen_sock.setsockopt(
                 socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.listen_sock.setblocking(False)
-            verbose_print(f"Listening on port: {listen_port}")
-            self.listen_sock.bind((ip, listen_port))
+            verbose_print(f"Listening on port: {self.listen_port}")
+            self.listen_sock.bind((self.ip, self.listen_port))
             # TODO decide what number - lets not decide and k make it big
             self.listen_sock.listen(100)
             # TODO for all sockets conn.setblocking(False) when using selectors
@@ -306,9 +301,29 @@ class ProtoCom(ProtocolCommunication):
             self.rr_selector = selectors.DefaultSelector()
             self.rr_selector.register(
                 self.listen_sock, selectors.EVENT_READ, self.id)
-
             # Received messages are added to this queue and removed when recv_msg() is called
             self.msg_queue = []
+
+    def connect_to_nodes_in_conf_by_key(self, list_key):
+        try:
+            for i in self.conf[list_key]:
+                node = self.conf["node_set"][i-1]
+                if i != self.id:
+                    self.peers[i] = RemoteEnd(
+                    node["id"], node["hostname"], node["protocol_port"], node["pub_key"], self.check_if_writer(node["id"])
+                    )
+                elif i == self.id:
+                    self.ip = node["hostname"]
+                    self.listen_port = node["protocol_port"]
+                    self.pub_key = node["pub_key"]
+        except:
+            return      
+
+    def check_if_writer(self, id):
+        for i in self.conf["active_writer_set_id_list"]:
+            if i == id:
+                return True
+        return False
 
     def accept_con(self, listen_sock: socket.socket):
         """ callback method for listening socket
@@ -535,19 +550,24 @@ class ProtoCom(ProtocolCommunication):
 
     def num_connection(self):
         return len(self.list_connected_peers())
-        # return len(self.peers)
 
     def list_connected_peers(self):
         c_p = []
-        # print(self.peers.values())
         for peer in self.peers.values():
-            # print(peer)
-            # print(peer.is_active)
             if peer.is_active:
                 c_p.append(peer.rem_id)
         return c_p
+    
+    def send_msg_to_remote_end(self, rem_id, message, send_to_readers):
+        # Send message to single remote end
+        if not send_to_readers and not self.peers[rem_id].is_writer:    
+            return  # Message is not for reader
+        data = pMsg.data_msg(self.id, rem_id, message)
+        vverbose_print(">", "Sending: ", data, " to id: ", rem_id)
+        vverbose_print(">", "Connection:", self.peers[rem_id])
+        self.peers[rem_id].send_bytes(data)
 
-    def send_msg(self, message: str, send_to: int = None) -> list:
+    def send_msg(self, message: str, send_to: int = None, send_to_readers: bool = None) -> list:
         """ Send message\n
             Does nothing if specified send_to id is not connected\n
             If send_to is None the message is broadcast to all connected writers\n
@@ -556,20 +576,15 @@ class ProtoCom(ProtocolCommunication):
             Send procedure
             1. Send a single message with type Data
             2. Wait for data acknowledge
-            3. confirm successfull send
+            3. confirm successful send
             """
         if send_to is None: # Broadcast message
+            
             id_list = []
             for rem_id in self.peers:
                 if self.peers[rem_id].is_active:
                     try:
-                        data = pMsg.data_msg(self.id, rem_id, message)
-                        vverbose_print(">", "Sending: ", data, " to id: ", rem_id)
-                        vverbose_print(">", "Connection:", self.peers[rem_id])
-                        
-                        # TODO: you dont work
-                        self.peers[rem_id].send_bytes(data)
-                        # TODO Listen for Acks???
+                        self.send_msg_to_remote_end(rem_id, message, send_to_readers)
                         id_list.append(rem_id)
                     except Exception as e:
                         verbose_print(">!!", "Failed to send to id: ", rem_id, "With exception: ", type(e), e)
@@ -579,10 +594,7 @@ class ProtoCom(ProtocolCommunication):
             if self.peers[send_to].is_active:
                 try:
                     data = pMsg.data_msg(self.id, send_to, message)
-                    # print(">", "Sending: ", data, " to id: ", s)
-                    # print(">", "Connection:", self.peers[s])
                     self.peers[send_to].send_bytes(data)
-                    # TODO Listen for Acks???
                     return [send_to]
                 except Exception as e:
                     verbose_print(">!!", "Failed to send to id: ", send_to)
@@ -627,11 +639,11 @@ def test_protocom_1():
     print()
 
     # using
-    with open("./src/config-l2.json", "r") as f:
-        test_conf = json.load(f)
+    with open("./src/config-local.json", "r") as f:
+        test_conf = json.load(f)    #TODO: The test is broken with the changes
 
-    print(repr(test_conf["writer_set"]))
-    num_writers = len(test_conf["writer_set"])
+    print(repr(test_conf["node_set"]))
+    num_writers = len(test_conf["node_set"])
     pc = ProtoCom(a.me, test_conf)
     pc.start()
     

@@ -26,12 +26,12 @@ def create_event(name: str, req):
             # type, name, body
             t, n, txt = m.split(" ")
         except KeyboardInterrupt:
-            return json.dumps({name: {"type": "Error", "name": "N/A", "body": "Error"}})
+            return json.dumps({name: {"type": "Error", "name": "N/A", "payload": "Error"}})
         except Exception as e:
             print("ERROR:", type(e), e)
             raise
         else:
-            event = {name: {"type": t, "name": n, "body": txt}}
+            event = {name: {"type": t, "name": n, "payload": txt}}
     else:
         event = req
 
