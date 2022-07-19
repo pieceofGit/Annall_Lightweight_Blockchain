@@ -23,7 +23,7 @@ if __name__ == "__main__":
     a = ap.parse_args()
 
     for i in range(a.size):
-        testData.append({"Type":id_generator(), 'Name':id_generator(16), 'body':id_generator(32)})
+        testData.append({"Type":id_generator(), 'Name':id_generator(16), "payload":id_generator(32)})
 
     print(json.dumps(testData))
 

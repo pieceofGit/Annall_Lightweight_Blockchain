@@ -293,7 +293,7 @@ def __test_interfaces():
     msg = bcdb.read_blocks(0, read_entire_chain=True)
     print("READING ENTIRE BLOCKCHAIN", msg, type(msg))
     if msg != None:
-        to_json = msg[0]["payload"]
+        to_json = msg[0]['payload']
     # print(type(to_json))
     # print(type(json.loads(to_json)))
 

@@ -183,7 +183,7 @@ def __test_localDB():
     # time.sleep(100)
     msg = len(blocks_db.read_blocks(0, read_entire_chain=True))
     print("Blockchain length: ", msg)
-    #to_json = msg[0]["payload"]
+    #to_json = msg[0]['payload']
 
 
 

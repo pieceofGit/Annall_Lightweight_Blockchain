@@ -48,7 +48,7 @@ def create_event(name):
         m = input('Enter the next event (request_type, name, text) : ')  # input format Type Name Text - where Each are a single word
         req_type, name, body = m.split(" ")
     except KeyboardInterrupt:
-        return json.dumps({ name: {'request_type': 'Error', 'name': 'N/A', 'body': 'Error'}})
+        return json.dumps({ name: {'request_type': 'Error', 'name': 'N/A', "payload": 'Error'}})
     except Exception as e:
         print("ERROR:", type(e), e)
         raise
@@ -56,7 +56,7 @@ def create_event(name):
     event = f"{name}: {m}"
     print("Event: ", event)
 
-    m_format = json.dumps({'request_type': req_type, 'name': name, "body": body, "payload_id": 1})
+    m_format = json.dumps({'request_type': req_type, 'name': name, "payload": body, "payload_id": 1})
     return m_format.encode()
     
 
@@ -85,25 +85,25 @@ if __name__ == "__main__":
     msg_1 = json.dumps({"payload_id": 1, "name": name})
     print(f"[MESSAGE TO SERVER] confirmation message who we are: {msg_1}")
     sock.sendall(format_msg(msg_1))
-    msg_2 = json.dumps({"request_type": "block", "name": name, "body": {"insurance_id":1}, "payload_id": 3})
+    msg_2 = json.dumps({"request_type": "block", "name": name, "payload": {"insurance_id":1}, "payload_id": 3})
     print("[SENDING MESSAGE] message 2 for blockchain")
     sock.sendall(format_msg(msg_2))
     acc_msg = read_single_msg(sock)
     print(f"[ACK] block added to payload? {acc_msg}")
-    msg_2 = json.dumps({"request_type": "block", "name": name, "body": {"insurance_id":1}, "payload_id": 4})
+    msg_2 = json.dumps({"request_type": "block", "name": name, "payload": {"insurance_id":1}, "payload_id": 4})
     print("[SENDING MESSAGE] message 2 for blockchain")
     sock.sendall(format_msg(msg_2))
     acc_msg = read_single_msg(sock)
     print(f"[ACK] block added to payload? {acc_msg}")
     print("[ASKING FOR VERIFICATION]")
-    msg_2 = json.dumps({"request_type": "verification", "name": name, "body": {"insurance_id":1}, "payload_id": 4})
+    msg_2 = json.dumps({"request_type": "verification", "name": name, "payload": {"insurance_id":1}, "payload_id": 4})
     print("[SENDING MESSAGE] message 2 for blockchain")
     sock.sendall(format_msg(msg_2))
     # wait for verification message
     verification_msg = read_single_msg(sock)
     print(f"[VERIFICATION] block exists? {verification_msg}")
     
-    msg_2 = json.dumps({"request_type": "block", "name": name, "body": {"insurance_id":1}, "payload_id": 3})
+    msg_2 = json.dumps({"request_type": "block", "name": name, "payload": {"insurance_id":1}, "payload_id": 3})
     print("[SENDING MESSAGE] message 2 for blockchain")
     sock.sendall(format_msg(msg_2))
     # wait for verification message
