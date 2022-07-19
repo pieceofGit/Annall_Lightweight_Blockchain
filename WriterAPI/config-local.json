@@ -45,13 +45,13 @@
       "name": "reader_1",
       "id": 5,
       "hostname": "127.0.0.1",
-      "protocol_port": 15004,
+      "protocol_port": 15005,
       "client_port": 5005,
       "pub_key": 5201436109692264160381491489256447438599177742267677213582409586036574854460390077866591556888766373006402781686515565938838507128202395078557421943547813
     }
   ],
   "active_writer_set_id_list": [1, 2],
-  "active_reader_set_id_list": [3],
+  "active_reader_set_id_list": [3, 4],
   "NO_coord": 1,
   "modulus": 65537,
   "version": "1.0"
