@@ -20,7 +20,7 @@ from WriterAPI.annallWriterAPI import app, WriterAPI
 # should put here some elementary command line argument processing
 # EG. parameters for where the config file is, number of writers (for testing), and rounds
 # Define explicitly the paths
-RUN_WRITER_API = True
+RUN_WRITER_API = True   # If the api turns on, then it should be a reader of the blockchain
 CWD = os.getcwd()
 CONFIG_PATH = f"{CWD}/src"
 LOCAL = True    # If True, use local file for private key and separate databases
@@ -56,7 +56,18 @@ if __name__ == "__main__":
     conf_file = a.conf
     priv_key = a.privKey
     verbose_print("[ID]", id, " [ROUNDS]", rounds, " [conf]", a.conf, " [privKey]", priv_key)
-    
+     # Initialize the local database connection
+    #   -- this is the local copy of the blockchain
+    dbpath = f"{DB_PATH}/test_node_{id}/blockchain.db"
+    print("::> Starting up Blockchain DB = using ", dbpath)
+    bce = BlockchainDB(dbpath)
+    print("Local block chain database successfully initialized")
+    if RUN_WRITER_API:  # Run the WriterAPI as a thread
+        # The writer api needs access to the blockchain database for reading
+        writer_api = WriterAPI(bce, app)
+        writer_api_thread = Thread(target=writer_api.run, name="TCPServerThread")
+        writer_api_thread.daemon = True
+        writer_api_thread.start()
     # Read config and other init stuff
     try:
         response = requests.get(WRITER_API_PATH + "config", {})
@@ -77,18 +88,7 @@ if __name__ == "__main__":
     pComm.start()
     print("Peer-to-peer network engine up  and running as:", pComm.name)
     
-    # Initialize the local database connection
-    #   -- this is the local copy of the blockchain
-    dbpath = f"{DB_PATH}/test_node_{id}/blockchain.db"
-    print("::> Starting up Blockchain DB = using ", dbpath)
-    bce = BlockchainDB(dbpath)
-    print("Local block chain database successfully initialized")
-    if RUN_WRITER_API:  # Run the WriterAPI as a thread
-        # The writer api needs access to the blockchain database for reading
-        writer_api = WriterAPI(bce, app)
-        writer_api_thread = Thread(target=writer_api.run, name="TCPServerThread")
-        writer_api_thread.daemon = True
-        writer_api_thread.start()
+   
     verbose_print("THE ID: ", id)
     TCP_IP = data["node_set"][id - 1]["hostname"]
     TCP_PORT = data["node_set"][id - 1]["client_port"] 

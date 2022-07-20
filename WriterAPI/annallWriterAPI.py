@@ -125,4 +125,4 @@ class WriterAPI:
         self.app = app
     
     def run(self):
-        self.app.run()
+        self.app.run(host="127.0.0.1", port="8000")
