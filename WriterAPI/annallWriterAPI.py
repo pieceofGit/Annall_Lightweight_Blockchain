@@ -1,12 +1,18 @@
 """ 
 A ClientAPI for Annáll using Flask and Gunicorn.
 """
+print("importing annall writer api")
 import json
 import os
 import argparse
 from flask import Flask, request, jsonify, Response
 import sys
-from exceptionHandler import InvalidUsage
+try: 
+    from .exceptionHandler import InvalidUsage
+    from_main = True
+except: 
+    from exceptionHandler import InvalidUsage
+    from_main = False
 # import sys
 print("Starting annallClientAPI Flask application server")
 app = Flask(__name__)
@@ -14,7 +20,10 @@ app = Flask(__name__)
 print("WORKING DIRECTORY: ", os.getcwd())
 LOCAL = True
 if LOCAL:
-    CONFIG_PATH = "config-local.json"
+    if from_main:
+        CONFIG_PATH = os.getcwd()+"/WriterAPI/config-local.json"
+    else:
+        CONFIG_PATH = "config-local.json"
 else:
     CONFIG_PATH = "config-remote.json"
 
@@ -108,6 +117,12 @@ def get_json():
 
 
 
-if __name__ == "__main__":
-    app.run(debug=True)
-
+# if __name__ == "__main__":
+#     app.run(debug=True)
+class WriterAPI:
+    def __init__(self, bcdb, app):
+        self.bcdb = bcdb
+        self.app = app
+    
+    def run(self):
+        self.app.run()

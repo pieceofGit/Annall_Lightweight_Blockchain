@@ -85,6 +85,8 @@
 #   "pub_key": 5201436109692264160381491489256447438599177742267677213582409586036574854460390077866591556888766373006402781686515565938838507128202395078557421943547813
 # }
 import ast
+
+from aem import app
 # config["writer_set"].append(new_writer)
 # print(config)
 some = "False"
@@ -115,14 +117,20 @@ import struct
 #         print(j)
 #     print(j) 
 
-print(-1000 % 9)
-print(-1000 % 6)
-print(-5%4)
-print(-5%-4)
-print(5%-4)
-# Python modulo operator always return the remainder having the same sign as the divisor.
-# 4 is the divisor and thus is 
+# print(-1000 % 9)
+# print(-1000 % 6)
+# print(-5%4)
+# print(-5%-4)
+# print(5%-4)
+# # Python modulo operator always return the remainder having the same sign as the divisor.
+# # 4 is the divisor and thus is 
 
-some_list = [1,2]
-if ast.literal_eval("1") in some_list:
-    print("YES")
+# some_list = [1,2]
+# if ast.literal_eval("1") in some_list:
+#     print("YES")
+
+# from .src.WriterAPI.annallWriterAPI import app
+# from .WriterAPI.annallWriterAPI import app
+from ..WriterAPI.annallWriterAPI import add_new_writer
+
+# annallWriterAPI.app.run()
