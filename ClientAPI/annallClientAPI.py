@@ -10,8 +10,7 @@ from exceptionHandler import InvalidUsage
 from Crypto.PublicKey import RSA 
 from Crypto.Signature import PKCS1_v1_5 
 from Crypto.Hash import SHA256 
-from base64 import b64decode 
-# from Crypto.Hash import SHA256
+from Crypto.Signature import pkcs1_15
 
 # import sys
 print("Starting annallClientAPI Flask application server")
@@ -81,33 +80,26 @@ def insert_block():
         # print("request data", request.data)
         # print(f"[REQUEST] {request_object}")
         print("The pub ", type(request_object['payload']['headers']['pubKey']), '\n' )
-        print("The hash ", request_object['payload']['headers']['hash'], '\n' )
+        print("The message ", request_object['payload']['headers']['message'], '\n' )
         print("The sig ", request_object['payload']['headers']['signature'] )
         pubKey = request_object['payload']['headers']['pubKey']
-        theHash = request_object['payload']['headers']['hash']
-        sig = request_object['payload']['headers']['signature']
-        rsakey = RSA.importKey(pubKey) 
-        signer = PKCS1_v1_5.new(rsakey) 
-        digest = SHA256.new() 
+        message = request_object['payload']['headers']['message']
+        signature = request_object['payload']['headers']['signature']
         # Assumes the data is base64 encoded to begin with
         # digest.update(b64decode(data)) 
-        if signer.verify(digest, b64decode(sig)):
-            print("True ")
-        else:
-            print("False")
-   
+        f = open('public.pem','r')
+        key = RSA.import_key(f.read())
+        pubKey = key.public_key().export_key()
+        print("The public key ", pubKey)
+        verifySignature(pubKey, message, signature)
         
-        block = json.dumps({"request_type": "block", "name": "name", "body": request_object["body"], "payload_id": 1})
-        print("request data", request.data)
-        # print(f"[REQUEST] {request_object}")
-        print("The body ", request_object['payload'] )
-        block = json.dumps({"request_type": "block", "name": "name", "payload": request_object['payload'], "payload_id": 1})
         
-        try:
-            resp_obj = server.send_msg(block)
-            return Response(resp_obj, mimetype="application/json")
-        except Exception:
-            raise InvalidUsage("Unable to post to writer", status_code=500)
+        # try:
+        #     resp_obj = server.send_msg(block)
+        #     return Response(resp_obj, mimetype="application/json")
+        # except Exception:
+        #     raise InvalidUsage("Unable to post to writer", status_code=500)
+        raise Response({"done":"Done"}, status_code=200)
     else:
         raise InvalidUsage("The JSON object key has to be named payload", status_code=400)
 
@@ -126,10 +118,13 @@ def getJson(request):
     except Exception:
         raise InvalidUsage("The JSON could not be decoded", status_code=400)
 
-
-
+def verifySignature(pubKey, message, signature):
+    ''' Verifies a signed message with the public key'''
+    message = message.encode("ISO-8859-1") 
+    signature = signature.encode("ISO-8859-1") 
+    pkcsObj = pkcs1_15.new(pubKey)
+    hash = SHA256.new(message)
+    return pkcsObj.verify(hash, signature)
 
 if __name__ == "__main__":
     app.run(debug=False)
-
-

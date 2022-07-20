@@ -107,7 +107,7 @@ if __name__ == "__main__":
             # from binary to string
             message = message.decode("utf-8") 
             # Back into binary
-            message = message.encode() 
+            # message = message.encode() 
             # signature = str(signature)
             
             # signature = signature.decode("utf-8") 
@@ -117,7 +117,7 @@ if __name__ == "__main__":
             # signature = signature[1:-1]
             signature = codecs.decode(signature, "ISO-8859-1")
             print("The sign ", type(signature), signature)
-            signature = signature.encode("ISO-8859-1") 
+            # signature = signature.encode("ISO-8859-1") 
             print("The sign ", type(signature), signature)
             
             try:
@@ -130,8 +130,8 @@ if __name__ == "__main__":
                     "headers" : {
                         "type" : "document",
                         "pubKey" : str(pubKey),
-                        "hash": str(theHash),
-                        "signature" : str(signature)
+                        "message": message,
+                        "signature" : signature
                     }, 
                     "payload": {
                         "userId" : 13,
