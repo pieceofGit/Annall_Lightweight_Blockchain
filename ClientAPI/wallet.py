@@ -1,9 +1,9 @@
+from base64 import encode
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pkcs1_15
 from Crypto.Hash import SHA256
 import requests
 import json
-from base64 import b64decode,b64encode
 BASE = "http://127.0.0.1:5000/"
 def signTransaction(privateKey, message = 'no message'):
     ''' Takes in a private key and signs a transaction'''
@@ -11,7 +11,7 @@ def signTransaction(privateKey, message = 'no message'):
     message = b'message'
     hash = SHA256.new(message)
     signature = pkcs1_15.new(key).sign(hash)
-    return hash, signature
+    return hash, signature, message
 
 def getKeys():
     ''' Returns a dictionary of a public and private key'''
@@ -30,18 +30,12 @@ def getKeys():
     return key 
 
 
-def verifySignature(pubKey, hash, signature):
+def verifySignature(pubKey, message, signature):
     ''' Verifies a signed message with the public key'''
     pkcsObj = pkcs1_15.new(pubKey)
+    hash = SHA256.new(message)
+    
     return pkcsObj.verify(hash, signature)
-
-def verifySignatureString(pubKey, hash, signature):
-    ''' Verifies a signed message with the public key'''
-    print("The pub key ", pubKey)
-    pubKey = RSA.import_key(pubKey)
-    pkcsObj = pkcs1_15.new(pubKey)
-    return pkcsObj.verify(hash, signature)
-
 
 def trash():
     # A dictionary of public and private keys
@@ -102,50 +96,42 @@ if __name__ == "__main__":
         elif command == '3':
             print('Doing something else')
             # r = requests.post(url = 'http://185.3.94.49:80/block' , data = {"payload": {"insurance":2}})
-            theHash, signature = signTransaction(privKey )
+            theHash, signature, message = signTransaction(privKey )
             pubKey = RSA.import_key(key.public_key().export_key())
             
             print("The pub ", type(pubKey))
-            print("The theHash ", type(theHash))
+            print("The message ", type(message), message)
             print("The sign ", type(signature))
-            TheActualPubKey = key.public_key().export_key()
-            
+            # from binary to string
+            message = message.decode("utf-8") 
+            print("The message ", type(message), message)
+            # Back into binary
+            message = message.encode() 
+            print("The message ", type(message), message)
             try:
-                verifySignature(pubKey, theHash, signature)
+                verifySignature(pubKey, message, signature)
                 print("The signature is valid.")
             except (ValueError, TypeError):
                 print("The signature is not valid.")
-                
-            print("Type of actual key ", type(TheActualPubKey), "The key itself ", TheActualPubKey)
-            
-            try:
-                verifySignatureString(TheActualPubKey, theHash, signature)
-                print("The signature is valid.")
-            except (ValueError, TypeError):
-                print("The signature is not valid.")
-            pubKeyString = str(TheActualPubKey)
-            theHash = str(theHash)
-            signature = str(signature)
-            
-            # dict = {
-            #         "payload": {
-            #         "headers" : {
-            #             "type" : "document",
-            #             "pubKey" : str(TheActualPubKey),
-            #             "hash": str(theHash),
-            #             "signature" : str(signature)
-            #         }, 
-            #         "payload": {
-            #             "userId" : 13,
-            #             "documentId" : 8
-            #             }
-            #         }
-            # }
-            # # r = requests.post(url = 'http://185.3.94.49:80/blocks' , json = dict 
-            # r = requests.post(BASE + "blocks", json.dumps(dict))
-            # print("THe r ", r.status_code)
-            # if r.status_code == 200:
-            #     print("It worked")
+            dict = {
+                    "payload": {
+                    "headers" : {
+                        "type" : "document",
+                        "pubKey" : str(pubKey),
+                        "hash": str(theHash),
+                        "signature" : str(signature)
+                    }, 
+                    "payload": {
+                        "userId" : 13,
+                        "documentId" : 8
+                        }
+                    }
+            }
+            # r = requests.post(url = 'http://185.3.94.49:80/blocks' , json = dict 
+            r = requests.post(BASE + "blocks", json.dumps(dict))
+            print("THe r ", r.status_code)
+            if r.status_code == 200:
+                print("It worked")
             # r.json() to get the data from the endpoint
             # print("The resp ", r.json())
         elif command == 'q' or command == 'quit':
