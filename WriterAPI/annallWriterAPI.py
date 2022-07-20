@@ -114,11 +114,9 @@ def get_json():
     except Exception:
         raise InvalidUsage("The JSON could not be decoded", status_code=400)
 
+if not from_main:
+    app.run(debug=True)
 
-
-
-# if __name__ == "__main__":
-#     app.run(debug=True)
 class WriterAPI:
     def __init__(self, bcdb, app):
         self.bcdb = bcdb
