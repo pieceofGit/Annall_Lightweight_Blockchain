@@ -4,6 +4,8 @@ from Crypto.Signature import pkcs1_15
 from Crypto.Hash import SHA256
 import requests
 import json
+import codecs
+
 BASE = "http://127.0.0.1:5000/"
 def signTransaction(privateKey, message = 'no message'):
     ''' Takes in a private key and signs a transaction'''
@@ -101,13 +103,23 @@ if __name__ == "__main__":
             
             print("The pub ", type(pubKey))
             print("The message ", type(message), message)
-            print("The sign ", type(signature))
+            print("The sign ", type(signature), signature)
             # from binary to string
             message = message.decode("utf-8") 
-            print("The message ", type(message), message)
             # Back into binary
             message = message.encode() 
-            print("The message ", type(message), message)
+            # signature = str(signature)
+            
+            # signature = signature.decode("utf-8") 
+            # signature = signature.strip('b"')
+            # signature = signature.strip(' "')
+            
+            # signature = signature[1:-1]
+            signature = codecs.decode(signature, "ISO-8859-1")
+            print("The sign ", type(signature), signature)
+            signature = signature.encode("ISO-8859-1") 
+            print("The sign ", type(signature), signature)
+            
             try:
                 verifySignature(pubKey, message, signature)
                 print("The signature is valid.")
