@@ -79,27 +79,28 @@ def insert_block():
     if "payload" in request_object:
         # print("request data", request.data)
         # print(f"[REQUEST] {request_object}")
-        print("The pub ", type(request_object['payload']['headers']['pubKey']), '\n' )
-        print("The message ", request_object['payload']['headers']['message'], '\n' )
-        print("The sig ", request_object['payload']['headers']['signature'] )
-        pubKey = request_object['payload']['headers']['pubKey']
+        
+        pub_key = request_object['payload']['headers']['pubKey']
         message = request_object['payload']['headers']['message']
         signature = request_object['payload']['headers']['signature']
+        print("The pub ",  pub_key)
+        print("The message ", message )
+        print("The sig ", signature )
+        pub_key = pub_key.encode("ISO-8859-1")
+        pub_key = pub_key.decode("ISO-8859-1")
+        print("new pub  ",  pub_key)
         # Assumes the data is base64 encoded to begin with
         # digest.update(b64decode(data)) 
-        f = open('public.pem','r')
-        key = RSA.import_key(f.read())
-        pubKey = key.public_key().export_key()
-        print("The public key ", pubKey)
-        verifySignature(pubKey, message, signature)
-        
-        
-        # try:
-        #     resp_obj = server.send_msg(block)
-        #     return Response(resp_obj, mimetype="application/json")
-        # except Exception:
-        #     raise InvalidUsage("Unable to post to writer", status_code=500)
-        raise Response({"done":"Done"}, status_code=200)
+        try:
+            verifySignature(pub_key, message, signature)
+            try:
+                resp_obj = server.send_msg(request_object['payload'])
+                return Response(resp_obj, mimetype="application/json")
+            except Exception:
+                raise InvalidUsage("Unable to post to writer", status_code=500)
+        except:
+            print("Invalid signature ")
+            raise InvalidUsage("Invalid signature responding to public key", status_code=401)
     else:
         raise InvalidUsage("The JSON object key has to be named payload", status_code=400)
 
@@ -122,6 +123,8 @@ def verifySignature(pubKey, message, signature):
     ''' Verifies a signed message with the public key'''
     message = message.encode("ISO-8859-1") 
     signature = signature.encode("ISO-8859-1") 
+    # pubKey = pubKey.encode("ISO-8859-1") 
+    pubKey = RSA.importKey(pubKey)
     pkcsObj = pkcs1_15.new(pubKey)
     hash = SHA256.new(message)
     return pkcsObj.verify(hash, signature)
