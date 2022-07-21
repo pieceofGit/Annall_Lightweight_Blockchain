@@ -13,7 +13,7 @@ BASE = "http://127.0.0.1:5000/"
 def signTransaction(privateKey, message = 'no message'):
     ''' Takes in a private key and signs a transaction'''
     key = RSA.import_key(privateKey)
-    message = b'message'
+    message = message.encode()
     hash = SHA256.new(message)
     signature = pkcs1_15.new(key).sign(hash)
     return hash, signature, message
@@ -110,19 +110,30 @@ if __name__ == "__main__":
             key = getKeys()
             printKeys(key)
         elif command == '2':
-            print('Doing something else')
-            r = requests.get(url = 'http://185.3.94.49:80/blocks' , data = {"payload": {"insurance":2}})
+            # Get all the blockchain data
+            r = requests.get(url = 'http://185.3.94.49:80/blocks' )
+            
             if r.status_code == 200:
-                print("It worked")
+                blockchain_data = r.json()
+                data = blockchain_data[-3:]
+                for transaction in data:
+                    print("Last 3 transactions ")
+                    print("Round ", transaction['round'] , "payload",  transaction['payload'])
+            else:
+                print("Could not retreive blockchain data")
+                
+                
         elif command == '3':
-            theHash, signature, message = signTransaction(wallet.priv_key  )
+            # Message should be written in
+            message = 'no_message'
+            
+            theHash, signature, message = signTransaction(wallet.priv_key, message)
             message = message.decode("ISO-8859-1") 
             signature = signature.decode("ISO-8859-1") 
             pub_key_exp = wallet.pub_key.decode("ISO-8859-1")
             # Here you get the dictionary that fits the expected type
             dict = get_message_type_dict(pub_key_exp, message, signature, 'document')
             test_sig(dict)
-            
             r = requests.post(url = 'http://185.3.94.49:80/blocks' , json = dict)
             r = requests.post(BASE + "blocks", json.dumps(dict))
             print("THe r ", r.status_code)
@@ -130,6 +141,7 @@ if __name__ == "__main__":
                 print("It worked")
                 r.json() # to get the data from the endpoint
                 print("The resp ", r.json())
+                
         elif command == 'q' or command == 'quit':
             exit()
         else:
