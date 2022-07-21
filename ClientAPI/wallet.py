@@ -163,6 +163,18 @@ if __name__ == "__main__":
                         }
                     }
             }
+            
+            pub_key_exp = dict['payload']['headers']['pubKey']
+            message = dict['payload']['headers']['message']
+            signature = dict['payload']['headers']['signature']
+            print("Pub key ", pub_key_exp, type(pub_key_exp))
+            try:
+                verifySignatureString(pub_key_exp, message, signature)
+                print("The signature is valid.")
+            except (ValueError, TypeError):
+                print("The signature is not valid.")
+            
+            
             r = requests.post(url = 'http://185.3.94.49:80/blocks' , json = dict)
             r = requests.post(BASE + "blocks", json.dumps(dict))
             print("THe r ", r.status_code)
