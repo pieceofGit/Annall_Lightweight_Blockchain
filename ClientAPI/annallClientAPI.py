@@ -84,6 +84,7 @@ def insert_block():
             resp_obj = server.send_msg(request_object['payload'])
             return Response(resp_obj, mimetype="application/json")
         except Exception:
+            print("Unable to post to writer")
             raise InvalidUsage("Unable to post to writer", status_code=500)
     else:
         raise InvalidUsage("The JSON object key has to be named payload", status_code=400)
