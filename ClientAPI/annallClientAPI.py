@@ -11,7 +11,7 @@ from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5 
 from Crypto.Hash import SHA256 
 from Crypto.Signature import pkcs1_15
-
+from clientfunctions import *
 # import sys
 print("Starting annallClientAPI Flask application server")
 app = Flask(__name__)
@@ -73,25 +73,13 @@ def get_blockchain():
 def insert_block():
     # Decode the JSON
     request_object = getJson(request)
-    
-    # Get the object 
-    
     if "payload" in request_object:
-        # print("request data", request.data)
-        # print(f"[REQUEST] {request_object}")
-        
-        pub_key_exp = request_object['payload']['headers']['pubKey']
-        message = request_object['payload']['headers']['message']
-        signature = request_object['payload']['headers']['signature']
-        # Assumes the data is base64 encoded to begin with
-        # digest.update(b64decode(data)) 
-        try:
-            verifySignature(pub_key_exp, message, signature)
-            print("Valid baby")
-        except:
-            print("Invalid signature ")
+       
+        signatureIsVerified =  verifyRequest(request_object)
+        if signatureIsVerified:
+            print("All is good and verified")
+        else:
             raise InvalidUsage("Invalid signature responding to public key", status_code=401)
-        
         try:
             resp_obj = server.send_msg(request_object['payload'])
             return Response(resp_obj, mimetype="application/json")
@@ -100,30 +88,7 @@ def insert_block():
     else:
         raise InvalidUsage("The JSON object key has to be named payload", status_code=400)
 
-# Get back block if on blockchain and verified
-# TODO: Add get block by blockid
-# TODO: Get all blocks for a wallet
-# @app.route("/block/<blockid>", methods=["GET"])
-# def get_block():
-#     request_object = getJson(request)
-    
-#     # return json.dumps({"message":"verified"})
 
-def getJson(request):
-    try:
-        return json.loads(request.data) 
-    except Exception:
-        raise InvalidUsage("The JSON could not be decoded", status_code=400)
-
-def verifySignature(pubKey, message, signature):
-    ''' Verifies a signed message with the public key'''
-    message = message.encode("ISO-8859-1") 
-    signature = signature.encode("ISO-8859-1") 
-    pubKey = pubKey.encode("ISO-8859-1") 
-    pubKey = RSA.importKey(pubKey)
-    pkcsObj = pkcs1_15.new(pubKey)
-    hash = SHA256.new(message)
-    return pkcsObj.verify(hash, signature)
 
 if __name__ == "__main__":
     app.run(debug=False)
