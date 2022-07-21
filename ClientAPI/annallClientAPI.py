@@ -10,9 +10,8 @@ from exceptionHandler import InvalidUsage
 from Crypto.PublicKey import RSA 
 from Crypto.Signature import PKCS1_v1_5 
 from Crypto.Hash import SHA256 
-from base64 import b64decode 
-# from Crypto.Hash import SHA256
-
+from Crypto.Signature import pkcs1_15
+from clientfunctions import *
 # import sys
 print("Starting annallClientAPI Flask application server")
 app = Flask(__name__)
@@ -74,62 +73,22 @@ def get_blockchain():
 def insert_block():
     # Decode the JSON
     request_object = getJson(request)
-    
-    # Get the object 
-    
     if "payload" in request_object:
-        # print("request data", request.data)
-        # print(f"[REQUEST] {request_object}")
-        print("The pub ", type(request_object['payload']['headers']['pubKey']), '\n' )
-        print("The hash ", request_object['payload']['headers']['hash'], '\n' )
-        print("The sig ", request_object['payload']['headers']['signature'] )
-        pubKey = request_object['payload']['headers']['pubKey']
-        theHash = request_object['payload']['headers']['hash']
-        sig = request_object['payload']['headers']['signature']
-        rsakey = RSA.importKey(pubKey) 
-        signer = PKCS1_v1_5.new(rsakey) 
-        digest = SHA256.new() 
-        # Assumes the data is base64 encoded to begin with
-        # digest.update(b64decode(data)) 
-        if signer.verify(digest, b64decode(sig)):
-            print("True ")
+       
+        signatureIsVerified =  verifyRequest(request_object)
+        if signatureIsVerified:
+            print("All is good and verified")
         else:
-            print("False")
-   
-        
-        block = json.dumps({"request_type": "block", "name": "name", "body": request_object["body"], "payload_id": 1})
-        print("request data", request.data)
-        # print(f"[REQUEST] {request_object}")
-        print("The body ", request_object['payload'] )
-        block = json.dumps({"request_type": "block", "name": "name", "payload": request_object['payload'], "payload_id": 1})
-        
+            raise InvalidUsage("Invalid signature responding to public key", status_code=401)
         try:
-            resp_obj = server.send_msg(block)
+            resp_obj = server.send_msg(request_object['payload'])
             return Response(resp_obj, mimetype="application/json")
         except Exception:
             raise InvalidUsage("Unable to post to writer", status_code=500)
     else:
         raise InvalidUsage("The JSON object key has to be named payload", status_code=400)
 
-# Get back block if on blockchain and verified
-# TODO: Add get block by blockid
-# TODO: Get all blocks for a wallet
-# @app.route("/block/<blockid>", methods=["GET"])
-# def get_block():
-#     request_object = getJson(request)
-    
-#     # return json.dumps({"message":"verified"})
-
-def getJson(request):
-    try:
-        return json.loads(request.data) 
-    except Exception:
-        raise InvalidUsage("The JSON could not be decoded", status_code=400)
-
-
 
 
 if __name__ == "__main__":
     app.run(debug=False)
-
-
