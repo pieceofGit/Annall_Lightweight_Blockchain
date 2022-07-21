@@ -10,7 +10,6 @@ import interfaces
 from interfaces import verbose_print, vverbose_print
 from block import Block
 
-
 class BlockchainDB(interfaces.BlockChainEngine):
     """ The Database engine operating the raw blockchain
         Only the protocol engine can add to the chain
@@ -118,6 +117,35 @@ class BlockchainDB(interfaces.BlockChainEngine):
                 d[col[0]] = row[idx]
         return d
 
+    def get_latest_block(self, dict_form=True, col="*"):
+        query = f"SELECT {col} FROM chain WHERE round >= {self.length - 1} ORDER BY round"
+        return self.get_query(query, dict_form)
+
+    def get_blockchain(self, dict_form=True):
+        query = f"SELECT * FROM chain WHERE round >= {0} ORDER BY round"
+        return self.get_query(query, dict_form)
+
+    def get_range_of_blocks(self, begin, end, col="*", dict_form=True):
+        """ Returns blocks within range """
+        assert isinstance(begin ,int)
+        assert isinstance(end, int)
+        query = f"SELECT {col} FROM chain WHERE round >= {begin} AND round <= {end} ORDER BY round"
+        return self.get_query(query, dict_form)
+
+    def get_query(self, query, dict_form=False):
+        to_return = []
+        try: 
+            if dict_form:
+                self.db_connection.row_factory = self.dict_factory  
+            else:
+                self.db_connection.row_factory = None
+            cursor = self.db_connection.cursor()
+            retrieved = cursor.execute(query)
+            to_return = retrieved.fetchall()
+        except Exception as e:
+            verbose_print("Error retrieving blocks from db")
+        return to_return
+
     def read_blocks(self, begin, end=None, col="*", get_last_row=False, read_entire_chain=False):
         """ Retrieve blocks with from and including start to end
             If end is None, retrieve only the one block
@@ -126,7 +154,7 @@ class BlockchainDB(interfaces.BlockChainEngine):
             What if none satisfies?
             What type of exceptions
         """
-        assert isinstance(begin, int)
+        assert isinstance(begin ,int)
         if end is not None:
             assert isinstance(end, int)
 
@@ -134,7 +162,6 @@ class BlockchainDB(interfaces.BlockChainEngine):
         to_return = []
 
         if get_last_row:  # If discrepancy between round and length of list because of arbitrarypayload
-            # TODO:  remove arbitrarypayload special treatment
             query = f"SELECT {col} FROM chain WHERE round >= {self.length - 1} ORDER BY round"
         elif read_entire_chain:   # Returns a list of tuples for each transaction
             query = f"SELECT * FROM chain WHERE round >= {0} ORDER BY round"
@@ -181,9 +208,13 @@ def __test_localDB():
     # print(f"[MESSAGE READ BLOCKS 1-4] The message: {msg}")
     # import time
     # time.sleep(100)
-    msg = len(blocks_db.read_blocks(0, read_entire_chain=True))
-    print("Blockchain length: ", msg)
+    msg_old = len(blocks_db.read_blocks(0, read_entire_chain=True))
+    msg_new = len(blocks_db.get_blockchain(True))
+    print("Blockchain length: ", msg_old==msg_new)
     #to_json = msg[0]['payload']
+    msg_get_range_old = blocks_db.read_blocks(3000, 10)
+    msg_get_range_new = blocks_db.get_range_of_blocks(-1, 3, dict_form=False)
+    print("Blockchain range of blocks equal: ", msg_get_range_new == msg_get_range_old)
 
 
 

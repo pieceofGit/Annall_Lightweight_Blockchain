@@ -8,7 +8,6 @@ import sys
 from connectToServer import ServerConnection
 from exceptionHandler import InvalidUsage
 
-
 # from Crypto.Hash import SHA256
 
 # import sys

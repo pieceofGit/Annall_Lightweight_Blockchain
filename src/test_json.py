@@ -131,6 +131,11 @@ import struct
 
 # from .src.WriterAPI.annallWriterAPI import app
 # from .WriterAPI.annallWriterAPI import app
-from ..WriterAPI.annallWriterAPI import add_new_writer
+# from ..WriterAPI.annallWriterAPI import add_new_writer
 
 # annallWriterAPI.app.run()
+
+# a_list = ["some"]
+# print(ast.literal_eval(a_list))
+some = ("yes", "no")
+print(some[0])

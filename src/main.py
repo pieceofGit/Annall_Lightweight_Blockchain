@@ -16,8 +16,7 @@ from interfaces import (
 from tcpserver import TCP_Server, ClientHandler
 from protocom import ProtoCom
 from blockchainDB import BlockchainDB
-from WriterAPI.annallWriterAPI import app, WriterAPI
-
+from WriterAPI.annallWriterAPI import app, WriterAPI, BCDB
 # should put here some elementary command line argument processing
 # EG. parameters for where the config file is, number of writers (for testing), and rounds
 # Define explicitly the paths
@@ -66,8 +65,9 @@ if __name__ == "__main__":
 
     if RUN_WRITER_API and id == 3:  # Run the WriterAPI as a thread on a reader
         # The writer api needs access to the blockchain database for reading
-        writer_api = WriterAPI(bce, app)
-        writer_api_thread = Thread(target=writer_api.run, name="TCPServerThread")
+        BCDB[0] = bce
+        writer_api = WriterAPI(app)
+        writer_api_thread = Thread(target=writer_api.run, name="WriterAPIThread")
         writer_api_thread.daemon = True
         writer_api_thread.start()
     # Read config and other init stuff
