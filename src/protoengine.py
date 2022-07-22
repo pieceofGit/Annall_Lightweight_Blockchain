@@ -309,7 +309,6 @@ class ProtoEngine(ProtocolEngine):
         """
         ## TODO: More suspicious is, this seems to block if any of the writers is not connected.
         while len(self.comm.list_connected_peers()) != len(self.writer_list) + len(self.reader_list) - 1: # TODO: Needs more sophistication
-            print(len(self.comm.list_connected_peers()), len(self.writer_list) - 1 + 1)
             time.sleep(1)
         print(f"ID={self.ID} -> connected and ready to build")
         return None
@@ -541,9 +540,6 @@ class ProtoEngine(ProtocolEngine):
             message = self._recv_msg(type="reply")
             if message is not None:
                 parsed_message = message.split("-")
-                print(parsed_message)
-                print(type(parsed_message[1]))
-                print(type(parsed_message[4]))
                 from_id = ast.literal_eval(parsed_message[1])
                 if from_id in self.reader_list:
                     no_recv_messages += 1    # Readers only send message for syncing

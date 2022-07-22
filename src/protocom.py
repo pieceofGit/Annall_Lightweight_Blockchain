@@ -529,7 +529,7 @@ class ProtoCom(ProtocolCommunication):
         """ The run method. Runs until request_stop is called. """
         # TODO add some checks for time since last revieved
         while self.running:
-            verbose_print(
+            vverbose_print(
                ">>> running - connected peers:", self.list_connected_peers(),
             )
             if self.rr_selector != None:

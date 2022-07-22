@@ -139,3 +139,6 @@ import struct
 # print(ast.literal_eval(a_list))
 some = ("yes", "no")
 print(some[0])
+
+other = [0]
+print([other])

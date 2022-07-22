@@ -16,12 +16,14 @@ from interfaces import (
 from tcpserver import TCP_Server, ClientHandler
 from protocom import ProtoCom
 from blockchainDB import BlockchainDB
-from WriterAPI.annallWriterAPI import app, WriterAPI, BCDB
+from annallWriterAPI import app, WriterAPI, BCDB
+# from WriterAPI.annallWriterAPI import app, WriterAPI, BCDB
 # should put here some elementary command line argument processing
 # EG. parameters for where the config file is, number of writers (for testing), and rounds
 # Define explicitly the paths
 RUN_WRITER_API = True   # If the api turns on, then it should be a reader of the blockchain
 CWD = os.getcwd()
+print("WORKING DIRECTORY: ", os.getcwd())
 CONFIG_PATH = f"{CWD}/src"
 LOCAL = True    # If True, use local file for private key and separate databases
 if LOCAL:

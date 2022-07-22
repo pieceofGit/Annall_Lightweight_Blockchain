@@ -119,17 +119,25 @@ class BlockchainDB(interfaces.BlockChainEngine):
 
     def get_latest_block(self, dict_form=True, col="*"):
         query = f"SELECT {col} FROM chain WHERE round >= {self.length - 1} ORDER BY round"
-        return self.get_query(query, dict_form)
+        latest_block =self.get_query(query, dict_form)  # Returns list of dict
+        if dict_form:
+            return latest_block[0]
+        else:
+            return latest_block
 
     def get_blockchain(self, dict_form=True):
         query = f"SELECT * FROM chain WHERE round >= {0} ORDER BY round"
         return self.get_query(query, dict_form)
 
-    def get_range_of_blocks(self, begin, end, col="*", dict_form=True):
+    def get_range_of_blocks(self, begin, end=None, col="*", dict_form=True):
         """ Returns blocks within range """
         assert isinstance(begin ,int)
-        assert isinstance(end, int)
-        query = f"SELECT {col} FROM chain WHERE round >= {begin} AND round <= {end} ORDER BY round"
+        if end is not None:
+            assert isinstance(end, int)
+        if end is None:
+            query = f"SELECT {col} FROM chain WHERE round >= {begin} ORDER BY round"
+        else:
+            query = f"SELECT {col} FROM chain WHERE round >= {begin} AND round <= {end} ORDER BY round"
         return self.get_query(query, dict_form)
 
     def get_query(self, query, dict_form=False):
@@ -186,7 +194,7 @@ class BlockchainDB(interfaces.BlockChainEngine):
 def __test_localDB():
 
     CWD = os.getcwd()
-    db_path = CWD + "/src/db/test_blockchain.db"
+    db_path = CWD + "/src/test_node_3/blockchain.db"
     print(f"[DIRECTORY PATH] {db_path}")
 
     blocks_db = BlockchainDB(db_path)
@@ -197,24 +205,24 @@ def __test_localDB():
 
     #Block(prev_hash, writerID, coordinatorID, winning_number, signature, timestamp, payload )
     genesis_block = Block("0", 0, 0, 0, "0", 0,  json.dumps({"type": "genesis block"}),)
-    blocks_db.insert_block(0, genesis_block)
-    blocks_db.insert_block(1, the_block)
-    blocks_db.insert_block(2, the_block)
-    blocks_db.insert_block(3, the_block)
-    blocks_db.insert_block(4, the_block)
-    blocks_db.insert_block(5, the_block)
-    blocks_db.insert_block(6, the_block)
-    reading_blocks = len(blocks_db.read_blocks(0, 4))
+    # blocks_db.insert_block(0, genesis_block)
+    # blocks_db.insert_block(1, the_block)
+    # blocks_db.insert_block(2, the_block)
+    # blocks_db.insert_block(3, the_block)
+    # blocks_db.insert_block(4, the_block)
+    # blocks_db.insert_block(5, the_block)
+    # blocks_db.insert_block(6, the_block)
+    # reading_blocks = len(blocks_db.read_blocks(0, 4))
     # print(f"[MESSAGE READ BLOCKS 1-4] The message: {msg}")
     # import time
     # time.sleep(100)
-    msg_old = len(blocks_db.read_blocks(0, read_entire_chain=True))
-    msg_new = len(blocks_db.get_blockchain(True))
-    print("Blockchain length: ", msg_old==msg_new)
-    #to_json = msg[0]['payload']
-    msg_get_range_old = blocks_db.read_blocks(3000, 10)
-    msg_get_range_new = blocks_db.get_range_of_blocks(-1, 3, dict_form=False)
-    print("Blockchain range of blocks equal: ", msg_get_range_new == msg_get_range_old)
+    # msg_old = len(blocks_db.read_blocks(0, read_entire_chain=True))
+    # msg_new = len(blocks_db.get_blockchain(True))
+    # print("Blockchain length: ", msg_old==msg_new)
+    # #to_json = msg[0]['payload']
+    # msg_get_range_old = blocks_db.read_blocks(3000, 10)
+    msg_get_range_new = blocks_db.get_range_of_blocks(1)
+    print("Blockchain: ", msg_get_range_new)
 
 
 
