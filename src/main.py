@@ -84,7 +84,9 @@ if __name__ == "__main__":
     if LOCAL:
         with open(f"{CONFIG_PATH}/test_node_{id}/priv_key.json", "r") as f:
             priv_key = json.load(f)
-    
+    # Do not start writing or reading until up to date. writer or reader should be in the active set.
+    # 
+
     # Start Communication Engine - maintaining the peer-to-peer network of writers
     print("::> Starting up peer-to-peer network engine with id ", id)
     pComm = ProtoCom(id, data)

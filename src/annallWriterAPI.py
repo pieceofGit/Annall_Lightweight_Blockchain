@@ -81,11 +81,11 @@ def get_missing_blocks(writer_latest_block):
     api_latest_block = BCDB[0].get_latest_block()   # Get latest block in dict
     # if api_latest_block[""]
     try:
-        if api_latest_block["hash"] == writer_latest_block["hash"]:
+        if api_latest_block["hash"] == writer_latest_block["hash"] and writer_latest_block["prevHash"] == api_latest_block["prevHash"]: # Add compare prev hash
             return False   # Writer is up to date
         else:
-            if api_latest_block["round"] == writer_latest_block["round"]:
-                # Different hash, same round. Something not ok on their end, return the blockchain
+            if api_latest_block["round"] == writer_latest_block["round"] or writer_latest_block["prevHash"] == api_latest_block["prevHash"]:
+                # Different hash, same round or prevHash. Something not ok on their end, return the blockchain
                 try:
                     missing_blocks = BCDB[0].get_blockchain()
                     return missing_blocks
@@ -93,7 +93,7 @@ def get_missing_blocks(writer_latest_block):
                     raise InvalidUsage("Could not fetch blocks", status_code=500)
             else:
                 try:
-                    # Different hash, different rounds
+                    # Different prev_hash, hash, and rounds
                     missing_blocks = BCDB[0].get_range_of_blocks(writer_latest_block["round"] + 1)
                     return missing_blocks
                 except:
@@ -117,7 +117,7 @@ def get_config():
 
 @app.route("/config", methods=["POST"])
 def add_writer_to_set():
-    """ JSON = {
+    """ required: {
         "name": string,
         "hostname": string,
         "pub_key": string
@@ -137,14 +137,18 @@ def add_writer_to_set():
 
 @app.route("/blocks", methods=["GET"])
 def get_blocks():
-    """ JSON = {
+    """ optional: {
         "hash": string,
         "round": int,
+        "prevHash": string
         }
     """
     # Returns the API's version of the blockchain. Needs to ask a writer for the rest
     # We have a node set, an active writer set, and an active reader set 
     if authenticate_writer():
+        print("REQUEST DATA: ", request.data)
+        if not request.data:
+            return Response(json.dumps(BCDB[0].get_blockchain()), mimetype="application/json", status=200)
         latest_writer_block = get_json()
         missing_blocks = get_missing_blocks(latest_writer_block)
         if not missing_blocks:
@@ -156,16 +160,6 @@ def get_blocks():
         #     return Response("Sending blocks in json failed", status=500)
     else:
         return Response("Writer not whitelisted", status=400)
-# @app.route("/blocks", methods=["GET"])
-# def get_missing_blocks():
-#     # Gets the latest block of the writer's blockchain. Sends it missing blocks in the chain
-#     if authenticate_writer():
-#         # send 
-#         ...
-
-
-
-    # app.run(debug=True)
 
 class WriterAPI():
     def __init__(self, app):
