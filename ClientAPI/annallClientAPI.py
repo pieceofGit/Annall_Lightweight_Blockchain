@@ -7,9 +7,11 @@ from flask import Flask, request, jsonify, Response
 import sys
 from connectToServer import ServerConnection
 from exceptionHandler import InvalidUsage
-
-# from Crypto.Hash import SHA256
-
+from Crypto.PublicKey import RSA 
+from Crypto.Signature import PKCS1_v1_5 
+from Crypto.Hash import SHA256 
+from Crypto.Signature import pkcs1_15
+from clientfunctions import *
 # import sys
 print("Starting annallClientAPI Flask application server")
 app = Flask(__name__)
@@ -70,44 +72,29 @@ def get_blockchain():
 @app.route("/blocks", methods=["POST"])
 def insert_block():
     # Decode the JSON
-    print("[the data sent to server", request.data)
     request_object = getJson(request)
-    
-    # Get the object 
-    
     if "payload" in request_object:
-        print("request data", request.data)
-        # print(f"[REQUEST] {request_object}")
-        print("The body ", request_object['payload'] )
-        block = json.dumps({"request_type": "block", "name": "name", "payload": request_object['payload'], "payload_id": 1})
-        
+       
+        if verifyRequest(request_object):
+            print("All is good and verified")
+            try:
+                resp_obj = server.send_msg(request_object['payload'])
+                return Response(resp_obj, mimetype="application/json")
+            except Exception:
+                print("Failed to send to blockchain")
+                raise InvalidUsage("Unable to post to writer", status_code=500)
+        else:
+            raise InvalidUsage("Invalid signature responding to public key", status_code=401)
         try:
-            resp_obj = server.send_msg(block)
+            resp_obj = server.send_msg(request_object['payload'])
             return Response(resp_obj, mimetype="application/json")
         except Exception:
+            print("Unable to post to writer")
             raise InvalidUsage("Unable to post to writer", status_code=500)
     else:
         raise InvalidUsage("The JSON object key has to be named payload", status_code=400)
-
-# Get back block if on blockchain and verified
-# TODO: Add get block by blockid
-# TODO: Get all blocks for a wallet
-# @app.route("/block/<blockid>", methods=["GET"])
-# def get_block():
-#     request_object = getJson(request)
-    
-#     # return json.dumps({"message":"verified"})
-
-def getJson(request):
-    try:
-        return json.loads(request.data) 
-    except Exception:
-        raise InvalidUsage("The JSON could not be decoded", status_code=400)
-
 
 
 
 if __name__ == "__main__":
     app.run(debug=False)
-
-

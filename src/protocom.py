@@ -261,7 +261,7 @@ class RemoteEnd:
 
 
 class ProtoCom(ProtocolCommunication):
-    def __init__(self, self_id: int, conf: dict, name: str = "Protocall communication" ):
+    def __init__(self, self_id: int, conf: dict, name: str = "P2P : Protocol communication" ):
         ProtocolCommunication.__init__(
             self, name)
         # set up
@@ -431,7 +431,7 @@ class ProtoCom(ProtocolCommunication):
                 vverbose_print("Connected to id:", r_id)
             except Exception as e:
                 vverbose_print(f">!! Failed to connect with exception: {e}")
-                self.peers[r_id].close(self.rr_selector)    # TODO: Fails on Socket = None on close()
+                self.peers[r_id].close(self.rr_selector)
                 return
             try:
                 req_msg = pMsg.con_requ_msg(self.id, r_id, self.pub_key)
@@ -528,10 +528,14 @@ class ProtoCom(ProtocolCommunication):
     def run(self):
         """ The run method. Runs until request_stop is called. """
         # TODO add some checks for time since last revieved
+        connected_peers = 0
         while self.running:
-            vverbose_print(
-               ">>> running - connected peers:", self.list_connected_peers(),
-            )
+            if connected_peers != len(self.list_connected_peers()):
+                verbose_print(
+                ">>> running - connected peers:", self.list_connected_peers(),
+                )
+                connected_peers = len(self.list_connected_peers())
+
             if self.rr_selector != None:
                 events = self.rr_selector.select(timeout=2)
                 for key, mask in events:
@@ -558,7 +562,7 @@ class ProtoCom(ProtocolCommunication):
                 c_p.append(peer.rem_id)
         return c_p
     
-    def send_msg_to_remote_end(self, rem_id, message, send_to_readers):
+    def send_msg_to_remote_end(self, rem_id, message, send_to_readers): 
         # Send message to single remote end
         if not send_to_readers and not self.peers[rem_id].is_writer:    
             return  # Message is not for reader
@@ -598,7 +602,7 @@ class ProtoCom(ProtocolCommunication):
                     return [send_to]
                 except Exception as e:
                     verbose_print(">!!", "Failed to send to id: ", send_to)
-            return []
+            return [] # TODO: should this not be [sent_to]
 
     def recv_msg(self, recv_from: int = None) -> list:
         """ returns a list of tuples of ([id]: int, [msg]: string) """
