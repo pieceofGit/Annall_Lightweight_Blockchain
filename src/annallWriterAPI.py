@@ -111,7 +111,7 @@ def handle_invalid_usage(error):
 def get_config():    
     # Returns the config file if writer is authenticated
     if authenticate_writer():
-        return json.dumps(config)
+        return Response(json.dumps(config), mimetype="application/json", status=200)
     else:
         raise InvalidUsage("Writer not whitelisted", status_code=400)
 
@@ -123,17 +123,28 @@ def add_writer_to_set():
         "pub_key": string
         }
     """
-    # Gets back entire config
+    # Adds writer to node set and returns the config
+    # Assumes one node per public ip address if remote
     writer_to_add = get_json()
     if not LOCAL:
         try:
-            if authenticate_writer(writer_to_add["hostname"]):
+            if authenticate_writer(writer_to_add["hostname"]):  
                 raise InvalidUsage("Writer already whitelisted", status_code=400)
         except:
             raise InvalidUsage("The JSON could not be decoded", status_code=400)
     # Append api to writer_set
     add_new_writer(writer_to_add)
-    return Response(status=200, mimetype="application/json")
+    return Response(status=201)
+
+@app.route("/activate_writer", methods=["POST"])
+def activate_writer():
+    """ Should add writer to active writer set """
+    ...
+
+@app.route("/activate_reader", methods=["POST"])
+def activate_reader():
+    """ Should add reader to active reader set """
+    ...
 
 @app.route("/blocks", methods=["GET"])
 def get_blocks():
