@@ -164,7 +164,7 @@ class RemoteEnd:
         # TODO handle exception when int fails. Read all message buffer and throw away
         # if self.is_active:
         byte_length = r_socket.recv(4)
-        verbose_print("Read length:", byte_length)
+        vverbose_print("Read length:", byte_length)
         if byte_length == b"":
             raise Exception(f"> Connection closed. Socket:{r_socket}")
         try:
