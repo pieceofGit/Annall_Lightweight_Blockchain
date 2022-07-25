@@ -75,21 +75,23 @@ def insert_block():
     request_object = getJson(request)
     if "payload" in request_object:
        
-        if verifyRequest(request_object):
-            print("All is good and verified")
-            try:
-                resp_obj = server.send_msg(request_object['payload'])
-                return Response(resp_obj, mimetype="application/json")
-            except Exception:
-                print("Failed to send to blockchain")
-                raise InvalidUsage("Unable to post to writer", status_code=500)
-        else:
-            raise InvalidUsage("Invalid signature responding to public key", status_code=401)
+        # if verifyRequest(request_object):
+        #     print("All is good and verified")
+        #     try:
+        #         resp_obj = server.send_msg(request_object['payload'])
+        #         return Response(resp_obj, mimetype="application/json")
+        #     except Exception:
+        #         print("Failed to send to blockchain")
+        #         raise InvalidUsage("Unable to post to writer", status_code=500)
+        # else:
+        #     raise InvalidUsage("Invalid signature responding to public key", status_code=401)
+        print("REQUEST OBJECT", request_object)
+        print("REQUEST OBJECT PAYLOAD", request_object)
+        block = json.dumps({"request_type": "block", "name": "name", "payload": request_object['payload'], "payload_id": 1})
         try:
-            resp_obj = server.send_msg(request_object['payload'])
+            resp_obj = server.send_msg(block)
             return Response(resp_obj, mimetype="application/json")
         except Exception:
-            print("Unable to post to writer")
             raise InvalidUsage("Unable to post to writer", status_code=500)
     else:
         raise InvalidUsage("The JSON object key has to be named payload", status_code=400)
