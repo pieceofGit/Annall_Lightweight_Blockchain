@@ -218,7 +218,6 @@ class ProtoEngine(ProtocolEngine):
     def broadcast(self, msg_type: str, msg, round: int, send_to_readers=False):
         assert isinstance(msg_type, str)
         assert isinstance(msg, (int, str, list))
-        print(type(round))
         assert isinstance(round, int)
         self._send_msg(round=round, type=msg_type, message=msg, sent_to=None, send_to_readers=send_to_readers)
 
@@ -409,8 +408,6 @@ class ProtoEngine(ProtocolEngine):
             message = self._recv_msg(type="block", recv_from=winner[2], round=round)    # Gets back tuple block
             time.sleep(0.01)
         parsed_message = message.split("-")
-        verbose_print(f"[THE MESSAGE] {message}")
-        verbose_print(f"[THE BLOCK MESSAGE] {parsed_message}")
         parsed_message = message.split("-")
         payload = ast.literal_eval(parsed_message[4])   # Gets back the unstringed value
         if not payload:
@@ -608,7 +605,6 @@ class ProtoEngine(ProtocolEngine):
                     break   # Stops the program
         else:
             while True:
-                print("[READER ROUND]")
                 coordinator = self.get_coordinatorID(round)
                 self.reader_round(round, coordinator)
                 round += 1
