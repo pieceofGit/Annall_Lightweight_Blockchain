@@ -636,7 +636,7 @@ class ProtoEngine(ProtocolEngine):
         
         if self.message_queue.empty():
             
-            verbose_print("message queue empty")
+            vverbose_print("message queue empty")
             return None
         mess = self.message_queue.get() # Reader checks for cancel messages and takes request message
         parsed_message = mess.split("-")
