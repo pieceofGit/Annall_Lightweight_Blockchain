@@ -102,9 +102,10 @@ if __name__ == "__main__":
             except:
                 print("Got back message from server: ", missing_blocks)
         # Add writer to active writer list if up to date
-        print(json.dumps({"block": bce.get_latest_block(), "node": {"id": 5}}))
+        print(json.dumps({"block": bce.get_latest_block(), "node": {"id": id}}))
         print(json.dumps(latest_block))
-        resp = requests.post(WRITER_API_PATH + "activate_writer", data=json.dumps({"block": bce.get_latest_block(), "node": {"id": 5}}))
+        resp = requests.post(WRITER_API_PATH + "activate_writer", 
+            data=json.dumps({"block": bce.get_latest_block(), "node": {"id": id}}))
         if resp.status_code == 200:
             pass
         elif resp.status_code == 201:
@@ -113,14 +114,12 @@ if __name__ == "__main__":
             # Out of data blockchain, incorrect data, or service unavailable
             pass
             # TODO: Decide how to handle remaining cases and for loop
-
-
-        
+ 
 
     print("Database up to date")
     # Start Communication Engine - maintaining the peer-to-peer network of writers
     print("::> Starting up peer-to-peer network engine with id ", id)
-    pComm = ProtoCom(id, data)
+    pComm = ProtoCom(id, data)  # Send in config file to protocom
     pComm.daemon = True
     pComm.start()
     print("Peer-to-peer network engine up  and running as:", pComm.name)
@@ -144,11 +143,7 @@ if __name__ == "__main__":
     keys = priv_key["priv_key"]
     PE = ProtoEngine(id, tuple(keys), pComm, bce, clients)
     PE.set_rounds(rounds)
-    PE.set_conf(data)
     # Writers set to wait for connecting to until rounds start
-    PE.set_writers(data["active_writer_set_id_list"])
-    PE.set_readers(data["active_reader_set_id_list"])
-
     PEthread = Thread(target=PE.run_forever, name="ProtocolEngine")
     PEthread.start()
     print("Protocol Engine up and running as:", PEthread.name)

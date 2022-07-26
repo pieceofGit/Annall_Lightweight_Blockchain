@@ -15,6 +15,7 @@ import time
 import random
 import struct
 import inspect
+import requests
 
 from interfaces import ( 
     ProtocolCommunication,
@@ -279,9 +280,11 @@ class ProtoCom(ProtocolCommunication):
         self.ip = None
         self.listen_port = None
         self.is_writer = self.check_if_writer(self.id)
+        self.writer_list = self.conf["active_writer_set_id_list"]
+        self.reader_list = self.conf["active_reader_set_id_list"]
         # Setup two-way communication with active writers and readers
-        self.connect_to_nodes_in_conf_by_key("active_writer_set_id_list")
-        self.connect_to_nodes_in_conf_by_key("active_reader_set_id_list")
+        self.setup_remote_ends_in_conf_by_key("active_writer_set_id_list")  # add to peers dict
+        self.setup_remote_ends_in_conf_by_key("active_reader_set_id_list")
         verbose_print(f"[IS WRITER] node with id: {self.id} is a writer: {self.is_writer}")
         # set up listening socket
         # Making sure to not run this if either are undefined, unless it crashes
@@ -304,7 +307,24 @@ class ProtoCom(ProtocolCommunication):
             # Received messages are added to this queue and removed when recv_msg() is called
             self.msg_queue = []
 
-    def connect_to_nodes_in_conf_by_key(self, list_key):
+    def update_conf(self):
+        WRITER_API_PATH = "http://127.0.0.1:8000/"  # Just here for testing purposes
+        try:
+            response = requests.get(WRITER_API_PATH + "config", {})
+            if response.status_code == 200:
+                if self.conf != response.json():
+                    self.conf = response.json()
+                    # Handle changes to config file
+                    self.setup_remote_ends_in_conf_by_key("active_writer_set_id_list")
+                    self.setup_remote_ends_in_conf_by_key("active_reader_set_id_list")
+                    self.writer_list = self.conf["active_writer_set_id_list"]
+                    self.reader_list = self.conf["active_reader_set_id_list"]
+
+        except Exception as e:
+            verbose_print("Failed to update conf: ", e)
+
+
+    def setup_remote_ends_in_conf_by_key(self, list_key):
         try:
             for i in self.conf[list_key]:
                 node = self.conf["node_set"][i-1]

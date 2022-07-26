@@ -135,17 +135,11 @@ class ProtoEngine(ProtocolEngine):
         ProtocolEngine.__init__(self, id, comm, blockchain, clients)
 
         self.ID = id
-        self.keys = keys    # Private keys
-
-        self.writer_list = []  # list of writer ID's
-        self.reader_list = [] # list of reader ID's
-        
+        self.keys = keys    # Private keys        
         # Defining e
         self.modulus = 65537
         # For how many rounds the blockchain should run for
         self.rounds = None
-        # Comes from the original config file (config.json) 
-        self.conf = None
         
         # Messages in our writer's queue
         self.message_queue = Queue()
@@ -160,11 +154,6 @@ class ProtoEngine(ProtocolEngine):
         assert isinstance(round, int)
         self.rounds = round
 
-    def set_conf(self, data):
-        ''' Assign config  '''
-        assert isinstance(data, object)
-        self.conf = data
-
     def sign_payload(self, payload: str):
         # keys of form [p, q, e]
         '''Creates a signature of the payload'''
@@ -175,16 +164,6 @@ class ProtoEngine(ProtocolEngine):
         D = bytes_to_long(payload.encode("utf-8"))
         signature = pow(D, d, N)
         return hex(signature % N)
-
-    def set_writers(self, writers: list):
-        for w in writers:
-            assert isinstance(w, int)
-        self.writer_list = writers
-    
-    def set_readers(self, readers: list):
-        for r in readers:
-            assert isinstance(r, int)
-        self.reader_list = readers
     
     def get_timestamp(self):
         # Returns time in Unix epoch time 
@@ -201,7 +180,7 @@ class ProtoEngine(ProtocolEngine):
             writer = block.writerID
             payload = block.payload
             signature = int(block.writer_signature, 16)
-            writer_pubkey = self.conf["node_set"][int(writer) - 1]["pub_key"]
+            writer_pubkey = self.comm.conf["node_set"][int(writer) - 1]["pub_key"]
             D = bytes_to_long(payload.encode("utf-8")) % writer_pubkey
             res = pow(signature, self.keys[2], writer_pubkey)
             res = res % writer_pubkey
@@ -277,7 +256,7 @@ class ProtoEngine(ProtocolEngine):
         assert isinstance(round, int)
         ## NOT SURE WHY THIS IS HERE:  8 - 1 % (3+1) # 7 % 4 = 3
         ## TODO not clear if this really works, e.g. in the case if some node dies, or if the set of writers changes
-        coordinator = (round - 1) % (len(self.writer_list))
+        coordinator = (round - 1) % (len(self.comm.writer_list))
         return coordinator + 1
 
     def calculate_sum(self, numbers: list):
@@ -307,7 +286,7 @@ class ProtoEngine(ProtocolEngine):
         """Bootstrap to the writerset, using comm module
         """
         ## TODO: More suspicious is, this seems to block if any of the writers is not connected.
-        while len(self.comm.list_connected_peers()) != len(self.writer_list) + len(self.reader_list) - 1: # TODO: Needs more sophistication
+        while len(self.comm.list_connected_peers()) != len(self.comm.writer_list) + len(self.comm.reader_list) - 1: # TODO: Needs more sophistication
             time.sleep(1)
         print(f"ID={self.ID} -> connected and ready to build")
         return None
@@ -533,12 +512,12 @@ class ProtoEngine(ProtocolEngine):
         no_recv_messages = 0
         # Currently waiting for a number from all active writers
         # MSG FORMAT <round nr>-<from id>-<to id>-<msg type>-<msg body>
-        while no_recv_messages < len(self.writer_list) + len(self.reader_list) - 1:
+        while no_recv_messages < len(self.comm.writer_list) + len(self.comm.reader_list) - 1:
             message = self._recv_msg(type="reply")
             if message is not None:
                 parsed_message = message.split("-")
                 from_id = ast.literal_eval(parsed_message[1])
-                if from_id in self.reader_list:
+                if from_id in self.comm.reader_list:
                     no_recv_messages += 1    # Readers only send message for syncing
                 else:
                     no_recv_messages += 1
@@ -588,10 +567,19 @@ class ProtoEngine(ProtocolEngine):
         #       Note: most likely need a consensus on which writers are present
         self.join_writer_set()
         print("[ALL JOINED] all writers have joined the writer set")
-        round = self.bcdb.length    # TODO: Not possible for catch-up node
+        if self.ID == 4:    # Only for test purposes
+            round = 20
+        else:
+            round = self.bcdb.length    # TODO: Not possible for catch-up node
         print("ROUND: ", round)
         if self.comm.is_writer:
             while True:
+                print(round)
+                if round % 20 == 0: # Every 100 conceptual rounds, update config file
+                    self.comm.update_conf()
+                    self.join_writer_set()
+                    print(self.comm.writer_list, self.comm.conf["active_writer_set_id_list"])
+
                 coordinator = self.get_coordinatorID(round)
                 vverbose_print(f"ID: {self.ID}, CordinatorId: {coordinator}", coordinator == self.ID)
                 if coordinator == self.ID:
@@ -603,8 +591,12 @@ class ProtoEngine(ProtocolEngine):
                 round += 1
                 if round > self.rounds and self.rounds:
                     break   # Stops the program
-        else:
+        else:   # is reader
             while True:
+                if round % 20 == 0: # Every 100 conceptual rounds, update config file
+                    self.comm.update_conf()
+                    self.join_writer_set()
+                    print(self.comm.writer_list, self.comm.conf["active_writer_set_id_list"])
                 coordinator = self.get_coordinatorID(round)
                 self.reader_round(round, coordinator)
                 round += 1
