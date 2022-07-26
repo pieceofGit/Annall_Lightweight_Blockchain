@@ -22,7 +22,7 @@ from annallWriterAPI import app, WriterAPI, BCDB
 # should put here some elementary command line argument processing
 # EG. parameters for where the config file is, number of writers (for testing), and rounds
 # Define explicitly the paths
-RUN_WRITER_API = False   # If the api turns on, then it should be a reader of the blockchain
+RUN_WRITER_API = True   # If the api turns on, then it should be a reader of the blockchain
 CWD = os.getcwd()
 print("WORKING DIRECTORY: ", os.getcwd())
 CONFIG_PATH = f"{CWD}/src"
@@ -87,7 +87,7 @@ if __name__ == "__main__":
             priv_key = json.load(f)
     # Do not start writing or reading until up to date. writer or reader should be in the active set.
     # Synchronous get all missing blocks
-    if not RUN_WRITER_API:
+    if id != 3: #TODO: Should fall back to asking another active writer for the missing blocks
         missing_blocks = True
         while missing_blocks:   # Stuck indefinitely if time to get missing blocks and connect to others is lower than others wait for new timeout
             latest_block = bce.get_latest_block()
@@ -95,13 +95,29 @@ if __name__ == "__main__":
                 missing_blocks = requests.get(WRITER_API_PATH + "blocks", data=json.dumps(latest_block)).json()    
             else:
                 missing_blocks = requests.get(WRITER_API_PATH + "blocks").json()
-        # If writer has latest block, gets back false, else add missing blocks 
+        # If writer has latest block, gets back false, else add missing blocks
             try:
                 for dict_block in missing_blocks:
                     bce.insert_block(dict_block["round"], Block.from_dict(dict_block))
             except:
                 print("Got back message from server: ", missing_blocks)
+        # Add writer to active writer list if up to date
+        print(json.dumps({"block": bce.get_latest_block(), "node": {"id": 5}}))
+        print(json.dumps(latest_block))
+        resp = requests.post(WRITER_API_PATH + "activate_writer", data=json.dumps({"block": bce.get_latest_block(), "node": {"id": 5}}))
+        if resp.status_code == 200:
+            pass
+        elif resp.status_code == 201:
+            data = resp.json()
+        else:   
+            # Out of data blockchain, incorrect data, or service unavailable
+            pass
+            # TODO: Decide how to handle remaining cases and for loop
 
+
+        
+
+    print("Database up to date")
     # Start Communication Engine - maintaining the peer-to-peer network of writers
     print("::> Starting up peer-to-peer network engine with id ", id)
     pComm = ProtoCom(id, data)

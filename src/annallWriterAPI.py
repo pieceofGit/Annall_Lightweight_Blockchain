@@ -8,7 +8,7 @@ import argparse
 from flask import Flask, request, jsonify, Response
 import sys
 print("WORKING DIRECTORY",os.getcwd())
-PREPEND_PATH = os.getcwd() + "/"
+PREPEND_PATH = os.getcwd() + "/src/"
 from exceptionHandler import InvalidUsage
 from_main = True
 # import sys 
@@ -29,6 +29,14 @@ print("config file in: ",PREPEND_PATH+CONFIG_PATH)
 with open(PREPEND_PATH+CONFIG_PATH, "r") as config_file:
   config = json.load(config_file)
 
+def add_to_config_by_key(key, value):
+    try:
+        config[key].append(value)
+        with open(CONFIG_PATH, "w") as file:
+            json.dump(config, file, indent=4)
+    except:
+        raise InvalidUsage("Could not access the json file", status_code=500)
+
 
 def add_new_writer(writer):
     # Create new writer object
@@ -47,18 +55,15 @@ def add_new_writer(writer):
             new_writer["client_port"] = 5000
             new_writer["protocol_port"] = 5000
         # Add writer to writer set and save    
-        config["node_set"].append(new_writer)
-        try:
-            with open(CONFIG_PATH, "w") as file:
-                json.dump(config, file, indent=4)
-        except:
-            raise InvalidUsage("Could not access the json file", status_code=500)
+        add_to_config_by_key("node_set", new_writer)
+        # config["node_set"].append(new_writer)
     except Exception as e:
         raise InvalidUsage(f"Could not decode JSON {e}", status_code=400)
 
-def authenticate_writer():
+def authenticate_writer(ip_address=None):
     # Checks if public ip address of request is in writer list
-    ip_address = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
+    if not ip_address:
+        ip_address = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
     for obj in config["node_set"]:
         if ip_address in obj["hostname"]:
             return True
@@ -69,6 +74,30 @@ def get_dict():
         return json.loads(request.data) 
     except Exception:
         raise InvalidUsage("The JSON could not be decoded", status_code=400)
+
+def add_to_active_set(key):
+    """ Adds writer or reader to their respective active set if the incoming node's blockchain is up to date 
+    Writer sends in object with keys block and node
+    """
+    if authenticate_writer():
+        # compare latest blocks
+        request_obj = get_dict()
+        try:
+            block = request_obj["block"]
+            node = request_obj["node"]
+            if node["id"] in config[key]:
+                return Response("Node already in set", status=200)
+            api_latest_block = BCDB[0].get_latest_block()
+            if api_latest_block["hash"] == block["hash"]:
+                # Add writer to active writer set
+                add_to_config_by_key(key, node["id"])
+                return Response(json.dumps(config), mimetype="application/json", status=201)
+            else:
+                return Response(json.dumps({"message": "Node not up to date"}), status=400) #TODO: wrong pattern
+        except Exception as e:
+            raise InvalidUsage(f"Could not read the data {e}", status_code=400)
+    else:
+        return Response("Node not whitelisted", status=400)
 
 def get_missing_blocks(writer_latest_block):
     # Needs to handle case if gbs and that it eventually catches up.
@@ -134,12 +163,14 @@ def add_writer_to_set():
 
 @app.route("/activate_writer", methods=["POST"])
 def activate_writer():
-    """ Should add writer to active writer set """
-    ...
+    """ Adds writer to active writer set if his blockchain is up to date 
+    Writer sends in object with keys block and node
+    """
+    return add_to_active_set("active_writer_set_id_list")
 
 @app.route("/activate_reader", methods=["POST"])
 def activate_reader():
-    """ Should add reader to active reader set """
+    """ Adds reader to active reader set if his blockchain is up to date """
     ...
 
 @app.route("/blocks", methods=["GET"])
