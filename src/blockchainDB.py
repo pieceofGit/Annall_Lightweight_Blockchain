@@ -46,11 +46,11 @@ class BlockchainDB(interfaces.BlockChainEngine):
 
         create_chain_table = """CREATE TABLE IF NOT EXISTS chain (
             round integer PRIMARY KEY,
-            prevHash string NOT NULL,
+            prev_hash string NOT NULL,
             writerID integer NOT NULL,
             coordinatorID integer NOT NULL,
-            winningNumber integer NOT NULL,
-            writerSignature string NOT NULL,
+            winning_number integer NOT NULL,
+            writer_signature string NOT NULL,
             timestamp integer NOT NULL,
             hash string NOT NULL,
             payload string
@@ -78,7 +78,7 @@ class BlockchainDB(interfaces.BlockChainEngine):
             block.timestamp, block.this_hash, block.payload]
             )
             self.db_connection.commit()
-            if not overwrite:   # Keep record of length for arbitrarypaylaod rounds
+            if not overwrite:
                 self.length += 1
             
         except Exception as e:
@@ -117,13 +117,12 @@ class BlockchainDB(interfaces.BlockChainEngine):
                 d[col[0]] = row[idx]
         return d
 
-    def get_latest_block(self, dict_form=True, col="*"):
+    def get_latest_block(self, dict_form=True, col="*"):    # Returns latest_block as list of one
         query = f"SELECT {col} FROM chain WHERE round >= {self.length - 1} ORDER BY round"
-        latest_block =self.get_query(query, dict_form)  # Returns list of dict
-        if dict_form:
+        latest_block = self.get_query(query, dict_form)  # Returns list of single dict
+        if len(latest_block):
             return latest_block[0]
-        else:
-            return latest_block
+        return None
 
     def get_blockchain(self, dict_form=True):
         query = f"SELECT * FROM chain WHERE round >= {0} ORDER BY round"
@@ -194,18 +193,18 @@ class BlockchainDB(interfaces.BlockChainEngine):
 def __test_localDB():
 
     CWD = os.getcwd()
-    db_path = CWD + "/src/test_node_3/blockchain.db"
+    db_path = CWD + "/src/test_node_5/blockchain.db"
     print(f"[DIRECTORY PATH] {db_path}")
 
     blocks_db = BlockchainDB(db_path)
 
      
-    the_block = Block("prevHash", 1, 2, 0, "writer signature", 0, "the hash")
-    # the_block = ("prevHash", 1, 2, json.dumps({"the payload": 1}), 0, "writer signature", "the hash")
+    the_block = Block("prev_hash", 1, 2, 0, "writer signature", 0, "the hash")
+    # the_block = ("prev_hash", 1, 2, json.dumps({"the payload": 1}), 0, "writer signature", "the hash")
 
     #Block(prev_hash, writerID, coordinatorID, winning_number, signature, timestamp, payload )
     genesis_block = Block("0", 0, 0, 0, "0", 0,  json.dumps({"type": "genesis block"}),)
-    # blocks_db.insert_block(0, genesis_block)
+    blocks_db.insert_block(0, genesis_block)
     # blocks_db.insert_block(1, the_block)
     # blocks_db.insert_block(2, the_block)
     # blocks_db.insert_block(3, the_block)
@@ -223,6 +222,8 @@ def __test_localDB():
     # msg_get_range_old = blocks_db.read_blocks(3000, 10)
     msg_get_range_new = blocks_db.get_range_of_blocks(1)
     print("Blockchain: ", msg_get_range_new)
+    msg_get_latest_block = blocks_db.get_latest_block(dict_form=False)
+    print(msg_get_latest_block, "THE LATEST BLOCK")
 
 
 

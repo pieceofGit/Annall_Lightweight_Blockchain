@@ -2,6 +2,7 @@
     Implements class block
 
 """
+import json
 import hashlib
 from interfaces import (
     i_Block,
@@ -25,11 +26,11 @@ class Block(i_Block):
                 ):
         ## Only invariant is that this_hash should be a valid hash_of the block
 
-        assert isinstance(prev_hash, str)         # prevHash
+        assert isinstance(prev_hash, str)         # prev_hash
         assert isinstance(writerID, int)          # writerID
         assert isinstance(coordinatorID, int)     # coordinatorID
-        assert isinstance(winning_number, int)    # winningNumber
-        assert isinstance(writer_signature, str)  # writerSignature = signs all fields except this_hash
+        assert isinstance(winning_number, int)    # winning_number
+        assert isinstance(writer_signature, str)  # writer_signature = signs all fields except this_hash
         assert isinstance(timestamp, int)         # timestamp
         assert isinstance(payload, str)           # payload
 
@@ -75,6 +76,16 @@ class Block(i_Block):
         if this_hash == b.this_hash:
             return b
         
+        verbose_print("Error: trying to create an inconsistent Block - this_hash does not match")
+        return None
+
+    @classmethod
+    def from_dict(cls, d_block : dict): ## Factory to create a block from a dictionary
+        b = Block(str(d_block["prev_hash"]), int(d_block["writerID"]), int(d_block["coordinatorID"]), 
+            int(d_block["winning_number"]), d_block["writer_signature"], int(d_block["timestamp"]), 
+            json.dumps(d_block["payload"]))
+        if d_block["hash"] == b.this_hash:
+            return b
         verbose_print("Error: trying to create an inconsistent Block - this_hash does not match")
         return None
 

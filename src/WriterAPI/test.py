@@ -2,9 +2,17 @@
 import requests
 import json
 BASE = "http://127.0.0.1:8000/"
+latest_block = {
+    "hash":"0x913d716ccd5227e756a3b2eda00b56092e7e64ea60236f73ab79285b2b741657",
+    "round": 7,
+    "prev_hash": "0x902a956a1ad654bc8d371de7f41ec0e88b92da8765924116f43f2f8523b1eab8"
+}
 
-response = requests.get(BASE + "config", {})
-print(type(response.json()))
+# response = requests.get(BASE + "blocks", data=json.dumps(latest_block))
+# print(response)
+# print(response.json())
+the_false = json.dumps(False)
+print(json.loads(the_false))
 # print(response.json())
 # new_writer = {
 #   "name": "writer_1",

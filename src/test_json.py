@@ -142,3 +142,8 @@ print(some[0])
 
 other = [0]
 print([other])
+
+no = []
+if not no:
+    print("YES")
+print(len(no))

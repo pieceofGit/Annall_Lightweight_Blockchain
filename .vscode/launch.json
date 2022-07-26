@@ -35,6 +35,26 @@
       "cwd": "${workspaceFolder}"
     },
     {
+      "name": "Python: Main 4",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}//src//main.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": ["-myID", "4", "-r 0", "-conf", "config-local.json"],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Python: Main 5",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}//src//main.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": ["-myID", "5", "-r 0", "-conf", "config-local.json"],
+      "cwd": "${workspaceFolder}"
+    },
+    {
       "name": "Python: ClientAPI",
       "type": "python",
       "request": "launch",

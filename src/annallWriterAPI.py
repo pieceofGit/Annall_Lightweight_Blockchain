@@ -8,13 +8,9 @@ import argparse
 from flask import Flask, request, jsonify, Response
 import sys
 print("WORKING DIRECTORY",os.getcwd())
-PREPEND_PATH = os.getcwd() + "/src/"
-try: 
-    from exceptionHandler import InvalidUsage
-    from_main = True
-except: 
-    from exceptionHandler import InvalidUsage
-    from_main = False
+PREPEND_PATH = os.getcwd() + "/"
+from exceptionHandler import InvalidUsage
+from_main = True
 # import sys 
 BCDB = ["Before db initialization"]
 print("Starting annallClientAPI Flask application server")
@@ -68,7 +64,7 @@ def authenticate_writer():
             return True
     return False
 
-def get_json():
+def get_dict():
     try:
         return json.loads(request.data) 
     except Exception:
@@ -81,11 +77,11 @@ def get_missing_blocks(writer_latest_block):
     api_latest_block = BCDB[0].get_latest_block()   # Get latest block in dict
     # if api_latest_block[""]
     try:
-        if api_latest_block["hash"] == writer_latest_block["hash"] and writer_latest_block["prevHash"] == api_latest_block["prevHash"]: # Add compare prev hash
+        if api_latest_block["hash"] == writer_latest_block["hash"] and writer_latest_block["prev_hash"] == api_latest_block["prev_hash"]: # Add compare prev hash
             return False   # Writer is up to date
         else:
-            if api_latest_block["round"] == writer_latest_block["round"] or writer_latest_block["prevHash"] == api_latest_block["prevHash"]:
-                # Different hash, same round or prevHash. Something not ok on their end, return the blockchain
+            if api_latest_block["round"] == writer_latest_block["round"] or writer_latest_block["prev_hash"] == api_latest_block["prev_hash"]:
+                # Different hash, same round or prev_hash. Something not ok on their end, return the blockchain
                 try:
                     missing_blocks = BCDB[0].get_blockchain()
                     return missing_blocks
@@ -125,7 +121,7 @@ def add_writer_to_set():
     """
     # Adds writer to node set and returns the config
     # Assumes one node per public ip address if remote
-    writer_to_add = get_json()
+    writer_to_add = get_dict()
     if not LOCAL:
         try:
             if authenticate_writer(writer_to_add["hostname"]):  
@@ -151,19 +147,21 @@ def get_blocks():
     """ optional: {
         "hash": string,
         "round": int,
-        "prevHash": string
+        "prev_hash": string
         }
     """
     # Returns the API's version of the blockchain. Needs to ask a writer for the rest
     # We have a node set, an active writer set, and an active reader set 
     if authenticate_writer():
+        print(request)
         print("REQUEST DATA: ", request.data)
         if not request.data:
             return Response(json.dumps(BCDB[0].get_blockchain()), mimetype="application/json", status=200)
-        latest_writer_block = get_json()
+        latest_writer_block = get_dict()
         missing_blocks = get_missing_blocks(latest_writer_block)
         if not missing_blocks:
-            return Response(json.dumps({"sync": True}), mimetype="application/json", status=200)
+            # return Response(json.dumps({"sync": True}), mimetype="application/json", status=200)
+            return Response(json.dumps(False), status=200)
         
         # Send back missing blocks or entire blockchain
         return Response(json.dumps(missing_blocks), mimetype="application/json")

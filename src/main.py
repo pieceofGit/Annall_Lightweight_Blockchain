@@ -15,13 +15,14 @@ from interfaces import (
 )
 from tcpserver import TCP_Server, ClientHandler
 from protocom import ProtoCom
+from block import Block
 from blockchainDB import BlockchainDB
 from annallWriterAPI import app, WriterAPI, BCDB
 # from WriterAPI.annallWriterAPI import app, WriterAPI, BCDB
 # should put here some elementary command line argument processing
 # EG. parameters for where the config file is, number of writers (for testing), and rounds
 # Define explicitly the paths
-RUN_WRITER_API = True   # If the api turns on, then it should be a reader of the blockchain
+RUN_WRITER_API = False   # If the api turns on, then it should be a reader of the blockchain
 CWD = os.getcwd()
 print("WORKING DIRECTORY: ", os.getcwd())
 CONFIG_PATH = f"{CWD}/src"
@@ -85,7 +86,21 @@ if __name__ == "__main__":
         with open(f"{CONFIG_PATH}/test_node_{id}/priv_key.json", "r") as f:
             priv_key = json.load(f)
     # Do not start writing or reading until up to date. writer or reader should be in the active set.
-    # 
+    # Synchronous get all missing blocks
+    if not RUN_WRITER_API:
+        missing_blocks = True
+        while missing_blocks:   # Stuck indefinitely if time to get missing blocks and connect to others is lower than others wait for new timeout
+            latest_block = bce.get_latest_block()
+            if latest_block:
+                missing_blocks = requests.get(WRITER_API_PATH + "blocks", data=json.dumps(latest_block)).json()    
+            else:
+                missing_blocks = requests.get(WRITER_API_PATH + "blocks").json()
+        # If writer has latest block, gets back false, else add missing blocks 
+            try:
+                for dict_block in missing_blocks:
+                    bce.insert_block(dict_block["round"], Block.from_dict(dict_block))
+            except:
+                print("Got back message from server: ", missing_blocks)
 
     # Start Communication Engine - maintaining the peer-to-peer network of writers
     print("::> Starting up peer-to-peer network engine with id ", id)

@@ -273,13 +273,13 @@ def __test_interfaces():
     dbpath = os.getcwd() + dbpath
     print(f"[DIRECTORY PATH] {dbpath}")
     bcdb = BlockChainEngine(dbpath)
-    # insertion = f'INSERT INTO chain(round,prevHash,writerID,coordinatorID,payload,winningNumber,writerSignature,hash) VALUES({block_id},"{block[0]}",{block[1]},{block[2]},"{block[3]}",{block[4]},"{block[5]}","{block[6]}");'
+    # insertion = f'INSERT INTO chain(round,prev_hash,writerID,coordinatorID,payload,winning_number,writer_signature,hash) VALUES({block_id},"{block[0]}",{block[1]},{block[2]},"{block[3]}",{block[4]},"{block[5]}","{block[6]}");'
     import json
     print(json.dumps({"insurance":"john"}))
 
     #the_block = Block(prev_hash, writerID, coordinatorID, winning_number, signature, timestamp, payload )
 
-    the_block = i_Block("prevHash", 1, 2, 0, "writer signature", 0, json.dumps({"hello":{"sailor":"the sailor"}}),)
+    the_block = i_Block("prev_hash", 1, 2, 0, "writer signature", 0, json.dumps({"hello":{"sailor":"the sailor"}}),)
    
     genesis_block = i_Block("0", 0, 0, 0, "0", 0, "genesis block",)
     bcdb.insert_block(0, genesis_block)
