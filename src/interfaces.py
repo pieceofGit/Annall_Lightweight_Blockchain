@@ -12,7 +12,7 @@ import ast
 NoneType = type(None)
 
 verbose = True
-vverbose = False
+vverbose = True
 
 
 def verbose_print(*s):

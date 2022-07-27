@@ -257,7 +257,7 @@ class ProtoEngine(ProtocolEngine):
         ## NOT SURE WHY THIS IS HERE:  8 - 1 % (3+1) # 7 % 4 = 3
         ## TODO not clear if this really works, e.g. in the case if some node dies, or if the set of writers changes
         coordinator = (round - 1) % (len(self.comm.writer_list))
-        return coordinator + 1
+        return self.comm.writer_list[coordinator]
 
     def calculate_sum(self, numbers: list):
         """Numbers is a list of <ID, number> pairs. This function calculates the pad for the round from the numbers using xor
@@ -463,9 +463,11 @@ class ProtoEngine(ProtocolEngine):
                 message = self._recv_msg(type="block", recv_from=winner[2], round=round)    # Gets back tuple block
                 time.sleep(0.01)
             parsed_message = message.split("-")
-            block = Block.from_tuple(ast.literal_eval(parsed_message[4])) # Converts tuple block to block object
-            if not block:   # Winner had nothing to write. Round skipped
+            print(f"Round {round} Winner {winner} message {message} length {len(message)}")
+            payload = ast.literal_eval(parsed_message[4]) 
+            if not payload:   # Winner had nothing to write. Round skipped
                 return
+            block = Block.from_tuple(payload) # Converts tuple block to block object
             if not self.verify_block(block):
                 self.cancel_round("Block not correct", round)   # Sets latest block as cancel block
             else:   # Block ok on our end
@@ -567,18 +569,15 @@ class ProtoEngine(ProtocolEngine):
         #       Note: most likely need a consensus on which writers are present
         self.join_writer_set()
         print("[ALL JOINED] all writers have joined the writer set")
-        if self.ID == 4:    # Only for test purposes
-            round = 20
-        else:
-            round = self.bcdb.length    # TODO: Not possible for catch-up node
-        print("ROUND: ", round)
+        round = self.bcdb.length    # TODO: Not possible for catch-up node
         if self.comm.is_writer:
             while True:
-                print(round)
                 if round % 20 == 0: # Every 100 conceptual rounds, update config file
                     self.comm.update_conf()
                     self.join_writer_set()
                     print(self.comm.writer_list, self.comm.conf["active_writer_set_id_list"])
+                    round = self.bcdb.length    # TODO: Not possible for catch-up node
+
 
                 coordinator = self.get_coordinatorID(round)
                 vverbose_print(f"ID: {self.ID}, CordinatorId: {coordinator}", coordinator == self.ID)
@@ -596,6 +595,7 @@ class ProtoEngine(ProtocolEngine):
                 if round % 20 == 0: # Every 100 conceptual rounds, update config file
                     self.comm.update_conf()
                     self.join_writer_set()
+                    round = self.bcdb.length    # TODO: Not possible for catch-up node
                     print(self.comm.writer_list, self.comm.conf["active_writer_set_id_list"])
                 coordinator = self.get_coordinatorID(round)
                 self.reader_round(round, coordinator)
