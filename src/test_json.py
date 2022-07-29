@@ -86,7 +86,7 @@
 # }
 import ast
 
-from aem import app
+# from aem import app
 # config["writer_set"].append(new_writer)
 # print(config)
 some = "False"
@@ -137,15 +137,60 @@ import struct
 
 # a_list = ["some"]
 # print(ast.literal_eval(a_list))
-some = ("yes", "no")
-print(some[0])
+# some = ("yes", "no")
+# print(some[0])
 
-other = [0]
-print([other])
+# other = [0]
+# print([other])
 
-no = []
-if not no:
-    print("YES")
-print(len(no))
+# no = []
+# if not no:
+#     print("YES")
+# print(len(no))
 
-print(1%100)
+# print(1%100)
+import time
+# import timeit
+# max_latency = 2
+# wait = time.perf_counter()
+# max_wait = max_latency + wait
+# while True:
+#     print(f"wait {time.perf_counter()} and max_wait {max_wait}")
+#     if time.perf_counter() > wait + 2:
+#         print("HELLO")
+#         break
+#     else:
+#         print("STILL WAITING")
+# for i in range(0):
+#     print("hello")
+
+# for i in range(1):
+#     print("helllo")
+
+# if None == False:
+#     print("YESSS")
+
+# def func():
+#     pass
+
+# if func() == False:
+#     print("OHHH")
+
+# print(func())
+
+# print(time.perf_counter())
+# time.sleep(2)
+# print(time.perf_counter())
+# print(time.perf_counter())
+# time.sleep(2)
+# print(time.perf_counter())
+
+
+def get_timer(wait):
+    time.sleep(2)
+    if time.perf_counter() > wait + 2:
+        print("Time was more")
+
+
+wait = time.perf_counter()
+get_timer(wait)

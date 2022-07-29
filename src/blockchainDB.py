@@ -71,15 +71,12 @@ class BlockchainDB(interfaces.BlockChainEngine):
         ## TODO: Remove DELETE = this is a blockchain, nothing should be deleted.        
         verbose_print(f"[INSERT BLOCK] added block with block id {block_id} and block {block}")
         try:
-            if overwrite:
-                self.cursor.execute(f"DELETE FROM chain WHERE round == {block_id}")
             self.cursor.execute("insert into chain values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [self.length, block.prev_hash, block.writerID, block.coordinatorID, block.winning_number, block.writer_signature, 
             block.timestamp, block.this_hash, block.payload]
             )
             self.db_connection.commit()
-            if not overwrite:
-                self.length += 1
+            self.length += 1
             
         except Exception as e:
             print("Error inserting block to chain db ", e)

@@ -1,6 +1,6 @@
 from queue import Queue
 import hashlib
-
+import requests
 
 from queue import Queue
 from threading import Thread
@@ -31,7 +31,6 @@ from blockchainDB import BlockchainDB
 from block import Block
 
 NoneType = type(None)
-
 def bytes_to_long(s: str):
     """Convert a byte string to a long integer (big endian).
     In Python 3.2+, use the native method instead::
@@ -148,7 +147,6 @@ class ProtoEngine(ProtocolEngine):
         # maintain a payload
         self.stashed_payload = None
 
-
     def set_rounds(self, round: int):
         ''' A round is a minting of a block, this defines for how many rounds the blockchain runs for'''
         assert isinstance(round, int)
@@ -189,7 +187,7 @@ class ProtoEngine(ProtocolEngine):
             # hash = hash_block(block)  - invariant, part of block construction
             signature_correct = res == D
             return signature_correct
-        else:
+        else: #TODO: Possibly degraded based on prior logic
             # Only reason new_block is None is that the hash does not match
             return False ## only reason block was not created
 
@@ -282,14 +280,33 @@ class ProtoEngine(ProtocolEngine):
         )
         return [numbers, pad, winner]
 
+    def add_missing_blocks(self):
+        WRITER_API_PATH = "http://127.0.0.1:8000/"  # TODO: Should be in global config file
+        latest_block = self.bcdb.get_latest_block()
+        if latest_block:
+            missing_blocks = requests.get(WRITER_API_PATH + "blocks", data=json.dumps(latest_block)).json()    
+        else:
+            missing_blocks = requests.get(WRITER_API_PATH + "blocks").json()
+    # If writer has latest block, gets back false, else add missing blocks
+        try:
+            for dict_block in missing_blocks:
+                self.bcdb.insert_block(dict_block["round"], Block.from_dict(dict_block))
+        except:
+            print("Got back message from server: ", missing_blocks)
+
+
     def join_writer_set(self):
         """Bootstrap to the writerset, using comm module
         """
+        # Should get an updated config file before connecting
+        self.comm.update_conf()
+        # TODO: Should never start a round unless there is at least one other writer
         ## TODO: More suspicious is, this seems to block if any of the writers is not connected.
         while len(self.comm.list_connected_peers()) != len(self.comm.writer_list) + len(self.comm.reader_list) - 1: # TODO: Needs more sophistication
             time.sleep(1)
+        # Ask for updated blockchain before starting blockchain. Gets back at max number of rounds between updated config
+        self.add_missing_blocks()
         print(f"ID={self.ID} -> connected and ready to build")
-        return None
 
     def cancel_round(self, cancel_log: str, round: int):
         """
@@ -361,31 +378,42 @@ class ProtoEngine(ProtocolEngine):
                 self.bcdb.insert_block(
                     int(parsed_message[0]), cancel_block, overwrite=True
                 )
+    def check_timeout_cancel_round(self, wait):
+        if time.perf_counter() > wait + 50:
+            print("TIMEOUT ROUND CANCELLED")
+            return True
+        return False
 
     def reader_round(self, round: int, coordinatorID: int):
         # Readers trust the chain and only listen for blocks including cancel blocks
         assert isinstance(round, int)
         assert isinstance(coordinatorID, int)
         message = None
-        while message is None:  #TODO: Clean up messaging
+        wait = time.perf_counter()
+        while message is None:
             message = self._recv_msg("request", recv_from=coordinatorID)
             time.sleep(0.01)
-        # Step 2 - Generate next number and transmit to Coordinator
+            if self.check_timeout_cancel_round(wait):
+                return False
+        # Step 2 - Generate next number and transmit to Coordinator. Only for syncing with others
         pad = self.generate_pad()
-        # pad = -1    # Send negative number since others always give a positive number
-        self._send_msg(round, "reply", pad, sent_to=coordinatorID)
-
+        self._send_msg(round, "reply", pad, sent_to=coordinatorID) 
         # Step 3 - Waiting for annoucement from the Coordinator
         message = None
+        wait = time.perf_counter()
         while message is None:
             message = self._recv_msg("announce", recv_from=coordinatorID)
+            if self.check_timeout_cancel_round(wait):
+                return False    
         # Step 4 - Verify and receive new block from winner
         parsed_message = message.split("-")
         winner = ast.literal_eval(parsed_message[4])
         message = None
-        while message is None:  # Gets stuck here in round 4. Message queue empty. Maybe that reader won round.
+        while message is None:  
             message = self._recv_msg(type="block", recv_from=winner[2], round=round)    # Gets back tuple block
             time.sleep(0.01)
+            if self.check_timeout_cancel_round(wait):
+                return False
         parsed_message = message.split("-")
         parsed_message = message.split("-")
         payload = ast.literal_eval(parsed_message[4])   # Gets back the unstringed value
@@ -424,10 +452,13 @@ class ProtoEngine(ProtocolEngine):
 
         # Step 1 - Receive request from Coordinator
         message = None
+        wait = time.perf_counter()
         while message is None:
             message = self._recv_msg("request", recv_from=coordinatorID)    # Gets stuck here if reconnected sometimes
             vverbose_print("[REQUEST MESSAGE] Received message of request for OTP from coordinator")
             time.sleep(0.01)
+            if self.check_timeout_cancel_round(wait):
+                return False
         
         # Step 2 - Generate next number and transmit to Coordinator
         pad = self.generate_pad()
@@ -435,9 +466,13 @@ class ProtoEngine(ProtocolEngine):
 
         # Step 3 - Waiting for announcement from the Coordinator
         message = None
+        wait = time.perf_counter()
         while message is None:
             message = self._recv_msg("announce", recv_from=coordinatorID)
-            time.sleep(0.01)        
+            time.sleep(0.01)   
+            if self.check_timeout_cancel_round(wait):
+                return False
+       
         # Step 4 - Verify and receive new block from winner
         parsed_message = message.split("-")
         winner = ast.literal_eval(parsed_message[4])
@@ -453,15 +488,18 @@ class ProtoEngine(ProtocolEngine):
             # Broadcast our newest block before writing into chain
             if not block:   # Winning writer had nothing to write
                 self.broadcast("block", str(block), round, send_to_readers=True)  
-                return
+                return False
             self.broadcast("block", str(block.as_tuple()), round, send_to_readers=True)  
 
         elif winner_verified:
             # Wait for a block to verify
             message = None
+            wait = time.perf_counter()
             while message is None:
                 message = self._recv_msg(type="block", recv_from=winner[2], round=round)    # Gets back tuple block
                 time.sleep(0.01)
+                if self.check_timeout_cancel_round(wait):
+                    return False
             parsed_message = message.split("-")
             print(f"Round {round} Winner {winner} message {message} length {len(message)}")
             payload = ast.literal_eval(parsed_message[4]) 
@@ -514,6 +552,7 @@ class ProtoEngine(ProtocolEngine):
         no_recv_messages = 0
         # Currently waiting for a number from all active writers
         # MSG FORMAT <round nr>-<from id>-<to id>-<msg type>-<msg body>
+        wait = time.perf_counter()       
         while no_recv_messages < len(self.comm.writer_list) + len(self.comm.reader_list) - 1:
             message = self._recv_msg(type="reply")
             if message is not None:
@@ -525,16 +564,22 @@ class ProtoEngine(ProtocolEngine):
                     no_recv_messages += 1
                     numbers.append([int(parsed_message[1]), int(parsed_message[4])])    #(id, otp)
             time.sleep(0.01)
-
+            # Max waiting time of 2 seconds for a node
+            if self.check_timeout_cancel_round(wait):
+                return False
         # Step 3 - Declare and announce winner
         winner = self.calculate_sum(numbers)    
         self.broadcast("announce", winner, round, send_to_readers=True)
         winner_id = winner[2]
         # Step 4 - Receive new block (from winner)
         message = None
+        wait = time.perf_counter()
         while message is None:
             message = self._recv_msg(type="block", recv_from=winner_id, round=round)
             time.sleep(0.01)
+            if self.check_timeout_cancel_round(wait):
+                return False
+
         parsed_message = message.split("-")
         payload = ast.literal_eval(parsed_message[4])
         if not payload: # Winner had nothing to write
@@ -572,12 +617,11 @@ class ProtoEngine(ProtocolEngine):
         round = self.bcdb.length    # TODO: Not possible for catch-up node
         if self.comm.is_writer:
             while True:
-                if round % 20 == 0: # Every 100 conceptual rounds, update config file
-                    self.comm.update_conf()
+                self.comm.update_active_nodes_list()    # Checks for inactive nodes
+                if round % 20 == 0: # Every 20 conceptual rounds, update config file
                     self.join_writer_set()
-                    print(self.comm.writer_list, self.comm.conf["active_writer_set_id_list"])
-                    round = self.bcdb.length    # TODO: Not possible for catch-up node
-
+                    vverbose_print(self.comm.writer_list, self.comm.conf["active_writer_set_id_list"])
+                    round = self.bcdb.length    # TODO: Breaks functionality, since nodes do a soft reset. No cancelled blocks for last round
 
                 coordinator = self.get_coordinatorID(round)
                 vverbose_print(f"ID: {self.ID}, CordinatorId: {coordinator}", coordinator == self.ID)
@@ -585,8 +629,8 @@ class ProtoEngine(ProtocolEngine):
                     self.coordinator_round(round)
                 else:
                     self.writer_round(round, coordinator)
-    
-                vverbose_print(f"[ROUND COMPLETE] round {round} finished with writer with ID {coordinator} as  the coordinator")
+                
+                verbose_print(f"[ROUND COMPLETE] round {round} finished with writer with ID {coordinator} as  the coordinator")
                 round += 1
                 if round > self.rounds and self.rounds:
                     break   # Stops the program
@@ -604,7 +648,7 @@ class ProtoEngine(ProtocolEngine):
                     break   # Stops the program
                 vverbose_print(f"[ROUND COMPLETE] round {round} finished with writer with ID {coordinator} as  the coordinator")
 
-
+ 
     # MSG FORMAT <round nr>-<from id>-<to id>-<msg type>-<msg body>
     def _send_msg(self, round: int, type: str, message, sent_to=None, send_to_readers=False):
         assert isinstance(sent_to, (int, NoneType))

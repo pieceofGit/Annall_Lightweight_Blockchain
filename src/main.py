@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
     if RUN_WRITER_API and id == 3:  # Run the WriterAPI as a thread on a reader
         # The writer api needs access to the blockchain database for reading
-        BCDB[0] = bce
+        BCDB[0] = bce   # blockchain db object access for the writer API process
         writer_api = WriterAPI(app)
         writer_api_thread = Thread(target=writer_api.run, name="WriterAPIThread")
         writer_api_thread.daemon = True
@@ -91,30 +91,37 @@ if __name__ == "__main__":
         missing_blocks = True
         while missing_blocks:   # Stuck indefinitely if time to get missing blocks and connect to others is lower than others wait for new timeout
             latest_block = bce.get_latest_block()
-            if latest_block:
-                missing_blocks = requests.get(WRITER_API_PATH + "blocks", data=json.dumps(latest_block)).json()    
-            else:
-                missing_blocks = requests.get(WRITER_API_PATH + "blocks").json()
+            try:
+                if latest_block:
+                    missing_blocks = requests.get(WRITER_API_PATH + "blocks", data=json.dumps(latest_block)).json()    
+                else:
+                    missing_blocks = requests.get(WRITER_API_PATH + "blocks").json()
+            except Exception as e:
+                verbose_print(f"Could not get missing blocks from Writer API")
+                missing_blocks = False
         # If writer has latest block, gets back false, else add missing blocks
             try:
                 for dict_block in missing_blocks:
                     bce.insert_block(dict_block["round"], Block.from_dict(dict_block))
             except:
                 print("Got back message from server: ", missing_blocks)
+        # TODO: The writer should still be asking for the newest blockchain until it has connected to all active nodes
         # Add writer to active writer list if up to date
         print(json.dumps({"block": bce.get_latest_block(), "node": {"id": id}}))
         print(json.dumps(latest_block))
-        resp = requests.post(WRITER_API_PATH + "activate_writer", 
-            data=json.dumps({"block": bce.get_latest_block(), "node": {"id": id}}))
-        if resp.status_code == 200:
-            pass
-        elif resp.status_code == 201:
-            data = resp.json()
-        else:   
-            # Out of data blockchain, incorrect data, or service unavailable
-            pass
-            # TODO: Decide how to handle remaining cases and for loop
- 
+        try:
+            resp = requests.post(WRITER_API_PATH + "activate_writer", 
+                data=json.dumps({"block": bce.get_latest_block(), "node": {"id": id}}))
+            if resp.status_code == 200:
+                pass
+            elif resp.status_code == 201:
+                data = resp.json()
+            else:
+                # Out of data blockchain, incorrect data, or service unavailable
+                pass
+                # TODO: Decide how to handle remaining cases and for loop
+        except:
+            verbose_print("Could not post to Writer API to activate us as writer")
 
     print("Database up to date")
     # Start Communication Engine - maintaining the peer-to-peer network of writers

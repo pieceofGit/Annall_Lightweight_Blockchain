@@ -125,7 +125,6 @@ class RemoteEnd:
             @returns string
             """
         # TODO handle exception when int fails. Read all message buffer and throw away
-        # if self.is_active:
         byte_length = self.socket.recv(4)
         if byte_length == b"":
             raise Exception(f"> Connection closed. Socket:{self.socket}")
@@ -135,14 +134,11 @@ class RemoteEnd:
             verbose_print(">!! Failed to read length of message")
             return ""
         try:
-            # print("Reading message")
             b = self.socket.recv(length)
         except Exception as e:
             verbose_print(">!! Failed to read message with:", e)
         decb = b.decode("utf-8")
         return decb
-        # else:
-        #    raise Exception("Connection not active")
 
     def recv_bytes(self) -> str:
         byte_length = self.socket.recv(4)
@@ -321,7 +317,7 @@ class ProtoCom(ProtocolCommunication):
                     self.reader_list = self.conf["active_reader_set_id_list"]
 
         except Exception as e:
-            verbose_print("Failed to update conf: ", e)
+            verbose_print("Failed to update config file")
 
 
     def setup_remote_ends_in_conf_by_key(self, list_key):
@@ -442,7 +438,7 @@ class ProtoCom(ProtocolCommunication):
         if self.conn_modulus >= len(w_list):
             self.conn_modulus = 0
         r_id = w_list[self.conn_modulus]
-        # for r_id in w_list:
+        # TODO: Don't understand this
         # NB only connect to those with higher number
         if r_id > self.id and not self.peers[r_id].is_active:
             vverbose_print(">", "Attempting to connect to id: ", r_id)
@@ -581,6 +577,19 @@ class ProtoCom(ProtocolCommunication):
             if peer.is_active:
                 c_p.append(peer.rem_id)
         return c_p
+    
+    def update_active_nodes_list(self):
+        """ Removes inactive nodes from writer or reader list"""
+        for i in range(len(self.writer_list)):
+            if self.writer_list[i] != self.id:
+                if not self.peers[self.writer_list[i]].is_active:
+                    self.writer_list.pop(i)
+        for i in range(len(self.reader_list)):
+            if self.writer_list[i] != self.id:
+                if not self.peers[self.reader_list[i]].is_active:
+                    self.reader_list.pop(i)
+
+
     
     def send_msg_to_remote_end(self, rem_id, message, send_to_readers): 
         # Send message to single remote end
