@@ -9,6 +9,7 @@ import json
 import interfaces
 from interfaces import verbose_print, vverbose_print
 from block import Block
+import requests
 
 class BlockchainDB(interfaces.BlockChainEngine):
     """ The Database engine operating the raw blockchain
@@ -18,9 +19,10 @@ class BlockchainDB(interfaces.BlockChainEngine):
 
     #def __init__(self, dbconnection):
     
-    def __init__(self, db_path : str = ":memory:"):
+    def __init__(self, db_path : str = ":memory:", api_path: str = ""):
         ## Missing conditionals and exceptions
         self.db_path = db_path
+        self.writer_api_path = api_path
         self.db_connection = sqlite3.connect(db_path, check_same_thread=False) # TODO: How can we circumvent check_same_thread?
         self.cursor = self.db_connection.cursor()
         self.initilize_table()
@@ -62,6 +64,26 @@ class BlockchainDB(interfaces.BlockChainEngine):
         except Exception as e:
             print("Error creating chain table ", e)
             #raise e
+    
+    def get_missing_blocks(self):
+        missing_blocks = True
+        while missing_blocks:   # Stuck indefinitely if time to get missing blocks and connect to others is lower than others wait for new timeout
+            latest_block = self.get_latest_block()
+            try:
+                if latest_block:    # Sends latest block and only gets missing block
+                    missing_blocks = requests.get(self.writer_api_path + "blocks", data=json.dumps(latest_block)).json()    
+                else:   # Returns the blockchain
+                    missing_blocks = requests.get(self.writer_api_path + "blocks").json()
+            except Exception as e:
+                verbose_print(f"Could not get missing blocks from Writer API")
+                missing_blocks = False
+        # If writer has latest block, gets back false, else add missing blocks
+            try:
+                for dict_block in missing_blocks:
+                    self.insert_block(dict_block["round"], Block.from_dict(dict_block))
+            except:
+                verbose_print("Could not insert blocks into database ", missing_blocks)
+
 
     def insert_block(self, block_id : int, block : Block, overwrite=False ):  
         # TODO: Separate from blockchain length and thus degraded.

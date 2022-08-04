@@ -37,7 +37,6 @@ PRIV_KEY_PATH = f"{CWD}/src"
 
 WRITER_API_PATH = "http://127.0.0.1:8000/"
 
-
 if __name__ == "__main__":
     print("MAIN STARTED")
     ap = argparse.ArgumentParser()
@@ -65,15 +64,13 @@ if __name__ == "__main__":
     #   -- this is the local copy of the blockchain
     dbpath = f"{DB_PATH}/test_node_{id}/blockchain.db"
     print("::> Starting up Blockchain DB = using ", dbpath)
-    bce = BlockchainDB(dbpath)
+    bce = BlockchainDB(dbpath, WRITER_API_PATH)
     print("Local block chain database successfully initialized")
-
-
-    if RUN_WRITER_API and id == 3:  # Run the WriterAPI as a thread on a reader
-        # Start up object for the round number
-        # The assumption is that the writer api is always connected and online for sharing the round number
-        ROUND[0] = Round()
-        # The writer api needs access to the blockchain database for reading
+    writer_api = RUN_WRITER_API and id == 3
+    print("IS WRITER API: ", writer_api)
+    round = Round(WRITER_API_PATH, writer_api)
+    if writer_api:  # Run the WriterAPI as a thread on a reader
+        ROUND[0] = round    # Access for round number in the API
         BCDB[0] = bce   # blockchain db object access for the writer API process
         writer_api = WriterAPI(app)
         writer_api_thread = Thread(target=writer_api.run, name="WriterAPIThread")
@@ -94,27 +91,10 @@ if __name__ == "__main__":
     # Do not start writing or reading until up to date. writer or reader should be in the active set.
     # Synchronous get all missing blocks
     if id != 3: #TODO: Should fall back to asking another active writer for the missing blocks
-        missing_blocks = True
-        while missing_blocks:   # Stuck indefinitely if time to get missing blocks and connect to others is lower than others wait for new timeout
-            latest_block = bce.get_latest_block()
-            try:
-                if latest_block:    # Sends latest block and only gets missing block
-                    missing_blocks = requests.get(WRITER_API_PATH + "blocks", data=json.dumps(latest_block)).json()    
-                else:   # Returns the blockchain
-                    missing_blocks = requests.get(WRITER_API_PATH + "blocks").json()
-            except Exception as e:
-                verbose_print(f"Could not get missing blocks from Writer API")
-                missing_blocks = False
-        # If writer has latest block, gets back false, else add missing blocks
-            try:
-                for dict_block in missing_blocks:
-                    bce.insert_block(dict_block["round"], Block.from_dict(dict_block))
-            except:
-                print("Got back message from server: ", missing_blocks)
+        bce.get_missing_blocks()
+        
         # TODO: The writer should still be asking for the newest blockchain until it has connected to all active nodes
         # Add writer to active writer list if up to date
-        print(json.dumps({"block": bce.get_latest_block(), "node": {"id": id}}))
-        print(json.dumps(latest_block))
         try:    # Writer activated if he has an up to date blockchain
             resp = requests.post(WRITER_API_PATH + "activate_writer", 
                 data=json.dumps({"block": bce.get_latest_block(), "node": {"id": id}}))
@@ -124,7 +104,7 @@ if __name__ == "__main__":
                 data = resp.json()
             else:
                 # Out of date blockchain, incorrect data, or service unavailable
-                # Need to fetch blockchain again.
+                # Need to fetch blockchain again if failed and ask to be active writer.
                 # Possibly the writer should be added to active list if fetching blockchain
                 pass
         except:
@@ -155,7 +135,7 @@ if __name__ == "__main__":
     # Start protocol engine
     print("::> Starting up BlockChainEngine")
     keys = priv_key["priv_key"]
-    PE = ProtoEngine(id, tuple(keys), pComm, bce, clients)
+    PE = ProtoEngine(id, tuple(keys), pComm, bce, clients, round)
     PE.set_rounds(rounds)
     # Writers set to wait for connecting to until rounds start
     PEthread = Thread(target=PE.run_forever, name="ProtocolEngine")

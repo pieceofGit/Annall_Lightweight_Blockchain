@@ -175,12 +175,12 @@ def activate_reader():
     """ Adds reader to active reader set if his blockchain is up to date """
     ...
 
-@app.route("/round", methods=["POST"])
+@app.route("/round", methods=["GET"])
 def get_round():
     if authenticate_writer():
         # Return the round number
         try:
-            return Response(ROUND[0].round, status=200)
+            return Response(json.dumps(ROUND[0].num), status=200)
         except:
             raise InvalidUsage("Could not fetch round number", status_code=500)
     else:

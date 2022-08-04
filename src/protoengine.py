@@ -17,7 +17,7 @@ import os
 import json
 from protocom import ProtoCom
 from tcpserver import TCP_Server, ClientHandler
-
+from round import Round
 import interfaces
 from interfaces import (
     ProtocolCommunication,
@@ -126,6 +126,7 @@ class ProtoEngine(ProtocolEngine):
         comm: ProtocolCommunication,
         blockchain: interfaces.BlockChainEngine,
         clients: ClientServer,
+        round: Round,
 
     ):  # what are the natural arguments
         assert isinstance(keys, tuple)
@@ -139,6 +140,8 @@ class ProtoEngine(ProtocolEngine):
         self.modulus = 65537
         # For how many rounds the blockchain should run for
         self.rounds = None
+        # Round object
+        self.round = round
         
         # Messages in our writer's queue
         self.message_queue = Queue()
@@ -621,32 +624,31 @@ class ProtoEngine(ProtocolEngine):
         # Expects all writers to join. Program does not start until all writers are all connected
         # TODO: Define a Quorate set, cannot insist on all writers being present
         #       Note: most likely need a consensus on which writers are present
+        new_writer = True
         self.join_writer_set()
         print("[ALL JOINED] all writers have joined the writer set")
-        round = self.bcdb.length    # TODO: Not possible for catch-up node unless we reset the rounds to the bcdb length
         # if self.comm.is_writer:
-        print("IS WRITER", self.comm.is_writer)
         while True:
             self.comm.update_active_nodes_list()    # Checks for inactive nodes
-            if round % 20 == 0: # Gets stuck here if writer of round 20 has nothing to write.
+            print(self.round.num)
+            if self.round.num % 20 == 0 and not new_writer: # Gets stuck here if writer of round 20 has nothing to write.
                 self.join_writer_set()
-                vverbose_print(self.comm.writer_list, self.comm.conf["active_writer_set_id_list"])
                 # Rounds are being reset for some reason for the reader
-                round = self.bcdb.length    # TODO: Should not reset round 
-            coordinator = self.get_coordinatorID(round)
+                self.round.set_round()    # Gets round from writer_api
+            coordinator = self.get_coordinatorID(self.round.num)
             verbose_print(f"ID: {self.ID}, CordinatorId: {coordinator}", coordinator == self.ID)
             if coordinator == self.ID:
-                round_success = self.coordinator_round(round)
+                round_success = self.coordinator_round(self.round.num)
             else:
-                round_success = self.writer_round(round, coordinator)
+                round_success = self.writer_round(self.round.num, coordinator)
             if not round_success:
                 # handle node did not receive message
                 pass
             now = datetime.now().strftime("%H:%M:%S")
-
-            verbose_print(f"[ROUND COMPLETE] round {round} finished with writer with ID {coordinator} as  the coordinator at ", now)
-            round += 1
-            if round > self.rounds and self.rounds:
+            verbose_print(f"[ROUND COMPLETE] round {self.round.num} finished with writer with ID {coordinator} as  the coordinator at ", now)
+            self.round.num += 1
+            new_writer = False
+            if self.round.num > self.rounds and self.rounds:
                 break   # Stops the program
         # else:   # is reader
         #     while True:
