@@ -114,11 +114,13 @@ class BlockchainDB(interfaces.BlockChainEngine):
                 d[col[0]] = row[idx]
         return d
 
-    def get_latest_block(self, dict_form=True, col="*"):    # Returns latest_block as list of one
+    def get_latest_block(self, dict_form=True, col="*"):    # Returns latest_block as list of one tuple or dict
         query = f"SELECT {col} FROM chain WHERE round >= {self.length - 1} ORDER BY round"
         latest_block = self.get_query(query, dict_form)  # Returns list of single dict
         if len(latest_block):
-            return latest_block[0]
+            if dict_form:
+                return latest_block[0]
+            return latest_block
         return None
 
     def get_blockchain(self, dict_form=True):
@@ -166,6 +168,8 @@ class BlockchainDB(interfaces.BlockChainEngine):
         to_return = []
 
         if get_last_row:  # If discrepancy between round and length of list because of arbitrarypayload
+            if self.length == 0:
+                return 0
             query = f"SELECT {col} FROM chain WHERE round >= {self.length - 1} ORDER BY round"
         elif read_entire_chain:   # Returns a list of tuples for each transaction
             query = f"SELECT * FROM chain WHERE round >= {0} ORDER BY round"
@@ -201,7 +205,7 @@ def __test_localDB():
 
     #Block(prev_hash, writerID, coordinatorID, winning_number, signature, timestamp, payload )
     genesis_block = Block("0", 0, 0, 0, "0", 0,  json.dumps({"type": "genesis block"}),)
-    blocks_db.insert_block(0, genesis_block)
+    # blocks_db.insert_block(0, genesis_block)
     # blocks_db.insert_block(1, the_block)
     # blocks_db.insert_block(2, the_block)
     # blocks_db.insert_block(3, the_block)
@@ -218,9 +222,10 @@ def __test_localDB():
     # #to_json = msg[0]['payload']
     # msg_get_range_old = blocks_db.read_blocks(3000, 10)
     msg_get_range_new = blocks_db.get_range_of_blocks(1)
-    print("Blockchain: ", msg_get_range_new)
-    msg_get_latest_block = blocks_db.get_latest_block(dict_form=False)
-    print(msg_get_latest_block, "THE LATEST BLOCK")
+    # print("Blockchain: ", msg_get_range_new)
+    msg_get_latest_block = blocks_db.get_latest_block(dict_form=False, col="hash")[0][0]
+    print("THE LATEST BLOCK: ", msg_get_latest_block)
+
 
 
 

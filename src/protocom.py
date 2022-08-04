@@ -585,7 +585,7 @@ class ProtoCom(ProtocolCommunication):
                 if not self.peers[self.writer_list[i]].is_active:
                     self.writer_list.pop(i)
         for i in range(len(self.reader_list)):
-            if self.writer_list[i] != self.id:
+            if self.reader_list[i] != self.id:
                 if not self.peers[self.reader_list[i]].is_active:
                     self.reader_list.pop(i)
 

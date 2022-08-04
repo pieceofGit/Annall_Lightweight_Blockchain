@@ -13,6 +13,7 @@ from exceptionHandler import InvalidUsage
 from_main = True
 # import sys 
 BCDB = ["Before db initialization"]
+ROUND = ["Before round initialization"]
 print("Starting annallClientAPI Flask application server")
 app = Flask(__name__)
 # Connect to server
@@ -104,7 +105,8 @@ def get_missing_blocks(writer_latest_block):
     # How should other writers be a part of this?
     # The api should not send duplicates that it will get when it has them already.
     api_latest_block = BCDB[0].get_latest_block()   # Get latest block in dict
-    # if api_latest_block[""]
+    if not api_latest_block:    # Database empty
+        return False
     try:
         if api_latest_block["hash"] == writer_latest_block["hash"] and writer_latest_block["prev_hash"] == api_latest_block["prev_hash"]: # Add compare prev hash
             return False   # Writer is up to date
@@ -172,6 +174,19 @@ def activate_writer():
 def activate_reader():
     """ Adds reader to active reader set if his blockchain is up to date """
     ...
+
+@app.route("/round", methods=["POST"])
+def get_round():
+    if authenticate_writer():
+        # Return the round number
+        try:
+            return Response(ROUND[0].round, status=200)
+        except:
+            raise InvalidUsage("Could not fetch round number", status_code=500)
+    else:
+        raise InvalidUsage("Writer not whitelisted", status_code=400)
+
+
 
 @app.route("/blocks", methods=["GET"])
 def get_blocks():

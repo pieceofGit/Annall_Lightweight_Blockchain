@@ -17,7 +17,8 @@ from tcpserver import TCP_Server, ClientHandler
 from protocom import ProtoCom
 from block import Block
 from blockchainDB import BlockchainDB
-from annallWriterAPI import app, WriterAPI, BCDB
+from annallWriterAPI import app, WriterAPI, BCDB, ROUND
+from round import Round
 # from WriterAPI.annallWriterAPI import app, WriterAPI, BCDB
 # should put here some elementary command line argument processing
 # EG. parameters for where the config file is, number of writers (for testing), and rounds
@@ -48,6 +49,7 @@ if __name__ == "__main__":
         default=src/,
         help="input data file (default stdin)",
     )"""
+
     ap.add_argument("-myID", default=0, type=int,
                     help="ID fyrir skrifara, mandatory")
     ap.add_argument("-r", default=0, type=int, help="number of rounds")
@@ -66,7 +68,11 @@ if __name__ == "__main__":
     bce = BlockchainDB(dbpath)
     print("Local block chain database successfully initialized")
 
+
     if RUN_WRITER_API and id == 3:  # Run the WriterAPI as a thread on a reader
+        # Start up object for the round number
+        # The assumption is that the writer api is always connected and online for sharing the round number
+        ROUND[0] = Round()
         # The writer api needs access to the blockchain database for reading
         BCDB[0] = bce   # blockchain db object access for the writer API process
         writer_api = WriterAPI(app)
@@ -92,9 +98,9 @@ if __name__ == "__main__":
         while missing_blocks:   # Stuck indefinitely if time to get missing blocks and connect to others is lower than others wait for new timeout
             latest_block = bce.get_latest_block()
             try:
-                if latest_block:
+                if latest_block:    # Sends latest block and only gets missing block
                     missing_blocks = requests.get(WRITER_API_PATH + "blocks", data=json.dumps(latest_block)).json()    
-                else:
+                else:   # Returns the blockchain
                     missing_blocks = requests.get(WRITER_API_PATH + "blocks").json()
             except Exception as e:
                 verbose_print(f"Could not get missing blocks from Writer API")
@@ -109,17 +115,18 @@ if __name__ == "__main__":
         # Add writer to active writer list if up to date
         print(json.dumps({"block": bce.get_latest_block(), "node": {"id": id}}))
         print(json.dumps(latest_block))
-        try:
+        try:    # Writer activated if he has an up to date blockchain
             resp = requests.post(WRITER_API_PATH + "activate_writer", 
                 data=json.dumps({"block": bce.get_latest_block(), "node": {"id": id}}))
-            if resp.status_code == 200:
+            if resp.status_code == 200: # has up to date config file
                 pass
             elif resp.status_code == 201:
                 data = resp.json()
             else:
-                # Out of data blockchain, incorrect data, or service unavailable
+                # Out of date blockchain, incorrect data, or service unavailable
+                # Need to fetch blockchain again.
+                # Possibly the writer should be added to active list if fetching blockchain
                 pass
-                # TODO: Decide how to handle remaining cases and for loop
         except:
             verbose_print("Could not post to Writer API to activate us as writer")
 
