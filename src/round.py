@@ -6,10 +6,10 @@ class Round:
     def __init__(self, api_path, is_writer_api, round=0):
         self.writer_api_path = api_path
         self.is_writer_api = is_writer_api
-        if not round and not is_writer_api:
-            self.num = self.get_round()
-        else:
-            self.num = round
+        # if not round and not is_writer_api:
+        #     self.num = self.get_round()
+        # else:
+        self.num = round
         print(self.is_writer_api)
     # def set_round(self, round: int):
     #     isinstance(round, int)

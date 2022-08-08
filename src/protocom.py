@@ -304,7 +304,8 @@ class ProtoCom(ProtocolCommunication):
             self.msg_queue = []
 
     def update_conf(self):
-        WRITER_API_PATH = "http://127.0.0.1:8000/"  # Just here for testing purposes
+        """ Fetches new conf and adds to peers and node lists """
+        WRITER_API_PATH = "http://127.0.0.1:8000/"  # Just here for testing purpose
         try:
             response = requests.get(WRITER_API_PATH + "config", {})
             if response.status_code == 200:
@@ -315,16 +316,18 @@ class ProtoCom(ProtocolCommunication):
                     self.setup_remote_ends_in_conf_by_key("active_reader_set_id_list")
                     self.writer_list = self.conf["active_writer_set_id_list"]
                     self.reader_list = self.conf["active_reader_set_id_list"]
-
         except Exception as e:
-            verbose_print("Failed to update config file")
-
+            verbose_print("Failed to update config file ", e)
 
     def setup_remote_ends_in_conf_by_key(self, list_key):
+        """ Creates a RemoteEnd object for each unconnected peer """
+        # TODO: Don't know effect of not removing unconnected peers from peer set
+        # The active peers are all that matters
+        # May need to overwriter id's if something changes in conf with same id
         try:
             for i in self.conf[list_key]:
                 node = self.conf["node_set"][i-1]
-                if i != self.id:
+                if i != self.id and i not in self.peers:
                     self.peers[i] = RemoteEnd(
                     node["id"], node["hostname"], node["protocol_port"], node["pub_key"], self.check_if_writer(node["id"])
                     )
@@ -438,7 +441,7 @@ class ProtoCom(ProtocolCommunication):
         if self.conn_modulus >= len(w_list):
             self.conn_modulus = 0
         r_id = w_list[self.conn_modulus]
-        # TODO: Don't understand this
+        # TODO: Don't understand this connecting to higher number r_id than id
         # NB only connect to those with higher number
         if r_id > self.id and not self.peers[r_id].is_active:
             vverbose_print(">", "Attempting to connect to id: ", r_id)
@@ -570,25 +573,47 @@ class ProtoCom(ProtocolCommunication):
 
     def num_connection(self):
         return len(self.list_connected_peers())
+    
+    def list_connected_writers(self):
+        c_p = []
+        for peer in self.peers.values():
+            if peer.is_active and peer.is_writer:
+                c_p.append(peer.rem_id)
+        if self.is_writer:
+            c_p.append(self.id)
+        print("[ACTIVE PEERS] ", c_p)
+        return c_p
 
     def list_connected_peers(self):
+        """ Returns sublist of nodes in conf we have connected to """
         c_p = []
         for peer in self.peers.values():
             if peer.is_active:
                 c_p.append(peer.rem_id)
         return c_p
     
-    def update_active_nodes_list(self):
-        """ Removes inactive nodes from writer or reader list"""
+    def update_active_nodes_list(self, include_peers=True):
+        """ Removes inactive nodes from writer or reader list
+        Should also remove the peer object
+        """
+        print(self.peers)
+        temp_writer_list = self.writer_list.copy()
+        temp_reader_list = self.reader_list.copy()
+
         for i in range(len(self.writer_list)):
             if self.writer_list[i] != self.id:
                 if not self.peers[self.writer_list[i]].is_active:
-                    self.writer_list.pop(i)
+                    temp_writer_list.remove(self.writer_list[i])
+                    if include_peers:
+                        del self.peers[self.writer_list[i]]
         for i in range(len(self.reader_list)):
             if self.reader_list[i] != self.id:
                 if not self.peers[self.reader_list[i]].is_active:
-                    self.reader_list.pop(i)
-
+                    temp_reader_list.remove(self.reader_list[i])
+                    if include_peers:
+                        del self.peers[self.reader_list[i]]
+        self.writer_list = temp_writer_list
+        self.reader_list = temp_reader_list
 
     
     def send_msg_to_remote_end(self, rem_id, message, send_to_readers): 

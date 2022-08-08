@@ -194,3 +194,11 @@ def get_timer(wait):
 
 wait = time.perf_counter()
 get_timer(wait)
+
+a_list = [1,2,3]
+other_list = a_list
+
+other_list.pop(1)
+print(a_list)
+
+

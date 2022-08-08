@@ -180,6 +180,8 @@ def get_round():
     if authenticate_writer():
         # Return the round number
         try:
+
+
             return Response(json.dumps(ROUND[0].num), status=200)
         except:
             raise InvalidUsage("Could not fetch round number", status_code=500)
