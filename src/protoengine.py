@@ -17,7 +17,6 @@ import os
 import json
 from protocom import ProtoCom
 from tcpserver import TCP_Server, ClientHandler
-from round import Round
 import interfaces
 from interfaces import (
     ProtocolCommunication,
@@ -126,7 +125,6 @@ class ProtoEngine(ProtocolEngine):
         comm: ProtocolCommunication,
         blockchain: interfaces.BlockChainEngine,
         clients: ClientServer,
-        round: Round,
 
     ):  # what are the natural arguments
         assert isinstance(keys, tuple)
@@ -140,9 +138,6 @@ class ProtoEngine(ProtocolEngine):
         self.modulus = 65537
         # For how many rounds the blockchain should run for
         self.rounds = None
-        # Round object
-        self.round = round
-        
         # Messages in our writer's queue
         self.message_queue = Queue()
         
@@ -310,27 +305,12 @@ class ProtoEngine(ProtocolEngine):
         """
         # Gets an updated config file before connecting
         self.comm.update_conf() # Updates node lists and peer set
-        inactive_wait = time.perf_counter()
-        new_nodes_wait = time.perf_counter()
         # Wait until our list of connected peers fulfills who we want to connect to and has at least two writers
         while len(self.comm.list_connected_peers()) != len(self.comm.writer_list) + len(self.comm.reader_list) - 1 or len(self.comm.list_connected_writers()) < 2:
-            # Remove inactive nodes after wait time
-            if self.check_timeout_cancel(inactive_wait, custom_timeout=10):
-                self.comm.update_active_nodes_list(include_peers=False)
-                inactive_wait = time.perf_counter()
             time.sleep(1)
-            # Updates conf for new writers
-            # Why not include the peers set? 
-            if self.check_timeout_cancel(new_nodes_wait, custom_timeout=15):
-                self.comm.update_conf()
-                self.comm.update_active_nodes_list(include_peers=False)
-                # Checks again after 5 seconds for new nodes if less than 2 connected writers
-                new_nodes_wait = time.perf_counter()
-        if new_writer:
-            self.round.set_round()
         print(f"ID={self.ID} -> connected and ready to build")
         # Ask for updated blockchain before starting blockchain. Gets back at max number of rounds between updated config
-        self.add_missing_blocks()
+        # self.add_missing_blocks()
 
     def cancel_round(self, cancel_log: str, round: int):
         """
@@ -437,15 +417,11 @@ class ProtoEngine(ProtocolEngine):
 
         # Step 1 - Receive request from Coordinator
         message = self.get_msg(type="request", recv_from=coordinatorID)    # Gets stuck here if reconnected sometimes
-        if not message: # Handle if timeout
-            return False
         # Step 2 - Generate next number and transmit to Coordinator
         pad = self.generate_pad()
         self._send_msg(round, "reply", pad, sent_to=coordinatorID)
         # Step 3 - Waiting for announcement from the Coordinator
         message = self.get_msg("announce", recv_from=coordinatorID)
-        if not message: # Handle if timeout
-            return False
         # Step 4 - Verify and receive new block from winner
         parsed_message = message.split("-")
         winner = ast.literal_eval(parsed_message[4])
@@ -466,8 +442,6 @@ class ProtoEngine(ProtocolEngine):
         elif winner_verified:
             # Wait for a block to verify
             message = self.get_msg(type="block", recv_from=winner[2], round=round)    # Gets back tuple block
-            if not message:
-                return False
             parsed_message = message.split("-")
             print(f"Round {round} Winner {winner} message {message} length {len(message)}")
             payload = ast.literal_eval(parsed_message[4]) 
@@ -524,9 +498,6 @@ class ProtoEngine(ProtocolEngine):
         # MSG FORMAT <round nr>-<from id>-<to id>-<msg type>-<msg body>
         wait = time.perf_counter()       
         while no_recv_messages < len(self.comm.writer_list) + len(self.comm.reader_list) - 1:
-            # Max waiting time of 2 seconds for a node
-            if self.check_timeout_cancel(wait):
-                return False
             message = self._recv_msg(type="reply")
             if message is not None:
                 parsed_message = message.split("-")
@@ -541,8 +512,6 @@ class ProtoEngine(ProtocolEngine):
         winner_id = winner[2]
         # Step 4 - Receive new block (from winner)
         message = self.get_msg(type="block", recv_from=winner_id, round=round)
-        if not message:
-            return False
         parsed_message = message.split("-")
         payload = ast.literal_eval(parsed_message[4])
         if not payload: # Winner had nothing to write
@@ -550,7 +519,6 @@ class ProtoEngine(ProtocolEngine):
         block = Block.from_tuple(payload)
         if not self.verify_block(block):
             self.cancel_round("Round not verified", round)  #Sets latest block as cancel block
-            verbose_print("ERROR, NOT CORRECT BLOCK")
         else:
             # Finally - write new block to the chain (DB)
             message = self._recv_msg(type="cancel") # Check if cancelled round
@@ -573,41 +541,24 @@ class ProtoEngine(ProtocolEngine):
     def run_forever(self):
         """
         """
-        # Expects all writers to join. Program does not start until all writers are all connected
-        # TODO: Define a Quorate set, cannot insist on all writers being present
-        #       Note: most likely need a consensus on which writers are present
         new_writer = True
+        round = 0
         self.join_writer_set(new_writer)
-        self.set_timeout(1)
         print("[ALL JOINED] all writers have joined the writer set")
-        # if self.comm.is_writer:
         while True:
-            joining_writer_set = False
             #TODO: Should we ever remove from the peers set
-            self.comm.update_active_nodes_list()    # Checks for inactive nodes
-            print(self.round.num)
-            if self.round.num % 20 == 0 and not new_writer: # Gets stuck here if writer of round 20 has nothing to write.
-                joining_writer_set = True
-                self.join_writer_set(new_writer)    # Check for changes to node sets
-                # self.set_timeout(5) # Set longer timeout when new writers connecting
-                # Rounds are being reset for some reason for the reader
-                print("Round number I got from API; ", self.round.num)
-            coordinator = self.get_coordinatorID(self.round.num)
+            # self.comm.update_active_nodes_list()    # Checks for inactive nodes
+            coordinator = self.get_coordinatorID(round)
             verbose_print(f"ID: {self.ID}, CordinatorId: {coordinator}", coordinator == self.ID)
             if coordinator == self.ID:
-                round_success = self.coordinator_round(self.round.num)
+                self.coordinator_round(round)
             else:
-                round_success = self.writer_round(self.round.num, coordinator)
-            if not round_success and not joining_writer_set:
-                # handle node did not receive message
-                self.set_timeout(self.timeout+1)
-            if joining_writer_set:
-                self.set_timeout(2)
+                self.writer_round(round, coordinator)
             now = datetime.now().strftime("%H:%M:%S")
-            verbose_print(f"[ROUND COMPLETE] round {self.round.num} finished with writer with ID {coordinator} as  the coordinator at ", now)
-            self.round.num += 1
+            verbose_print(f"[ROUND COMPLETE] round {round} finished with writer with ID {coordinator} as  the coordinator at ", now)
+            round += 1
             new_writer = False
-            if self.round.num > self.rounds and self.rounds:
+            if round > self.rounds and self.rounds:
                 break   # Stops the program
  
     # MSG FORMAT <round nr>-<from id>-<to id>-<msg type>-<msg body>
