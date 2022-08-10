@@ -1,6 +1,5 @@
 from queue import Queue
 import hashlib
-import requests
 
 from queue import Queue
 from threading import Thread
@@ -9,10 +8,8 @@ import time
 from datetime import datetime
 import ast
 
-import sqlite3
 import sys
 import argparse
-import random
 import os
 import json
 from protocom import ProtoCom
@@ -206,7 +203,7 @@ class ProtoEngine(ProtocolEngine):
 
     def broadcast(self, msg_type: str, msg, round: int, send_to_readers=False):
         assert isinstance(msg_type, str)
-        assert isinstance(msg, (int, str, list))
+        assert isinstance(msg, (int, str, list, tuple))
         assert isinstance(round, int)
         self._send_msg(round=round, type=msg_type, message=msg, sent_to=None, send_to_readers=send_to_readers)
 
@@ -486,8 +483,13 @@ class ProtoEngine(ProtocolEngine):
         message = self.get_msg("announce", recv_from=coordinatorID)
         # Step 4 - Verify and receive new block from winner
         parsed_message = message.split("-")
-        winner = ast.literal_eval(parsed_message[4][0])
-        fetch_new_conf = ast.literal_eval(parsed_message[4][1]) # Gets back boolean value if should fetch new config
+        print('parsed_message: ', parsed_message)
+        msg_body = ast.literal_eval(parsed_message[4])
+        print('msg_body: ', msg_body)
+        for i in msg_body:
+            print(i)
+        winner = msg_body[0]
+        fetch_new_conf = msg_body[1] # Gets back boolean value if should fetch new config
         winner_verified = self.verify_round_winner(winner, pad)
         vverbose_print(f"[WINNER WRITER] writer with ID {winner[2]} won the round")
         if winner_verified and self.ID == winner[2]:
@@ -561,17 +563,26 @@ class ProtoEngine(ProtocolEngine):
         # MSG FORMAT <round nr>-<from id>-<to id>-<msg type>-<msg body>
         while no_recv_messages < len(self.mem_data.writer_list) + len(self.mem_data.reader_list) - 1:
             message = self._recv_msg(type="reply")
+            # msg body = tuple(otp, conf)
+            # otp = int
+            # conf = tuple([], [], [])
             if message is not None:
                 parsed_message = message.split("-")
                 from_id = ast.literal_eval(parsed_message[1])
-                nodes_confs.append(from_id, int(parsed_message[4][1]))
+                msg_body = ast.literal_eval(parsed_message[4]) #(pad, conf)
+                nodes_confs.append((from_id, tuple(msg_body[1])))
                 if from_id in self.mem_data.writer_list:    # Add OTP from writers only
-                    numbers.append([int(parsed_message[1]), int(parsed_message[4][0])])    #(id, otp)
+                    print('parsed_message: ', parsed_message)
+                    # numbers = [[id, otp], ...]
+                    numbers.append([from_id, int(msg_body[0])])    #(id, otp)
                 no_recv_messages += 1
             time.sleep(0.01)
         # Step 3 - Declare and announce winner and check if ok to add writer from waiting list
         nodes_fetch_conf = self.mem_data.waiting_list_not_equal(nodes_confs)   # Boolean if nodes should fetch new config
-        winner = self.calculate_sum(numbers)
+        # winner = [numbers, pad, winner]
+        # winner = [[[id, otp], ...], pad, winner]
+        # sends [numbers, pad, winner] for calculation and if should fetch new conf
+        winner = self.calculate_sum(numbers)    #[numbers, pad, winner]
         self.broadcast("announce", (winner, nodes_fetch_conf), round, send_to_readers=True)
         winner_id = winner[2]
         # Step 4 - Receive new block (from winner)
@@ -613,6 +624,7 @@ class ProtoEngine(ProtocolEngine):
             verbose_print(f"ID: {self.ID}, CordinatorId: {coordinator}", coordinator == self.ID)
             if coordinator == self.ID:
                 self.coordinator_round(round)
+                fetch_new_conf = False
             else:
                 fetch_new_conf = self.writer_round(round, coordinator)
             now = datetime.now().strftime("%H:%M:%S")
@@ -620,7 +632,7 @@ class ProtoEngine(ProtocolEngine):
             round += 1
             if fetch_new_conf:
                 self.comm.update_conf()
-            else:
+            elif self.mem_data.waiting_list:
                 self.mem_data.pop_from_waiting_list() 
             if round > self.rounds and self.rounds:
                 break   # Stops the program
