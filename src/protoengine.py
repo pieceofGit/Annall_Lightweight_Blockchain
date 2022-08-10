@@ -443,7 +443,8 @@ class ProtoEngine(ProtocolEngine):
         return message
     
     def compare_active_nodes(self, coord_conf):
-        if coord_conf[0] != self.mem_data.writer_list or coord_conf[2] != self.mem_data.reader_list:
+        # coord_conf = [writer_list, reader_list, waiting_list]
+        if coord_conf[0] != self.mem_data.writer_list or coord_conf[1] != self.mem_data.reader_list:
             return False    # Should cancel the round
         return True
 
@@ -483,11 +484,7 @@ class ProtoEngine(ProtocolEngine):
         message = self.get_msg("announce", recv_from=coordinatorID)
         # Step 4 - Verify and receive new block from winner
         parsed_message = message.split("-")
-        print('parsed_message: ', parsed_message)
         msg_body = ast.literal_eval(parsed_message[4])
-        print('msg_body: ', msg_body)
-        for i in msg_body:
-            print(i)
         winner = msg_body[0]
         fetch_new_conf = msg_body[1] # Gets back boolean value if should fetch new config
         winner_verified = self.verify_round_winner(winner, pad)
@@ -572,7 +569,6 @@ class ProtoEngine(ProtocolEngine):
                 msg_body = ast.literal_eval(parsed_message[4]) #(pad, conf)
                 nodes_confs.append((from_id, tuple(msg_body[1])))
                 if from_id in self.mem_data.writer_list:    # Add OTP from writers only
-                    print('parsed_message: ', parsed_message)
                     # numbers = [[id, otp], ...]
                     numbers.append([from_id, int(msg_body[0])])    #(id, otp)
                 no_recv_messages += 1
@@ -611,6 +607,7 @@ class ProtoEngine(ProtocolEngine):
                 self.latest_block = block
 
         self.bcdb.insert_block(round, self.latest_block)
+        return False
 
     def run_forever(self):
         round = 0
@@ -623,8 +620,7 @@ class ProtoEngine(ProtocolEngine):
             coordinator = self.get_coordinatorID(round)
             verbose_print(f"ID: {self.ID}, CordinatorId: {coordinator}", coordinator == self.ID)
             if coordinator == self.ID:
-                self.coordinator_round(round)
-                fetch_new_conf = False
+                fetch_new_conf = self.coordinator_round(round)
             else:
                 fetch_new_conf = self.writer_round(round, coordinator)
             now = datetime.now().strftime("%H:%M:%S")
