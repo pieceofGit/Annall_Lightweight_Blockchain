@@ -29,6 +29,7 @@ def add_to_config_by_key(key, value):
         config[key].append(value)
         with open(PREPEND_PATH+CONFIG_PATH, "w") as file:
             json.dump(config, file, indent=4)
+            file.close()
     except:
         raise InvalidUsage("Could not access the json file", status_code=500)
 

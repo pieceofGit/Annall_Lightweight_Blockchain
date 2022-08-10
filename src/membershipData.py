@@ -33,8 +33,9 @@ class MembershipData:
         try:
             response = requests.get(self.api_path + "config", {})
             verbose_print("[CONFIG node API] Got config from node API")
+            self.conf = response.json()
             self.set_lists()
-            return response.json()
+            return self.conf
         except:
             verbose_print("[CONFIG LOCAL] Failed to get config from writer")
             with open(self.full_conf_path, "r") as f:
