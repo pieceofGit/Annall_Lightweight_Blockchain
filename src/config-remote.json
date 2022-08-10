@@ -29,6 +29,10 @@
       ]
     }
   ],
+  "writer_list": [1, 2],
+  "reader_list": [3],
+  "writer_waiting_room_list": [],
+  "reader_waiting_room_list": [],
   "NO_coord": 1,
   "modulus": 65537,
   "version": "1.0"

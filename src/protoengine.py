@@ -16,6 +16,7 @@ import random
 import os
 import json
 from protocom import ProtoCom
+from membershipData import MembershipData
 from tcpserver import TCP_Server, ClientHandler
 import interfaces
 from interfaces import (
@@ -125,6 +126,7 @@ class ProtoEngine(ProtocolEngine):
         comm: ProtocolCommunication,
         blockchain: interfaces.BlockChainEngine,
         clients: ClientServer,
+        mem_data: MembershipData
 
     ):  # what are the natural arguments
         assert isinstance(keys, tuple)
@@ -145,7 +147,9 @@ class ProtoEngine(ProtocolEngine):
         # maintain a payload
         self.stashed_payload = None
         self.timeout = None
-    
+        self.mem_data = mem_data
+        self.waiting = self.is_waiting()
+
     def set_timeout(self, timeout):
         self.timeout = timeout
 
@@ -153,7 +157,13 @@ class ProtoEngine(ProtocolEngine):
         ''' A round is a minting of a block, this defines for how many rounds the blockchain runs for'''
         assert isinstance(round, int)
         self.rounds = round
-
+    
+    def is_waiting(self):
+        for i in self.mem_data.waiting_list:
+            if i[0] == self.ID: # i = (id, is_writer)
+                return True
+        return False
+        
     def sign_payload(self, payload: str):
         # keys of form [p, q, e]
         '''Creates a signature of the payload'''
@@ -180,7 +190,7 @@ class ProtoEngine(ProtocolEngine):
             writer = block.writerID
             payload = block.payload
             signature = int(block.writer_signature, 16)
-            writer_pubkey = self.comm.conf["node_set"][int(writer) - 1]["pub_key"]
+            writer_pubkey = self.mem_data.conf["node_set"][int(writer) - 1]["pub_key"]
             D = bytes_to_long(payload.encode("utf-8")) % writer_pubkey
             res = pow(signature, self.keys[2], writer_pubkey)
             res = res % writer_pubkey
@@ -259,8 +269,8 @@ class ProtoEngine(ProtocolEngine):
         assert isinstance(round, int)
         ## NOT SURE WHY THIS IS HERE:  8 - 1 % (3+1) # 7 % 4 = 3
         ## TODO not clear if this really works, e.g. in the case if some node dies, or if the set of writers changes
-        coordinator = (round - 1) % (len(self.comm.writer_list))
-        return self.comm.writer_list[coordinator]
+        coordinator = (round - 1) % (len(self.mem_data.writer_list))
+        return self.mem_data.writer_list[coordinator]
 
     def calculate_sum(self, numbers: list):
         """Numbers is a list of <ID, number> pairs. This function calculates the pad for the round from the numbers using xor
@@ -285,29 +295,15 @@ class ProtoEngine(ProtocolEngine):
         )
         return [numbers, pad, winner]
 
-    def add_missing_blocks(self):
-        WRITER_API_PATH = "http://127.0.0.1:8000/"  # TODO: Should be in global config file
-        latest_block = self.bcdb.get_latest_block()
-        if latest_block:
-            missing_blocks = requests.get(WRITER_API_PATH + "blocks", data=json.dumps(latest_block)).json()    
-        else:
-            missing_blocks = requests.get(WRITER_API_PATH + "blocks").json()
-    # If writer has latest block, gets back false, else add missing blocks
-        if missing_blocks:
-            try:
-                for dict_block in missing_blocks:
-                    self.bcdb.insert_block(dict_block["round"], Block.from_dict(dict_block))
-            except:
-                print("Got back message from server: ", missing_blocks)
-
-    def join_writer_set(self, new_writer):
+    def join_writer_set(self):
         """Bootstrap to the writerset, using comm module
         """
-        # Gets an updated config file before connecting
         self.comm.update_conf() # Updates node lists and peer set
-        # Wait until our list of connected peers fulfills who we want to connect to and has at least two writers
-        while len(self.comm.list_connected_peers()) != len(self.comm.writer_list) + len(self.comm.reader_list) - 1 or len(self.comm.list_connected_writers()) < 2:
+        # Wait until our list of connected peers fulfills who we want to connect to or has at least two writers
+        while len(self.comm.list_connected_peers()) != len(self.mem_data.writer_list) + len(self.mem_data.reader_list) - 1:
             time.sleep(1)
+            if self.waiting:
+                self.comm.update_conf()
         print(f"ID={self.ID} -> connected and ready to build")
         # Ask for updated blockchain before starting blockchain. Gets back at max number of rounds between updated config
         # self.add_missing_blocks()
@@ -399,16 +395,73 @@ class ProtoEngine(ProtocolEngine):
         #     if time.perf_counter() > wait + timeout:
         #         return True
         return False
+    
+     # MSG FORMAT <round nr>-<from id>-<to id>-<msg type>-<msg body>
+    def _send_msg(self, round: int, type: str, message, sent_to=None, send_to_readers=False):
+        assert isinstance(sent_to, (int, NoneType))
+        assert isinstance(type, (str, NoneType))
+        # implements a remote procedure call wrt protocolCommunication
+        self.comm.send_msg(f"{round}-{self.ID}-{100}-{type}-{message}", send_to=sent_to, send_to_readers=send_to_readers)
+
+    # MSG FORMAT <round nr>-<from id>-<to id>-<msg type>-<msg body>
+    def _recv_msg(self, type=None, recv_from=None, round=None, waiting=None):
+        assert isinstance(recv_from, (int, NoneType))
+        assert isinstance(type, (str, NoneType))
+        assert isinstance(round, (int, NoneType))
+        # implements a remote procedure call wrt protocolCommunication
+        rec = self.comm.recv_msg()  # Checks for new messages from other writers and adds them to the queue
+        for message in rec: 
+            self.message_queue.put(message[1])
+        
+        if self.message_queue.empty():
+            
+            vverbose_print("message queue empty")
+            return None
+        mess = self.message_queue.get() # Reader checks for cancel messages and takes request message
+        parsed_message = mess.split("-")
+        type_check = True
+        from_check = True
+        round_check = True
+
+        if type:
+            type_check = parsed_message[3] == type
+            if waiting and type_check:  # For nodes in waiting room
+                return mess
+        if recv_from:
+            from_check = int(parsed_message[1]) == recv_from
+        if round:
+            round_check = int(parsed_message[0]) == round
+
+        if type_check and from_check and round_check:
+            return mess
+        else:
+            self.message_queue.put(mess)    # Message added back. Was not supposed to be taken off of the queue
+        return None
         
     def get_msg(self, type, recv_from=None, round=None):
         message = None
-        wait = time.perf_counter()
         while message is None:
-            if self.check_timeout_cancel(wait):
-                return False
             message = self._recv_msg(type, recv_from, round=round)
             time.sleep(0.01)
         return message
+    
+    def compare_active_nodes(self, coord_conf):
+        if coord_conf[0] != self.mem_data.writer_list or coord_conf[2] != self.mem_data.reader_list:
+            return False    # Should cancel the round
+        return True
+
+    
+    def waiting_room(self):
+        """ Nodes wait for a message from a coordinator """
+        # The nodes need to fetch missing blocks and the config while waiting to be in sync
+        message = None
+        while not message:
+            message = self._recv_msg("request", waiting=True)
+            self.comm.update_conf()
+            self.bcdb.get_missing_blocks()
+            time.sleep(0.01)
+        parsed_message = message.split("-")
+        return int(ast.literal_eval(parsed_message[0]))
 
     # The round for the writer when you are not coordinator
     def writer_round(self, round: int, coordinatorID: int):
@@ -416,15 +469,25 @@ class ProtoEngine(ProtocolEngine):
         assert isinstance(coordinatorID, int)
 
         # Step 1 - Receive request from Coordinator
-        message = self.get_msg(type="request", recv_from=coordinatorID)    # Gets stuck here if reconnected sometimes
-        # Step 2 - Generate next number and transmit to Coordinator
+        if not self.waiting:
+            message = self.get_msg(type="request", recv_from=coordinatorID)    # Gets stuck here if reconnected sometimes
+            parsed_message = message.split("-")
+            # Gets tuple of (writer_list, reader_list, waiting_list)
+            conf_is_equal = self.compare_active_nodes(ast.literal_eval(parsed_message[4]))
+            if not conf_is_equal:
+                self.cancel_round("Writer or reader list not equal", round)
+        else:
+            self.waiting = False    # New writer already has the request
+        # Step 2 - Generate next number and transmit to Coordinator with its conf
         pad = self.generate_pad()
-        self._send_msg(round, "reply", pad, sent_to=coordinatorID)
+        conf = self.mem_data.get_tuple_of_lists()
+        self._send_msg(round, "reply", (pad, conf), sent_to=coordinatorID)
         # Step 3 - Waiting for announcement from the Coordinator
         message = self.get_msg("announce", recv_from=coordinatorID)
         # Step 4 - Verify and receive new block from winner
         parsed_message = message.split("-")
-        winner = ast.literal_eval(parsed_message[4])
+        winner = ast.literal_eval(parsed_message[4][0])
+        fetch_new_conf = ast.literal_eval(parsed_message[4][1]) # Gets back boolean value if should fetch new config
         winner_verified = self.verify_round_winner(winner, pad)
         vverbose_print(f"[WINNER WRITER] writer with ID {winner[2]} won the round")
         if winner_verified and self.ID == winner[2]:
@@ -437,8 +500,7 @@ class ProtoEngine(ProtocolEngine):
             if not block:   # Winning writer had nothing to write
                 self.broadcast("block", str(block), round, send_to_readers=True)  
                 return False
-            self.broadcast("block", str(block.as_tuple()), round, send_to_readers=True)  
-
+            self.broadcast("block", str(block.as_tuple()), round, send_to_readers=True)
         elif winner_verified:
             # Wait for a block to verify
             message = self.get_msg(type="block", recv_from=winner[2], round=round)    # Gets back tuple block
@@ -478,37 +540,39 @@ class ProtoEngine(ProtocolEngine):
 
         vverbose_print(f"[LATEST BLOCK] the latest block is: {self.latest_block}")
         self.bcdb.insert_block(round, self.latest_block)
-        return True
+        return fetch_new_conf
 
     def coordinator_round(self, round: int):
         
         vverbose_print(f"Round: {round} and ID={self.ID}")
 
         assert isinstance(round, int)
-
-        # Step 1 -
+        self.comm.update_conf() # Fetches updated config
+        # Step 1 - Requests an OTP and shares the current config file
         self.check_for_old_cancel_message(round=round)
-        
-
-        self.broadcast(msg_type="request", msg=round, round=round, send_to_readers=True)
+        # Sends the config file to reach consensus on the active nodes
+        conf_msg = self.mem_data.get_tuple_of_lists()
+        self.broadcast(msg_type="request", msg=conf_msg, round=round, send_to_readers=True)
         # Step 2 - Wait for numbers reply from all
         numbers = []
         no_recv_messages = 0
+        nodes_confs = []
         # Currently waiting for a number from all active writers
         # MSG FORMAT <round nr>-<from id>-<to id>-<msg type>-<msg body>
-        wait = time.perf_counter()       
-        while no_recv_messages < len(self.comm.writer_list) + len(self.comm.reader_list) - 1:
+        while no_recv_messages < len(self.mem_data.writer_list) + len(self.mem_data.reader_list) - 1:
             message = self._recv_msg(type="reply")
             if message is not None:
                 parsed_message = message.split("-")
                 from_id = ast.literal_eval(parsed_message[1])
-                if from_id in self.comm.writer_list:    # Add OTP from writers only
-                    numbers.append([int(parsed_message[1]), int(parsed_message[4])])    #(id, otp)
+                nodes_confs.append(from_id, int(parsed_message[4][1]))
+                if from_id in self.mem_data.writer_list:    # Add OTP from writers only
+                    numbers.append([int(parsed_message[1]), int(parsed_message[4][0])])    #(id, otp)
                 no_recv_messages += 1
             time.sleep(0.01)
-        # Step 3 - Declare and announce winner
-        winner = self.calculate_sum(numbers)    
-        self.broadcast("announce", winner, round, send_to_readers=True)
+        # Step 3 - Declare and announce winner and check if ok to add writer from waiting list
+        nodes_fetch_conf = self.mem_data.waiting_list_not_equal(nodes_confs)   # Boolean if nodes should fetch new config
+        winner = self.calculate_sum(numbers)
+        self.broadcast("announce", (winner, nodes_fetch_conf), round, send_to_readers=True)
         winner_id = winner[2]
         # Step 4 - Receive new block (from winner)
         message = self.get_msg(type="block", recv_from=winner_id, round=round)
@@ -536,70 +600,30 @@ class ProtoEngine(ProtocolEngine):
                 self.latest_block = block
 
         self.bcdb.insert_block(round, self.latest_block)
-        return True
 
     def run_forever(self):
-        """
-        """
-        new_writer = True
         round = 0
-        self.join_writer_set(new_writer)
+        self.join_writer_set()
         print("[ALL JOINED] all writers have joined the writer set")
         while True:
-            #TODO: Should we ever remove from the peers set
-            # self.comm.update_active_nodes_list()    # Checks for inactive nodes
+            if self.waiting:
+                # Node waits for a message from any coordinator after connecting to get the round number
+                round = self.waiting_room()
             coordinator = self.get_coordinatorID(round)
             verbose_print(f"ID: {self.ID}, CordinatorId: {coordinator}", coordinator == self.ID)
             if coordinator == self.ID:
                 self.coordinator_round(round)
             else:
-                self.writer_round(round, coordinator)
+                fetch_new_conf = self.writer_round(round, coordinator)
             now = datetime.now().strftime("%H:%M:%S")
             verbose_print(f"[ROUND COMPLETE] round {round} finished with writer with ID {coordinator} as  the coordinator at ", now)
             round += 1
-            new_writer = False
+            if fetch_new_conf:
+                self.comm.update_conf()
+            else:
+                self.mem_data.pop_from_waiting_list() 
             if round > self.rounds and self.rounds:
                 break   # Stops the program
- 
-    # MSG FORMAT <round nr>-<from id>-<to id>-<msg type>-<msg body>
-    def _send_msg(self, round: int, type: str, message, sent_to=None, send_to_readers=False):
-        assert isinstance(sent_to, (int, NoneType))
-        assert isinstance(type, (str, NoneType))
-        # implements a remote procedure call wrt protocolCommunication
-        self.comm.send_msg(f"{round}-{self.ID}-{100}-{type}-{message}", send_to=sent_to, send_to_readers=send_to_readers)
-
-    # MSG FORMAT <round nr>-<from id>-<to id>-<msg type>-<msg body>
-    def _recv_msg(self, type=None, recv_from=None, round=None):
-        assert isinstance(recv_from, (int, NoneType))
-        assert isinstance(type, (str, NoneType))
-        assert isinstance(round, (int, NoneType))
-        # implements a remote procedure call wrt protocolCommunication
-        rec = self.comm.recv_msg()  # Checks for new messages from other writers and adds them to the queue
-        for message in rec: 
-            self.message_queue.put(message[1])
-        
-        if self.message_queue.empty():
-            
-            vverbose_print("message queue empty")
-            return None
-        mess = self.message_queue.get() # Reader checks for cancel messages and takes request message
-        parsed_message = mess.split("-")
-        type_check = True
-        from_check = True
-        round_check = True
-
-        if type:
-            type_check = parsed_message[3] == type
-        if recv_from:
-            from_check = int(parsed_message[1]) == recv_from
-        if round:
-            round_check = int(parsed_message[0]) == round
-
-        if type_check and from_check and round_check:
-            return mess
-        else:
-            self.message_queue.put(mess)    # Message added back. Was not supposed to be taken off of the queue
-        return None
 
 
 global_list = []

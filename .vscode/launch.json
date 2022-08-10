@@ -65,7 +65,7 @@
       "cwd": "${fileDirname}"
     },
     {
-      "name": "Python: WriterAPI",
+      "name": "Python: NodeAPI",
       "type": "python",
       "request": "launch",
       "program": "${file}",

@@ -15,10 +15,7 @@ class BlockchainDB(interfaces.BlockChainEngine):
     """ The Database engine operating the raw blockchain
         Only the protocol engine can add to the chain
         More entities probably need read access.
-    """
-
-    #def __init__(self, dbconnection):
-    
+    """    
     def __init__(self, db_path : str = ":memory:", api_path: str = ""):
         ## Missing conditionals and exceptions
         self.db_path = db_path
@@ -28,7 +25,6 @@ class BlockchainDB(interfaces.BlockChainEngine):
         self.initilize_table()
         print("DB: Local Blockchain ready for use")
         self.length = self.get_round_number()           # really a sequence number as primary key
-
 
     def __del__(self):
         # Missing conditionals and exceptions
@@ -75,7 +71,7 @@ class BlockchainDB(interfaces.BlockChainEngine):
                 else:   # Returns the blockchain
                     missing_blocks = requests.get(self.writer_api_path + "blocks").json()
             except Exception as e:
-                verbose_print(f"Could not get missing blocks from Writer API")
+                verbose_print(f"Could not get missing blocks from node API")
                 missing_blocks = False
         # If writer has latest block, gets back false, else add missing blocks
             try:

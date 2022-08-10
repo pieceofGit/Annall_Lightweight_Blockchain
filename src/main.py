@@ -16,10 +16,10 @@ from interfaces import (
 from tcpserver import TCP_Server, ClientHandler
 from protocom import ProtoCom
 from block import Block
+from membershipData import MembershipData
 from blockchainDB import BlockchainDB
-from annallWriterAPI import app, WriterAPI, BCDB, ROUND
-from round import Round
-# from WriterAPI.annallWriterAPI import app, WriterAPI, BCDB
+from nodeAPI import app, NodeAPI, BCDB
+# from NodeAPI.nodeAPI import app, NodeAPI, BCDB
 # should put here some elementary command line argument processing
 # EG. parameters for where the config file is, number of writers (for testing), and rounds
 # Define explicitly the paths
@@ -66,65 +66,29 @@ if __name__ == "__main__":
     print("::> Starting up Blockchain DB = using ", dbpath)
     bce = BlockchainDB(dbpath, WRITER_API_PATH)
     print("Local block chain database successfully initialized")
-    writer_api = RUN_WRITER_API and id == 3
-    print("IS WRITER API: ", writer_api)
-    round = Round(WRITER_API_PATH, writer_api)
-    if writer_api:  # Run the WriterAPI as a thread on a reader
-        ROUND[0] = round    # Access for round number in the API
-        BCDB[0] = bce   # blockchain db object access for the writer API process
-        writer_api = WriterAPI(app)
+    mem_data = MembershipData(id, CONFIG_PATH, conf_file, WRITER_API_PATH, bce)
+    data = mem_data.conf
+    if RUN_WRITER_API and id == 3:  # Run the NodeAPI as a thread on a reader
+        BCDB[0] = bce   # blockchain db object access for the node API process
+        writer_api = NodeAPI(app)
         writer_api_thread = Thread(target=writer_api.run, name="WriterAPIThread")
         writer_api_thread.daemon = True
         writer_api_thread.start()
-    # Read config and other init stuff
-    try:
-        response = requests.get(WRITER_API_PATH + "config", {})
-        data = response.json()
-        verbose_print("[CONFIG WRITER API] Got config from writer API")
-    except:
-        verbose_print("[CONFIG LOCAL] Failed to get config from writer")
-        with open(f"{CONFIG_PATH}/{conf_file}", "r") as f:
-            data = json.load(f)
-    if LOCAL:
-        with open(f"{CONFIG_PATH}/test_node_{id}/priv_key.json", "r") as f:
-            priv_key = json.load(f)
-    # Do not start writing or reading until up to date. writer or reader should be in the active set.
-    # Synchronous get all missing blocks
-    if id != 3: #TODO: Should fall back to asking another active writer for the missing blocks
-        bce.get_missing_blocks()
-        
-        # TODO: The writer should still be asking for the newest blockchain until it has connected to all active nodes
-        # Add writer to active writer list if up to date
-        try:    # Writer activated if he has an up to date blockchain
-            resp = requests.post(WRITER_API_PATH + "activate_writer", 
-                data=json.dumps({"block": bce.get_latest_block(), "node": {"id": id}}))
-            if resp.status_code == 200: # has up to date config file
-                pass
-            elif resp.status_code == 201:
-                data = resp.json()
-            else:
-                # Out of date blockchain, incorrect data, or service unavailable
-                # Need to fetch blockchain again if failed and ask to be active writer.
-                # Possibly the writer should be added to active list if fetching blockchain
-                pass
-        except:
-            verbose_print("Could not post to Writer API to activate us as writer")
-
+    with open(f"{CONFIG_PATH}/test_node_{id}/priv_key.json", "r") as f:
+        priv_key = json.load(f)
+    # Do not start participating until up to date
     print("Database up to date")
     # Start Communication Engine - maintaining the peer-to-peer network of writers
     print("::> Starting up peer-to-peer network engine with id ", id)
-    pComm = ProtoCom(id, data)  # Send in config file to protocom
+    pComm = ProtoCom(id, mem_data)  # Send in config file to protocom
     pComm.daemon = True
     pComm.start()
-    print("Peer-to-peer network engine up  and running as:", pComm.name)
-    
-   
-    verbose_print("THE ID: ", id)
-    TCP_IP = data["node_set"][id - 1]["hostname"]
-    TCP_PORT = data["node_set"][id - 1]["client_port"] 
+    print("Peer-to-peer network engine up  and running as:", pComm.name)   
+    TCP_IP = mem_data.get_tcp_ip(id)
+    TCP_PORT = mem_data.get_tcp_port(id)
     print(f"TCP PORT: {TCP_PORT}")
     print("::> Starting up ClientServer thread")
-    # TCPServer: name, IPv4_addr, port, RequestHandlerClass, bcdb,
+    # TCPServer: name, IPv4_addr, port, RequestHandlerClass, bcdb
     clients = TCP_Server("the server", TCP_IP, TCP_PORT, ClientHandler, bce)    # ClientHandler uses the bce object to read db
     # Socket listening to events
     # The Client Handler thread
@@ -135,7 +99,7 @@ if __name__ == "__main__":
     # Start protocol engine
     print("::> Starting up BlockChainEngine")
     keys = priv_key["priv_key"]
-    PE = ProtoEngine(id, tuple(keys), pComm, bce, clients, round)
+    PE = ProtoEngine(id, tuple(keys), pComm, bce, clients, mem_data)
     PE.set_rounds(rounds)
     # Writers set to wait for connecting to until rounds start
     PEthread = Thread(target=PE.run_forever, name="ProtocolEngine")

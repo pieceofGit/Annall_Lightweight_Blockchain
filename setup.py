@@ -14,5 +14,5 @@ setup(name="annall_project", version="0.1", packages=find_packages())
     #         "blockchain_webinterface",
     #         "src/txtfiles",
     #     ],
-    #     include=["WriterAPI", "WriterAPI.*", "ClientAPI","ClientAPI.*", "src", "src.*"]
+    #     include=["NodeAPI", "NodeAPI.*", "ClientAPI","ClientAPI.*", "src", "src.*"]
     # ),

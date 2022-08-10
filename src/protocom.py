@@ -15,7 +15,7 @@ import time
 import random
 import struct
 import inspect
-import requests
+from membershipData import MembershipData
 
 from interfaces import ( 
     ProtocolCommunication,
@@ -258,12 +258,12 @@ class RemoteEnd:
 
 
 class ProtoCom(ProtocolCommunication):
-    def __init__(self, self_id: int, conf: dict, name: str = "P2P : Protocol communication" ):
+    def __init__(self, self_id: int, mem_data: MembershipData, name: str = "P2P : Protocol communication"):
         ProtocolCommunication.__init__(
             self, name)
         # set up
         self.id = self_id
-        self.conf = conf
+        self.mem_data = mem_data
         self.running = True
         self.conn_modulus = 0
         # lock is used to put on to and take off of msg_queue
@@ -276,11 +276,9 @@ class ProtoCom(ProtocolCommunication):
         self.ip = None
         self.listen_port = None
         self.is_writer = self.check_if_writer(self.id)
-        self.writer_list = self.conf["active_writer_set_id_list"]
-        self.reader_list = self.conf["active_reader_set_id_list"]
         # Setup two-way communication with active writers and readers
-        self.setup_remote_ends_in_conf_by_key("active_writer_set_id_list")  # add to peers dict
-        self.setup_remote_ends_in_conf_by_key("active_reader_set_id_list")
+        self.setup_remote_ends_in_conf_by_key("writer_list")  # add to peers dict
+        self.setup_remote_ends_in_conf_by_key("reader_list")
         verbose_print(f"[IS WRITER] node with id: {self.id} is a writer: {self.is_writer}")
         # set up listening socket
         # Making sure to not run this if either are undefined, unless it crashes
@@ -303,30 +301,13 @@ class ProtoCom(ProtocolCommunication):
             # Received messages are added to this queue and removed when recv_msg() is called
             self.msg_queue = []
 
-    def update_conf(self):
-        """ Fetches new conf and adds to peers and node lists """
-        WRITER_API_PATH = "http://127.0.0.1:8000/"  # Just here for testing purpose
-        try:
-            response = requests.get(WRITER_API_PATH + "config", {})
-            if response.status_code == 200:
-                if self.conf != response.json():
-                    self.conf = response.json()
-                    # Handle changes to config file
-                    self.setup_remote_ends_in_conf_by_key("active_writer_set_id_list")
-                    self.setup_remote_ends_in_conf_by_key("active_reader_set_id_list")
-                    self.writer_list = self.conf["active_writer_set_id_list"]
-                    self.reader_list = self.conf["active_reader_set_id_list"]
-        except Exception as e:
-            verbose_print("Failed to update config file ", e)
-
     def setup_remote_ends_in_conf_by_key(self, list_key):
-        """ Creates a RemoteEnd object for each unconnected peer """
-        # TODO: Don't know effect of not removing unconnected peers from peer set
+        """ Creates a RemoteEnd object for each new peer in the conf node_set """
         # The active peers are all that matters
         # May need to overwriter id's if something changes in conf with same id
         try:
-            for i in self.conf[list_key]:
-                node = self.conf["node_set"][i-1]
+            for i in self.mem_data.conf[list_key]:
+                node = self.mem_data.conf["node_set"][i-1]
                 if i != self.id and i not in self.peers:
                     self.peers[i] = RemoteEnd(
                     node["id"], node["hostname"], node["protocol_port"], node["pub_key"], self.check_if_writer(node["id"])
@@ -336,10 +317,18 @@ class ProtoCom(ProtocolCommunication):
                     self.listen_port = node["protocol_port"]
                     self.pub_key = node["pub_key"]
         except:
-            return      
+            return
+
+    def update_conf(self):
+        # The master reader has the most up to date version of the waiting list.
+        # When the master reader pops an item off the waiting list and to the node lists..
+        # The node API gets the update through the shared config file.
+        self.mem_data.get_remote_conf()
+        self.setup_remote_ends_in_conf_by_key("writer_list")
+        self.setup_remote_ends_in_conf_by_key("reader_list")
 
     def check_if_writer(self, id):
-        for i in self.conf["active_writer_set_id_list"]:
+        for i in self.mem_data.conf["writer_list"]:
             if i == id:
                 return True
         return False
@@ -591,6 +580,10 @@ class ProtoCom(ProtocolCommunication):
             if peer.is_active:
                 c_p.append(peer.rem_id)
         return c_p
+    
+    def set_waiting_node_active(self):
+        """ Adds a reader and/or writer from waiting list to the corresponding active list """
+        ...
     
     def update_active_nodes_list(self, include_peers=True):
         """ Removes inactive nodes from writer or reader list

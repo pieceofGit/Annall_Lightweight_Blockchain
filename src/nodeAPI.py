@@ -1,28 +1,22 @@
 """ 
-A WriterAPI for Annáll using Flask and Gunicorn.
+A NodeAPI for Annáll using Flask and Gunicorn.
 """
-print("importing annall writer api")
+print("importing annall node API")
 import json
 import os
-import argparse
 from flask import Flask, request, jsonify, Response
-import sys
 print("WORKING DIRECTORY",os.getcwd())
 PREPEND_PATH = os.getcwd() + "/src/"
 from exceptionHandler import InvalidUsage
 from_main = True
 # import sys 
 BCDB = ["Before db initialization"]
-ROUND = ["Before round initialization"]
 print("Starting annallClientAPI Flask application server")
 app = Flask(__name__)
 # Connect to server
 LOCAL = True
 if LOCAL:
-    if from_main:   # Running from command line in top directory
-        CONFIG_PATH = "config-local.json"
-    else:
-        CONFIG_PATH ="config-local.json"
+    CONFIG_PATH = "config-local.json"
 else:
     CONFIG_PATH = "config-remote.json"
 print("config file in: ",PREPEND_PATH+CONFIG_PATH)
@@ -33,11 +27,10 @@ with open(PREPEND_PATH+CONFIG_PATH, "r") as config_file:
 def add_to_config_by_key(key, value):
     try:
         config[key].append(value)
-        with open(CONFIG_PATH, "w") as file:
+        with open(PREPEND_PATH+CONFIG_PATH, "w") as file:
             json.dump(config, file, indent=4)
     except:
         raise InvalidUsage("Could not access the json file", status_code=500)
-
 
 def add_new_writer(writer):
     # Create new writer object
@@ -76,7 +69,7 @@ def get_dict():
     except Exception:
         raise InvalidUsage("The JSON could not be decoded", status_code=400)
 
-def add_to_active_set(key):
+def add_to_waiting_room(key, is_writer):
     """ Adds writer or reader to their respective active set if the incoming node's blockchain is up to date 
     Writer sends in object with keys block and node
     """
@@ -90,11 +83,17 @@ def add_to_active_set(key):
                 return Response("Node already in set", status=200)
             api_latest_block = BCDB[0].get_latest_block()
             if api_latest_block["hash"] == block["hash"]:
-                # Add writer to active writer set
-                add_to_config_by_key(key, node["id"])
-                return Response(json.dumps(config), mimetype="application/json", status=201)
+                # Add writer to waiting list if not in any list
+                if (node["id"] not in config["writer_list"] and node["id"] not in config["reader_list"] 
+                        and not any(node["id"] in row for row in config["waiting_list"])):
+                    print(any(node["id"] in row for row in config["waiting_list"]))
+                    print(node["id"], config["waiting_list"])
+                    add_to_config_by_key(key, value=(node["id"], is_writer))
+                    return Response(json.dumps(config), mimetype="application/json", status=201)
+                else:
+                    return Response(json.dumps({"message": "node already in conf"}), mimetype="application/json", status=200)
             else:
-                return Response(json.dumps({"message": "Node not up to date"}), status=400) #TODO: wrong pattern
+                return Response(json.dumps({"message": "Node not up to date"}), status=400)
         except Exception as e:
             raise InvalidUsage(f"Could not read the data {e}", status_code=400)
     else:
@@ -163,32 +162,17 @@ def add_writer_to_set():
     add_new_writer(writer_to_add)
     return Response(status=201)
 
-@app.route("/activate_writer", methods=["POST"])
-def activate_writer():
-    """ Adds writer to active writer set if his blockchain is up to date 
+@app.route("/add_writer", methods=["POST"])
+def add_writer():
+    """ Adds writer to writer waiting list if his latest block is up to date 
     Writer sends in object with keys block and node
     """
-    return add_to_active_set("active_writer_set_id_list")
+    return add_to_waiting_room("waiting_list", True)
 
-@app.route("/activate_reader", methods=["POST"])
-def activate_reader():
-    """ Adds reader to active reader set if his blockchain is up to date """
-    ...
-
-@app.route("/round", methods=["GET"])
-def get_round():
-    if authenticate_writer():
-        # Return the round number
-        try:
-
-
-            return Response(json.dumps(ROUND[0].num), status=200)
-        except:
-            raise InvalidUsage("Could not fetch round number", status_code=500)
-    else:
-        raise InvalidUsage("Writer not whitelisted", status_code=400)
-
-
+@app.route("/add_reader", methods=["POST"])
+def add_reader():
+    """ Adds reader to reader waiting list if his latest block is up to date """
+    return add_to_waiting_room("waiting_list", False)
 
 @app.route("/blocks", methods=["GET"])
 def get_blocks():
@@ -218,7 +202,7 @@ def get_blocks():
     else:
         return Response("Writer not whitelisted", status=400)
 
-class WriterAPI():
+class NodeAPI():
     def __init__(self, app):
         self.app = app
     
@@ -232,6 +216,6 @@ if not from_main:
     db_path = CWD + "../src/db/test_blockchain.db"
     print(f"[DIRECTORY PATH] {db_path}")
     blocks_db = BlockchainDB(db_path)
-    program = WriterAPI(app)
+    program = NodeAPI(app)
     program.run()
     

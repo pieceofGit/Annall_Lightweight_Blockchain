@@ -12,8 +12,8 @@ python src/main.py -myID <id> -r <number of rounds>
 
 The program has writers and readers of the blockchain, both writing to their own database.
 The program executes the rounds when all writers and readers are connected.
-The program's writers and readers are either set by starting the WriterAPI or with a local config file.
-The writers and readers required to start are kept in the config under "active_writer_set_id_list" and "active_reader_set_id_list".
+The program's writers and readers are either set by starting the NodeAPI or with a local config file.
+The writers and readers required to start are kept in the config under "writer_list" and "reader_list".
 To send POST and GET requests, you run the ClientAPI/annallClientAPI.py or you can just run src/tests/testclient.py <port no.> without the ClientAPI which connects and sends transactions directly to the blockchain.
 
 ### Installing

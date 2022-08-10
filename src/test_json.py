@@ -129,11 +129,11 @@ import struct
 # if ast.literal_eval("1") in some_list:
 #     print("YES")
 
-# from .src.WriterAPI.annallWriterAPI import app
-# from .WriterAPI.annallWriterAPI import app
-# from ..WriterAPI.annallWriterAPI import add_new_writer
+# from .src.NodeAPI.nodeAPI import app
+# from .NodeAPI.nodeAPI import app
+# from ..NodeAPI.nodeAPI import add_new_writer
 
-# annallWriterAPI.app.run()
+# nodeAPI.app.run()
 
 # a_list = ["some"]
 # print(ast.literal_eval(a_list))
@@ -202,3 +202,61 @@ other_list.pop(1)
 print(a_list)
 
 
+none = []
+if none:
+    print("yes")
+else:
+    print("no")
+
+
+json =  {
+    "block":{
+        "round": 32,
+        "prev_hash": 0,
+        "writerID": 1,
+        "coordinatorID": 2,
+        "winning_number": 18473,
+        "writer_signature": "0x601e1bdfc6bf183bea9be8a35fbd737eec5d44f0c9386aa860a40b376232d542664db481a823b1242e443d35391b511e0b09d952b316fab958a12e11188c362c",
+        "timestamp": 1659956070,
+        "hash": "0x3acffd531b9347f1200d4d4c570cbc95bcd0f7bbb7ea1fe0a9417c0e98d1bbea",
+        "payload": {
+            "name": "Annáll Blockchain",
+            "owners": "Reykjavík University and Gísli Hjálmtýsson",
+            "purpose": "A lightweight and secure blockchain for whatever you want"
+        }
+    },
+    "node":{
+        "name": "writer_50",
+        "hostname": "127.0.0.1",
+        "pub_key": 6587849500818316161519508278916854824201302152793630979346725188602264462651268740217047928962253207403830618696453825975409521538077356628137373401104759
+    },
+}
+
+a_list = []
+a_list.append(("yes", True))
+print(a_list)
+if not False:
+    print("YES it is not false")
+
+item1, item2 = [1,2]
+print(item1, item2)
+
+conf = [
+    [
+        50,
+        False
+    ],
+    [
+        50,
+        False
+    ],
+    [
+        50,
+        False
+    ],
+    [
+        50,
+        False
+    ]
+]
+print(any(50 in row for row in conf))

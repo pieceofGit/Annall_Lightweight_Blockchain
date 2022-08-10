@@ -20,7 +20,7 @@ TCP_PORT = 5001 # Connects to port of writer 1
 
 with open(f'../src/config-local.json') as config_file:   # If in top directory for debug
   config = json.load(config_file)
-  #TODO: Should get config from WriterAPI and attempt to connect as a client to the first available active writer
+  #TODO: Should get config from NodeAPI and attempt to connect as a client to the first available active writer
   IP_ADDR = config["node_set"][0]["hostname"] 
   TCP_PORT = config["node_set"][0]["client_port"]
 print(TCP_PORT)
