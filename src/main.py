@@ -1,24 +1,19 @@
-from operator import concat
 import os
 import argparse
 from threading import Thread
 import json
-import random
-import requests
 ## Own modules imported
 from protoengine import ProtoEngine
 from interfaces import (
     #BlockChainEngine,
     #ClientServer,
-    verbose_print,
-    vverbose_print
+    verbose_print
 )
 from tcpserver import TCP_Server, ClientHandler
 from protocom import ProtoCom
-from block import Block
 from membershipData import MembershipData
 from blockchainDB import BlockchainDB
-from nodeAPI import app, NodeAPI, BCDB
+from nodeAPI import app, NodeAPI, BCDB, MEM_DATA
 # from NodeAPI.nodeAPI import app, NodeAPI, BCDB
 # should put here some elementary command line argument processing
 # EG. parameters for where the config file is, number of writers (for testing), and rounds
@@ -67,6 +62,7 @@ if __name__ == "__main__":
     bce = BlockchainDB(dbpath, WRITER_API_PATH)
     print("Local block chain database successfully initialized")
     mem_data = MembershipData(id, CONFIG_PATH, conf_file, WRITER_API_PATH, bce)
+    MEM_DATA[0] = mem_data
     data = mem_data.conf
     if RUN_WRITER_API and id == 3:  # Run the NodeAPI as a thread on a reader
         BCDB[0] = bce   # blockchain db object access for the node API process

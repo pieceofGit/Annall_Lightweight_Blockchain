@@ -301,6 +301,8 @@ class ProtoEngine(ProtocolEngine):
             time.sleep(1)
             if self.waiting:
                 self.comm.update_conf()
+                print('self.mem_data.conf: ', self.mem_data.conf)
+                verbose_print("Waiting to connect to all nodes")
         print(f"ID={self.ID} -> connected and ready to build")
         # Ask for updated blockchain before starting blockchain. Gets back at max number of rounds between updated config
         # self.add_missing_blocks()
@@ -443,7 +445,7 @@ class ProtoEngine(ProtocolEngine):
         return message
     
     def compare_active_nodes(self, coord_conf):
-        # coord_conf = [writer_list, reader_list, waiting_list]
+        # coord_conf = (writer_list, reader_list, waiting_list)
         if coord_conf[0] != self.mem_data.writer_list or coord_conf[1] != self.mem_data.reader_list:
             return False    # Should cancel the round
         return True

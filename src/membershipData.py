@@ -15,6 +15,7 @@ class MembershipData:
         if self.is_api:
             with open(self.full_conf_path, "r") as f:
                 self.conf = json.load(f)
+                f.close()
         else:
             self.conf = self.get_remote_conf()        
 
@@ -70,6 +71,7 @@ class MembershipData:
                 pass
             elif resp.status_code == 201:
                 self.conf = resp.json()  # Gets back new json
+                print('self.conf: ', self.conf)
             else:
                 # Out of date blockchain, incorrect data, or service unavailable
                 # Need to fetch blockchain again if failed and ask to be active writer.
@@ -111,3 +113,12 @@ class MembershipData:
             except: # conf is empty but not waiting lists
                 return True
         return False
+
+    def add_to_config_by_key(self, key, value):
+        try:
+            self.conf[key].append(value)
+            with open(self.full_conf_path, "w") as file:
+                json.dump(self.conf, file, indent=4)
+                file.close()
+        except Exception as e:
+            verbose_print("Failed to append to config by key ", e)
