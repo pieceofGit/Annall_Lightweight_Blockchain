@@ -61,7 +61,7 @@ if __name__ == "__main__":
     print("::> Starting up Blockchain DB = using ", dbpath)
     bce = BlockchainDB(dbpath, WRITER_API_PATH)
     print("Local block chain database successfully initialized")
-    mem_data = MembershipData(id, CONFIG_PATH, conf_file, WRITER_API_PATH, bce)
+    mem_data = MembershipData(id, CONFIG_PATH, conf_file, WRITER_API_PATH, bce, True)
     MEM_DATA[0] = mem_data
     data = mem_data.conf
     if RUN_WRITER_API and id == 3:  # Run the NodeAPI as a thread on a reader

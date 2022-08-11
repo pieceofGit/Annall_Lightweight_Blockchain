@@ -612,14 +612,14 @@ class ProtoEngine(ProtocolEngine):
         return False
 
     def run_forever(self):
-        round = 0
+        round = self.bcdb.length
         self.join_writer_set()
         print("[ALL JOINED] all writers have joined the writer set")
         while True:
             if self.waiting:
                 # Node waits for a message from any coordinator after connecting to get the round number
                 round = self.waiting_room()
-            coordinator = self.get_coordinatorID(round)
+            coordinator = self.get_coordinatorID(round) 
             verbose_print(f"ID: {self.ID}, CordinatorId: {coordinator}", coordinator == self.ID)
             if coordinator == self.ID:
                 fetch_new_conf = self.coordinator_round(round)

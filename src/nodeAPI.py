@@ -4,7 +4,7 @@ A NodeAPI for Annáll using Flask and Gunicorn.
 print("importing annall node API")
 import json
 import os
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, Response
 print("WORKING DIRECTORY",os.getcwd())
 PREPEND_PATH = os.getcwd() + "/src/"
 from exceptionHandler import InvalidUsage
@@ -26,32 +26,31 @@ def add_to_config_by_key(key, value):
     try:
         MEM_DATA[0].add_to_config_by_key(key, value)
     except Exception as e:
-        print('e: ', e)
         raise InvalidUsage("Could not access the json file", status_code=500)
 
-def add_new_writer(writer):
-    # Create new writer object
+def add_new_node(node):
+    # Create new node object
     try:
         id = len(MEM_DATA[0].conf["node_set"]) + 1
-        new_writer = {
-            "name": writer["name"],
+        new_node = {
+            "name": node["name"],
             "id": id,
-            "hostname": writer["hostname"],
-            "pub_key": writer["pub_key"]
+            "hostname": node["hostname"],
+            "pub_key": node["pub_key"]
         }
         if LOCAL:
-            new_writer["client_port"] = 5000 + id
-            new_writer["protocol_port"] = 15000 + id
+            new_node["client_port"] = 5000 + id
+            new_node["protocol_port"] = 15000 + id
         else:
-            new_writer["client_port"] = 5000
-            new_writer["protocol_port"] = 5000
-        # Add writer to writer set and save    
-        MEM_DATA[0].add_to_config_by_key("node_set", new_writer)
+            new_node["client_port"] = 5000
+            new_node["protocol_port"] = 5000
+        # Add node to node set and save    
+        MEM_DATA[0].add_to_config_by_key("node_set", new_node)
     except Exception as e:
         raise InvalidUsage(f"Could not decode JSON {e}", status_code=400)
 
-def authenticate_writer(ip_address=None):
-    # Checks if public ip address of request is in writer list
+def node_authenticated(ip_address=None):
+    # Checks if the request ip address or ip_address is in the node_set
     if not ip_address:
         ip_address = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
     for obj in MEM_DATA[0].conf["node_set"]:
@@ -65,31 +64,31 @@ def get_dict():
     except Exception:
         raise InvalidUsage("The JSON could not be decoded", status_code=400)
 
-def add_to_waiting_room(key, is_writer):
-    """ Adds writer or reader to their respective active set if the incoming node's blockchain is up to date 
-    Writer sends in object with keys block and node
+def add_to_waiting_room(key):
+    """ Adds node to the waiting list if it has the latest block
     """
-    if authenticate_writer():
+    if node_authenticated():
         # compare latest blocks
         request_obj = get_dict()
         try:
             block = request_obj["block"]
-            node = request_obj["node"]
-            if node["id"] in MEM_DATA[0].conf[key]:
+            node_id = request_obj["node"]["id"]
+            is_writer = request_obj["node"]["is_writer"]
+            if node_id in MEM_DATA[0].conf[key]:
                 return Response("Node already in set", status=200)
             api_latest_block = BCDB[0].get_latest_block()
+            if not api_latest_block:
+                return Response(json.dumps({"message": "Cannot verify node. Blockchain not started"}),
+                    mimetype="application/json", status=500)
             if api_latest_block["hash"] == block["hash"]:
-                # Add writer to waiting list if not in any list
-                if (node["id"] not in MEM_DATA[0].conf["writer_list"] and node["id"] not in MEM_DATA[0].conf["reader_list"] 
-                        and not any(node["id"] in row for row in MEM_DATA[0].conf["waiting_list"])):
-                    print(any(node["id"] in row for row in MEM_DATA[0].conf["waiting_list"]))
-                    print(node["id"], MEM_DATA[0].conf["waiting_list"])
-                    MEM_DATA[0].add_to_config_by_key(key, value=(node["id"], is_writer))
+                # Add node to waiting list if not in any active set
+                if not MEM_DATA[0].node_in_active_set(node_id):
+                    MEM_DATA[0].add_to_config_by_key(key, value=(node_id, is_writer))
                     return Response(json.dumps(MEM_DATA[0].conf), mimetype="application/json", status=201)
                 else:
                     return Response(json.dumps({"message": "node already in conf"}), mimetype="application/json", status=200)
             else:
-                return Response(json.dumps({"message": "Node not up to date"}), status=400)
+                return Response(json.dumps({"message": "Node not up to date"}), mimetype="application/json", status=400)
         except Exception as e:
             raise InvalidUsage(f"Could not read the data {e}", status_code=400)
     else:
@@ -129,60 +128,52 @@ def handle_invalid_usage(error):
     response.status_code = error.status_code
     return response
 
+# Flask endpoints
+
 @app.route("/config", methods=["GET"])
 def get_config():    
-    # Returns the config file if writer is authenticated
-    if authenticate_writer():
+    # Returns the config file if the writer is in the node_set
+    if node_authenticated():
         return Response(json.dumps(MEM_DATA[0].conf), mimetype="application/json", status=200)
     else:
         raise InvalidUsage("Writer not whitelisted", status_code=400)
 
 @app.route("/config", methods=["POST"])
-def add_writer_to_set():
+def add_node_to_set():
     """ required: {
         "name": string,
         "hostname": string,
         "pub_key": string
         }
     """
-    # Adds writer to node set and returns the config
-    # Assumes one node per public ip address if remote
-    writer_to_add = get_dict()
+    # Adds writer to node_set and returns the config. Can have duplicate ip addresseses if local
+    node_to_add = get_dict()
     if not LOCAL:
         try:
-            if authenticate_writer(writer_to_add["hostname"]):  
+            if node_authenticated(node_to_add["hostname"]):  
                 raise InvalidUsage("Writer already whitelisted", status_code=400)
         except:
             raise InvalidUsage("The JSON could not be decoded", status_code=400)
-    # Append api to writer_set
-    add_new_writer(writer_to_add)
+    # Append node to the node_set
+    add_new_node(node_to_add)
     return Response(status=201)
 
-@app.route("/add_writer", methods=["POST"])
-def add_writer():
-    """ Adds writer to writer waiting list if his latest block is up to date 
-    Writer sends in object with keys block and node
+@app.route("/activate_node", methods=["POST"])
+def activate_node():
+    """ 
+    {   "block": { "hash": string, "round": int, prev_hash: string},
+        "node": {"id": int, "is_writer": bool}  }
     """
-    return add_to_waiting_room("waiting_list", True)
-
-@app.route("/add_reader", methods=["POST"])
-def add_reader():
-    """ Adds reader to reader waiting list if his latest block is up to date """
-    return add_to_waiting_room("waiting_list", False)
+    # Returns the config, if node is added
+    return add_to_waiting_room("waiting_list")
 
 @app.route("/blocks", methods=["GET"])
 def get_blocks():
-    """ optional: {
-        "hash": string,
-        "round": int,
-        "prev_hash": string
-        }
+    """ { "hash": string, "round": int, "prev_hash": string }
     """
     # Returns the API's version of the blockchain. Needs to ask a writer for the rest
     # We have a node set, an active writer set, and an active reader set 
-    if authenticate_writer():
-        print(request)
-        print("REQUEST DATA: ", request.data)
+    if node_authenticated():
         if not request.data:
             return Response(json.dumps(BCDB[0].get_blockchain()), mimetype="application/json", status=200)
         latest_writer_block = get_dict()
@@ -190,7 +181,6 @@ def get_blocks():
         if not missing_blocks:
             # return Response(json.dumps({"sync": True}), mimetype="application/json", status=200)
             return Response(json.dumps(False), status=200)
-        
         # Send back missing blocks or entire blockchain
         return Response(json.dumps(missing_blocks), mimetype="application/json")
         # except:

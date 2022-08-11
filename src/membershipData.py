@@ -3,10 +3,15 @@ import requests
 from interfaces import verbose_print
 
 class MembershipData:
-    def __init__(self, id, conf_path, conf_file, api_path, bcdb):
+    def __init__(self, id, conf_path, conf_file, api_path, bcdb, is_writer):
         self.id = id
         self.api_path = api_path
         self.full_conf_path = f"{conf_path}/{conf_file}"
+        self.is_writer = is_writer
+        self.writer_list = None    
+        self.writer_list = None
+        self.waiting_list = None
+        self.bcdb = bcdb
         if id == 3:
             self.is_api = True
         else:
@@ -17,28 +22,28 @@ class MembershipData:
                 self.conf = json.load(f)
                 f.close()
         else:
-            self.conf = self.get_remote_conf()        
+            self.conf = self.get_remote_conf()     
+   
 
-        self.writer_list = None
-        self.writer_list = None
-        self.waiting_list = None
-        self.set_lists()
-        self.bcdb = bcdb
-    
     def set_lists(self):
+        """ Updates the active sets """
         self.writer_list = self.conf["writer_list"]
         self.reader_list = self.conf["reader_list"]
         self.waiting_list = self.conf["waiting_list"]
             
     def get_remote_conf(self):
+        """ Get conf if in an active set, else posts to be reader or writer """
         try:
             response = requests.get(self.api_path + "config", {})
             verbose_print("[CONFIG node API] Got config from node API")
             self.conf = response.json()
             self.set_lists()
+            # If the node is not in any list, it posts to be reader or writer
+            if not self.node_in_active_set(self.id):
+                self.activate_node()
             return self.conf
-        except:
-            verbose_print("[CONFIG LOCAL] Failed to get config from writer")
+        except Exception as e:
+            verbose_print("[CONFIG LOCAL] Failed to get config from writer", e)
             with open(self.full_conf_path, "r") as f:
                 return json.load(f)
 
@@ -59,14 +64,14 @@ class MembershipData:
             except Exception as e:
                 print("failed to write to config file ", e)
 
-    def add_node(self):
+    def activate_node(self):
         """ Adds node to waiting list """
         self.bcdb.get_missing_blocks()
         # TODO: The node should still be asking for the newest blockchain until it has connected to all active nodes
         # Add node to waiting list if up to date
         try:
-            resp = requests.post(self.api_path + "add_writer", 
-                data = json.dumps({"block": self.bcdb.get_latest_block(), "node": {"id": self.id}}))
+            resp = requests.post(self.api_path + "activate_node", 
+                data = json.dumps({"block": self.bcdb.get_latest_block(), "node": {"id": self.id, "is_writer": self.is_writer}}))
             if resp.status_code == 200: # has up to date config file
                 pass
             elif resp.status_code == 201:
@@ -122,3 +127,10 @@ class MembershipData:
                 file.close()
         except Exception as e:
             verbose_print("Failed to append to config by key ", e)
+        
+    def node_in_active_set(self, id):
+        if (id not in self.writer_list and 
+                id not in self.reader_list and 
+                    not any(id in row for row in self.waiting_list)):
+            return False
+        return True
