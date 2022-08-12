@@ -39,6 +39,7 @@ class MembershipData:
             self.conf = response.json()
             self.set_lists()
             # If the node is not in any list, it posts to be reader or writer
+            print(self.node_in_active_set(self.id))
             if not self.node_in_active_set(self.id):
                 self.activate_node()
             return self.conf
@@ -48,6 +49,7 @@ class MembershipData:
                 return json.load(f)
 
     def set_conf(self):
+        """ Sets changes to lists in conf """
         self.conf["writer_list"] = self.writer_list
         self.conf["reader_list"] = self.reader_list
         self.conf["waiting_list"] = self.waiting_list
@@ -76,6 +78,7 @@ class MembershipData:
                 pass
             elif resp.status_code == 201:
                 self.conf = resp.json()  # Gets back new json
+                self.set_lists()
                 print('self.conf: ', self.conf)
             else:
                 # Out of date blockchain, incorrect data, or service unavailable
@@ -112,8 +115,9 @@ class MembershipData:
         if self.waiting_list == []:
             return False    # Nothing to add
         for conf in configs:
-            try:    #Compares first item
-                if conf[2][0] != self.waiting_list[0]:
+            try:    #Compares first item in waiting list
+                print(conf[1][2][0], self.waiting_list[0])
+                if conf[1][2][0] != self.waiting_list[0]:
                     return True    # First 
             except: # conf is empty but not waiting lists
                 return True
@@ -129,8 +133,8 @@ class MembershipData:
             verbose_print("Failed to append to config by key ", e)
         
     def node_in_active_set(self, id):
-        if (id not in self.writer_list and 
-                id not in self.reader_list and 
-                    not any(id in row for row in self.waiting_list)):
-            return False
-        return True
+        if (id in self.writer_list or
+                id in self.reader_list or
+                    any(id in row for row in self.waiting_list)):
+            return True
+        return False

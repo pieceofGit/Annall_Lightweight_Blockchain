@@ -156,9 +156,10 @@ class ProtoEngine(ProtocolEngine):
         self.rounds = round
     
     def is_waiting(self):
-        for i in self.mem_data.waiting_list:
-            if i[0] == self.ID: # i = (id, is_writer)
-                return True
+        if self.mem_data.waiting_list:
+            for i in self.mem_data.waiting_list:
+                if i[0] == self.ID: # i = [id, is_writer]
+                    return True
         return False
         
     def sign_payload(self, payload: str):
@@ -500,7 +501,7 @@ class ProtoEngine(ProtocolEngine):
             # Broadcast our newest block before writing into chain
             if not block:   # Winning writer had nothing to write
                 self.broadcast("block", str(block), round, send_to_readers=True)  
-                return False
+                return fetch_new_conf
             self.broadcast("block", str(block.as_tuple()), round, send_to_readers=True)
         elif winner_verified:
             # Wait for a block to verify
@@ -509,7 +510,7 @@ class ProtoEngine(ProtocolEngine):
             print(f"Round {round} Winner {winner} message {message} length {len(message)}")
             payload = ast.literal_eval(parsed_message[4]) 
             if not payload:   # Winner had nothing to write. Round skipped
-                return True
+                return fetch_new_conf
             block = Block.from_tuple(payload) # Converts tuple block to block object
             if not self.verify_block(block) and self.comm.is_writer:    # Only writers can create cancel blocks
                 print("[ROUND CANCEL] Could not verify block in round ", round)
@@ -588,7 +589,7 @@ class ProtoEngine(ProtocolEngine):
         parsed_message = message.split("-")
         payload = ast.literal_eval(parsed_message[4])
         if not payload: # Winner had nothing to write
-            return True
+            return False
         block = Block.from_tuple(payload)
         if not self.verify_block(block):
             self.cancel_round("Round not verified", round)  #Sets latest block as cancel block
@@ -620,7 +621,7 @@ class ProtoEngine(ProtocolEngine):
                 # Node waits for a message from any coordinator after connecting to get the round number
                 round = self.waiting_room()
             coordinator = self.get_coordinatorID(round) 
-            verbose_print(f"ID: {self.ID}, CordinatorId: {coordinator}", coordinator == self.ID)
+            verbose_print(f"Round {round} ID: {self.ID}, CordinatorId: {coordinator}", coordinator == self.ID)
             if coordinator == self.ID:
                 fetch_new_conf = self.coordinator_round(round)
             else:
@@ -628,10 +629,12 @@ class ProtoEngine(ProtocolEngine):
             now = datetime.now().strftime("%H:%M:%S")
             verbose_print(f"[ROUND COMPLETE] round {round} finished with writer with ID {coordinator} as  the coordinator at ", now)
             round += 1
+            print(fetch_new_conf)
             if fetch_new_conf:
                 self.comm.update_conf()
-            elif self.mem_data.waiting_list:
-                self.mem_data.pop_from_waiting_list() 
+            elif self.mem_data.waiting_list and not fetch_new_conf:
+                self.mem_data.pop_from_waiting_list()
+                self.comm.setup_remote_ends()
             if round > self.rounds and self.rounds:
                 break   # Stops the program
 

@@ -301,6 +301,10 @@ class ProtoCom(ProtocolCommunication):
             # Received messages are added to this queue and removed when recv_msg() is called
             self.msg_queue = []
 
+    def setup_remote_ends(self):
+        self.setup_remote_ends_in_conf_by_key("writer_list")
+        self.setup_remote_ends_in_conf_by_key("reader_list")
+
     def setup_remote_ends_in_conf_by_key(self, list_key):
         """ Creates a RemoteEnd object for each new peer in the conf node_set """
         # The active peers are all that matters

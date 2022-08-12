@@ -26,7 +26,7 @@ def add_to_config_by_key(key, value):
     try:
         MEM_DATA[0].add_to_config_by_key(key, value)
     except Exception as e:
-        raise InvalidUsage("Could not access the json file", status_code=500)
+        raise InvalidUsage(f"Could not access the json file {e}", status_code=500)
 
 def add_new_node(node):
     # Create new node object
@@ -39,11 +39,11 @@ def add_new_node(node):
             "pub_key": node["pub_key"]
         }
         if LOCAL:
-            new_node["client_port"] = 5000 + id
             new_node["protocol_port"] = 15000 + id
+            new_node["client_port"] = 5000 + id
         else:
             new_node["client_port"] = 5000
-            new_node["protocol_port"] = 5000
+            new_node["protocol_port"] = 15000
         # Add node to node set and save    
         MEM_DATA[0].add_to_config_by_key("node_set", new_node)
     except Exception as e:
