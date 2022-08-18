@@ -95,7 +95,7 @@ if __name__ == "__main__":
     
     guard = True
     #command = input("Do you have a wallet? (y/n)").strip()
-    command = 'y'
+    command = 'n'
     wallet = Wallet()
     if command == "y":
         f = open('private.pem','r')
