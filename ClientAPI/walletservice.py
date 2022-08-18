@@ -9,7 +9,8 @@ import rsa
 from messagetype import get_message_type_dict
 from wallet import Wallet
 
-BASE = "http://127.0.0.1:5000/"
+GLOBAL = "http://185.3.94.49:80"
+LOCAL = "http://127.0.0.1:5000/"
 def signTransaction(privateKey, message = 'no message'):
     ''' Takes in a private key and signs a transaction'''
     key = RSA.import_key(privateKey)
@@ -86,7 +87,12 @@ def printKeys(key):
     print("Here is your private key ", key.export_key())
     print("Your keys are also saved in private.pem and public.pem files locally ")
 if __name__ == "__main__":
-
+    remoteClientBool = False
+    if remoteClientBool:
+        clienturl = GLOBAL
+    else:
+        clienturl = LOCAL
+    
     guard = True
     #command = input("Do you have a wallet? (y/n)").strip()
     command = 'y'
@@ -111,7 +117,7 @@ if __name__ == "__main__":
             printKeys(key)
         elif command == '2':
             # Get all the blockchain data
-            r = requests.get(url = 'http://185.3.94.49:80/blocks' )
+            r = requests.get(url =  GLOBAL + '/blocks' )
             
             if r.status_code == 200:
                 blockchain_data = r.json()
@@ -136,7 +142,7 @@ if __name__ == "__main__":
             dict = get_message_type_dict(pub_key_exp, message, signature, 'document')
             test_sig(dict)
             r = requests.post(url = 'http://185.3.94.49:80/blocks' , json = dict)
-            r = requests.post(BASE + "blocks", json.dumps(dict))
+            # r = requests.post(BASE + "blocks", json.dumps(dict))
             print("THe r ", r.status_code)
             if r.status_code == 200:
                 print("It worked")
