@@ -115,7 +115,8 @@ if __name__ == "__main__":
             
             if r.status_code == 200:
                 blockchain_data = r.json()
-                data = blockchain_data[-3:]
+                # data = blockchain_data[-3:]
+                data = blockchain_data
                 for transaction in data:
                     print("Last 3 transactions ")
                     print("Round ", transaction['round'] , "payload",  transaction['payload'])
