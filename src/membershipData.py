@@ -48,7 +48,7 @@ class MembershipData:
             with open(self.full_conf_path, "r") as f:
                 return json.load(f)
 
-    def set_conf(self):
+    def _set_conf(self):
         """ Sets changes to lists in conf """
         self.conf["writer_list"] = self.writer_list
         self.conf["reader_list"] = self.reader_list
@@ -59,7 +59,7 @@ class MembershipData:
             # Updates the configuration file
             # Might need a lock
             # set lists again
-            self.set_conf()
+            self._set_conf()
             try:
                 with open(self.full_conf_path, "w") as file:
                     json.dump(self.conf, file, indent=4)
@@ -95,7 +95,7 @@ class MembershipData:
                 self.writer_list.append(id)
             else:
                 self.reader_list.append(id)
-            if self.is_api:
+            if self.is_api: # Assumes everyone already fetched the waiting list
                 self._update_conf()
         except Exception as e:
             verbose_print("Failed to pop from waiting list ", e)

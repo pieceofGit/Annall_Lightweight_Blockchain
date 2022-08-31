@@ -297,7 +297,7 @@ class ProtoEngine(ProtocolEngine):
         """Bootstrap to the writerset, using comm module
         """
         self.comm.update_conf() # Updates node lists and peer set
-        # Wait until our list of connected peers fulfills who we want to connect to or has at least two writers
+        # Wait until our list of connected peers fulfills who we want to connect to
         while len(self.comm.list_connected_peers()) != len(self.mem_data.writer_list) + len(self.mem_data.reader_list) - 1:
             time.sleep(1)
             if self.waiting:
@@ -630,14 +630,14 @@ class ProtoEngine(ProtocolEngine):
             verbose_print(f"[ROUND COMPLETE] round {round} finished with writer with ID {coordinator} as  the coordinator at ", now)
             round += 1
             print(fetch_new_conf)
-            if fetch_new_conf:
+            if fetch_new_conf:  # Fetch new conf if first item in waiting list not equal for coordinator and nodes
                 self.comm.update_conf()
             elif self.mem_data.waiting_list and not fetch_new_conf:
+                # All nodes agree on first item in waiting list and connect to the new node
                 self.mem_data.pop_from_waiting_list()
                 self.comm.setup_remote_ends()
             if round > self.rounds and self.rounds:
                 break   # Stops the program
-
 
 global_list = []
 

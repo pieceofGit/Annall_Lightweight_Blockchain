@@ -1,20 +1,14 @@
-from sympy import rem
 from PCommMsg import pMsg
 from PCommMsg import pMsgTyp
 #import interfaces
-from threading import Thread
 import threading
 import socket
-from queue import Queue
-import select
 import selectors
 import sys
 import json
 import argparse
 import time
 import random
-import struct
-import inspect
 from membershipData import MembershipData
 
 from interfaces import ( 
@@ -277,8 +271,8 @@ class ProtoCom(ProtocolCommunication):
         self.listen_port = None
         self.is_writer = self.check_if_writer(self.id)
         # Setup two-way communication with active writers and readers
-        self.setup_remote_ends_in_conf_by_key("writer_list")  # add to peers dict
-        self.setup_remote_ends_in_conf_by_key("reader_list")
+        self.setup_remote_ends_by_key("writer_list")  # add to peers dict
+        self.setup_remote_ends_by_key("reader_list")
         verbose_print(f"[IS WRITER] node with id: {self.id} is a writer: {self.is_writer}")
         # set up listening socket
         # Making sure to not run this if either are undefined, unless it crashes
@@ -302,15 +296,15 @@ class ProtoCom(ProtocolCommunication):
             self.msg_queue = []
 
     def setup_remote_ends(self):
-        self.setup_remote_ends_in_conf_by_key("writer_list")
-        self.setup_remote_ends_in_conf_by_key("reader_list")
+        self.setup_remote_ends_by_key("writer_list")
+        self.setup_remote_ends_by_key("reader_list")
 
-    def setup_remote_ends_in_conf_by_key(self, list_key):
+    def setup_remote_ends_by_key(self, list_key):
         """ Creates a RemoteEnd object for each new peer in the conf node_set """
         # The active peers are all that matters
         # May need to overwriter id's if something changes in conf with same id
         try:
-            for i in self.mem_data.conf[list_key]:
+            for i in self.mem_data.conf[list_key]:  # writer_list or reader_list
                 node = self.mem_data.conf["node_set"][i-1]
                 if i != self.id and i not in self.peers:
                     self.peers[i] = RemoteEnd(
@@ -324,12 +318,10 @@ class ProtoCom(ProtocolCommunication):
             return
 
     def update_conf(self):
-        # The master reader has the most up to date version of the waiting list.
-        # When the master reader pops an item off the waiting list and to the node lists..
-        # The node API gets the update through the shared config file.
+        """ Fetches a new config and adds new nodes """
         self.mem_data.get_remote_conf()
-        self.setup_remote_ends_in_conf_by_key("writer_list")
-        self.setup_remote_ends_in_conf_by_key("reader_list")
+        self.setup_remote_ends_by_key("writer_list")
+        self.setup_remote_ends_by_key("reader_list")
 
     def check_if_writer(self, id):
         for i in self.mem_data.conf["writer_list"]:
@@ -574,7 +566,6 @@ class ProtoCom(ProtocolCommunication):
                 c_p.append(peer.rem_id)
         if self.is_writer:
             c_p.append(self.id)
-        print("[ACTIVE PEERS] ", c_p)
         return c_p
 
     def list_connected_peers(self):
@@ -596,7 +587,6 @@ class ProtoCom(ProtocolCommunication):
         print(self.peers)
         temp_writer_list = self.writer_list.copy()
         temp_reader_list = self.reader_list.copy()
-
         for i in range(len(self.writer_list)):
             if self.writer_list[i] != self.id:
                 if not self.peers[self.writer_list[i]].is_active:
@@ -612,7 +602,6 @@ class ProtoCom(ProtocolCommunication):
         self.writer_list = temp_writer_list
         self.reader_list = temp_reader_list
 
-    
     def send_msg_to_remote_end(self, rem_id, message, send_to_readers): 
         # Send message to single remote end
         if not send_to_readers and not self.peers[rem_id].is_writer:    
