@@ -1,16 +1,13 @@
 """ 
-A ClientAPI for Annáll using Flask and Gunicorn.
+A Client API for Annáll using Flask and Gunicorn.
+The Client API has a TCP socket connection to the blockchain TCP server on writer 1.
+The TCP server expects a json for all its request.
+The type of request to the TCP server is handled by the request_type field.
 """
 import json
-import argparse
 from flask import Flask, request, jsonify, Response
-import sys
 from connectToServer import ServerConnection
 from exceptionHandler import InvalidUsage
-from Crypto.PublicKey import RSA 
-from Crypto.Signature import PKCS1_v1_5 
-from Crypto.Hash import SHA256 
-from Crypto.Signature import pkcs1_15
 from clientfunctions import *
 # import sys
 print("Starting annallClientAPI Flask application server")
@@ -35,7 +32,7 @@ def handle_invalid_usage(error):
 @app.route("/publishandsubscribe", methods=["GET"])
 def createSmartContracts():
     # Asks for blockchain and gets it back
-    requestObject = getJson(request)
+    requestObject = get_json(request)
     typeToGet = requestObject['type']
     typeToGet = typeToGet.lower()
     resp_obj = server.send_msg(json.dumps({"request_type": "read_chain"}))
@@ -55,38 +52,24 @@ def createSmartContracts():
 @app.route("/walletTest", methods=["GET"])
 def testWallet():
     # Asks for blockchain and gets it back
-    requestObject = getJson(request)
+    requestObject = get_json(request)
     
     return Response({}, mimetype="application/json")
 
 @app.route("/blocks", methods=["GET"])
 def get_blockchain():
-    # Asks for blockchain and gets it back
+    """ Returns blocks in a list of dicts per block """
     try:
         resp_obj = server.send_msg(json.dumps({"request_type": "read_chain"}))
         return Response(resp_obj, mimetype="application/json")
     except Exception:
         raise InvalidUsage("Failed to read from writer", status_code=500)
-    
 
 @app.route("/blocks", methods=["POST"])
 def insert_block():
-    # Decode the JSON
-    request_object = getJson(request)
+    """ Sends the transaction for insertion as block on the chain. """
+    request_object = get_json(request)
     if "payload" in request_object:
-       
-        # if verifyRequest(request_object):
-        #     print("All is good and verified")
-        #     try:
-        #         resp_obj = server.send_msg(request_object['payload'])
-        #         return Response(resp_obj, mimetype="application/json")
-        #     except Exception:
-        #         print("Failed to send to blockchain")
-        #         raise InvalidUsage("Unable to post to writer", status_code=500)
-        # else:
-        #     raise InvalidUsage("Invalid signature responding to public key", status_code=401)
-        print("REQUEST OBJECT", request_object)
-        print("REQUEST OBJECT PAYLOAD", request_object)
         block = json.dumps({"request_type": "block", "name": "name", "payload": request_object['payload'], "payload_id": 1})
         try:
             resp_obj = server.send_msg(block)

@@ -2,18 +2,13 @@ annallClientAPI is a Python Flask gateway API intermediary between a client and 
 The API gets incoming requests of type:
 a. GET /blocks
 b. POST /block {"payload": payload}
-For a POST /block, the API expects a key "payload" and payload in a JSON object.
+For a POST /block, the API expects a key "payload" in a JSON object with any value.
 
-To run the API:
-
-    1. virtualenv api_venv
-    2. source ./api_venv/bin/activate
-    3. pip install -r requirements.txt
-    4. python annallClientAPI.py <local writer port>
+To run the API: 1. virtualenv api_venv 2. source ./api_venv/bin/activate 3. pip install -r requirements.txt 4. python annallClientAPI.py <local writer port>
 
     For auto flask run this command: FLASK_APP=annallClientAPI.py FLASK_ENV=development flask run
 
-NOTE: A writer has to be running for the API to service requests.
+NOTE: the writer 1 has to be running for the API to forward requests to the blockchain. The blockchain has to be running for the GET method and for putting transactions into blocks on the blockchain.
 
 The API tries ten times over ten seconds to connect to the TCP socket of the writer on the selected port. If it fails ten times, the API remains running but none of the requests are handled.
 
