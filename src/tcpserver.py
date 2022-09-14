@@ -5,7 +5,6 @@ import time
 import json
 import argparse
 import time
-import hashlib
 
 from interfaces import ClientServer, verbose_print, vverbose_print
 from queue import Queue
@@ -39,8 +38,9 @@ class ClientHandler(threading.Thread):
         self.payload_queue = payload_q
         self.bcdb = bcdb
 
-    def check_existence(self, hash: str, payload: str):
-        cond_string = f'hash == "{hash}" AND payload == "{payload}"'
+    def check_existence(self, hash: str):
+        cond_string = f'hash == "{hash}"'
+        # cond_string = f'hash == "{hash}" AND payload == "{payload}"'
         entry = self.bcdb.select_entry(cond_string)
         return bool(entry)
 
@@ -116,8 +116,9 @@ class ClientHandler(threading.Thread):
                 self.terminate = True
                 break
             if d["request_type"] == "verify":
-                payload = f"{d['name']},{d['request_type']},{d['payload']}"
-                if self.check_existence(d["hash"], payload):
+                # payload = f"{d['name']},{d['request_type']},{d['payload']}"
+                # if self.check_existence(d["hash"], payload):
+                if self.check_existence(d["hash"]):
                     resp = json.dumps({"verified": True,})
                 else:
                     resp = json.dumps({"verified": False,})

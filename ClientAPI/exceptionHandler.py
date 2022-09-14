@@ -1,11 +1,11 @@
 class InvalidUsage(Exception):
-    status_code = 400
+    status = 400
 
-    def __init__(self, message, status_code=None, payload=None):
+    def __init__(self, message, status=None, payload=None):
         Exception.__init__(self)
         self.message = message
-        if status_code is not None:
-            self.status_code = status_code
+        if status is not None:
+            self.status = status
         self.payload = payload
 
     def to_dict(self):

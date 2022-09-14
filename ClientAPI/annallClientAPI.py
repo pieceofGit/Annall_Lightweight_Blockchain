@@ -6,7 +6,7 @@ The type of request to the TCP server is handled by the request_type field.
 """
 import json
 from flask import Flask, request, jsonify, Response
-from connectToServer import ServerConnection
+from serverConnection import ServerConnection
 from exceptionHandler import InvalidUsage
 from clientfunctions import *
 # import sys
@@ -26,7 +26,7 @@ server = ServerConnection(IP_ADDR, TCP_PORT)
 @app.errorhandler(InvalidUsage)
 def handle_invalid_usage(error):
     response = jsonify(error.to_dict())
-    response.status_code = error.status_code
+    response.status = error.status
     return response
 
 @app.route("/publishandsubscribe", methods=["GET"])
@@ -53,7 +53,6 @@ def createSmartContracts():
 def testWallet():
     # Asks for blockchain and gets it back
     requestObject = get_json(request)
-    
     return Response({}, mimetype="application/json")
 
 @app.route("/blocks", methods=["GET"])
@@ -63,23 +62,36 @@ def get_blockchain():
         resp_obj = server.send_msg(json.dumps({"request_type": "read_chain"}))
         return Response(resp_obj, mimetype="application/json")
     except Exception:
-        raise InvalidUsage("Failed to read from writer", status_code=500)
+        raise InvalidUsage("Failed to read from writer", status=500)
 
 @app.route("/blocks", methods=["POST"])
 def insert_block():
     """ Sends the transaction for insertion as block on the chain. """
     request_object = get_json(request)
     if "payload" in request_object:
-        block = json.dumps({"request_type": "block", "name": "name", "payload": request_object['payload'], "payload_id": 1})
+        block = json.dumps({"request_type": "block", "name": request.environ.get('HTTP_X_REAL_IP', request.remote_addr), "payload": request_object['payload'], "payload_id": 1})
         try:
             resp_obj = server.send_msg(block)
-            return Response(resp_obj, mimetype="application/json")
+            return Response(resp_obj, mimetype="application/json", status=201)
         except Exception:
-            raise InvalidUsage("Unable to post to writer", status_code=500)
+            raise InvalidUsage("Unable to post to writer", status=500)
     else:
-        raise InvalidUsage("The JSON object key has to be named payload", status_code=400)
+        raise InvalidUsage("The JSON object key has to be named payload", status=400)
+
+@app.route("/verified/<hash>")
+def block_hash_exists(hash):
+    # Returns true or false if block is verified based on its hash
+    ip_address = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
+    # Ask for verification of hash
+    to_send = json.dumps({"request_type": "verify", "hash": hash})
+    resp_obj = server.send_msg(to_send)
+    return Response(resp_obj, mimetype="application/json", status=200)
+    
+
+
+
 
 
 
 if __name__ == "__main__":
-    app.run(debug=False)
+    app.run(debug=True)

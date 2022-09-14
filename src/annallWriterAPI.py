@@ -12,7 +12,7 @@ PREPEND_PATH = os.getcwd() + "/src/"
 try: 
     from exceptionHandler import InvalidUsage
     from_main = True
-except: 
+except:
     from exceptionHandler import InvalidUsage
     from_main = False
 # import sys 
