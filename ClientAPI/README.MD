@@ -6,8 +6,13 @@ The API gets incoming requests of type:
 a. GET /blocks
 b. POST /block {"payload": payload}
 For a POST /block, the API expects a key "payload" in a JSON object with any value.
+c. GET /verified/<hash>
 
-To run the API: 1. virtualenv api_venv 2. source ./api_venv/bin/activate 3. pip install -r requirements.txt 4. python annallClientAPI.py <local writer port>
+To run the API: 
+    1. virtualenv api_venv 
+    2. source ./api_venv/bin/activate 
+    3. pip install -r requirements.txt 
+    4. python annallClientAPI.py <local writer port>
 
     For auto flask run this command: FLASK_APP=annallClientAPI.py FLASK_ENV=development flask run
 
