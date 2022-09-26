@@ -22,7 +22,7 @@ RUN_WRITER_API = True   # If the api turns on, then it should be a reader of the
 CWD = os.getcwd()
 print("WORKING DIRECTORY: ", os.getcwd())
 CONFIG_PATH = f"{CWD}/src"
-LOCAL = True    # If True, use local file for private key and separate databases
+LOCAL = False    # If True, use local file for private key and separate databases
 if LOCAL:
     DB_PATH = f"{CWD}/src"
 else:
@@ -81,8 +81,10 @@ if __name__ == "__main__":
     if LOCAL:
         with open(f"{CONFIG_PATH}/test_node_{id}/priv_key.json", "r") as f:
             priv_key = json.load(f)
+    print("THE CONF: ", conf)
     # Do not start writing or reading until up to date. writer or reader should be in the active set.
     # 
+
 
     # Start Communication Engine - maintaining the peer-to-peer network of writers
     print("::> Starting up peer-to-peer network engine with id ", id)

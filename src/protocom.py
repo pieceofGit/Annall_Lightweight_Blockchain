@@ -1,20 +1,14 @@
-from sympy import rem
 from PCommMsg import pMsg
 from PCommMsg import pMsgTyp
 #import interfaces
-from threading import Thread
 import threading
 import socket
-from queue import Queue
-import select
 import selectors
 import sys
 import json
 import argparse
 import time
 import random
-import struct
-import inspect
 
 from interfaces import ( 
     ProtocolCommunication,
@@ -320,6 +314,7 @@ class ProtoCom(ProtocolCommunication):
             return      
 
     def check_if_writer(self, id):
+        print(self.conf)
         for i in self.conf["active_writer_set_id_list"]:
             if i == id:
                 return True
