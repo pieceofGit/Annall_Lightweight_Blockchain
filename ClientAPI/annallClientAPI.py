@@ -47,7 +47,7 @@ def createSmartContracts():
             print("Couldnt find a type")
     print("Return list for the given type ", lis)
     lis = jsonify(lis)
-    return Response(lis)
+    return Response(lis, mimetype="application/json",)
 
 
 @app.route("/walletTest", methods=["GET"])
@@ -63,11 +63,11 @@ def get_blockchain():
         resp_obj = server.send_msg(json.dumps({"request_type": "read_chain"}))
         return Response(resp_obj, mimetype="application/json")
     except Exception:
-        raise InvalidUsage("Failed to read from writer", status=500)
+        raise InvalidUsage("Failed to read from writer", mimetype="application/json", status=500)
 
 @app.errorhandler(400)
 def handle_bad_request(e):
-    return Response(json.dumps({"error": "Could not parse the request object"}), 400)
+    return Response(json.dumps({"error": "Could not parse the request object"}), mimetype="application/json", status=400)
 
 @app.route("/blocks", methods=["POST"])
 def insert_block():
@@ -75,10 +75,10 @@ def insert_block():
     request_json = request.get_json(request)
     request_obj = BlockInputModel(request_json)
     if request_obj.error:
-        return Response(json.dumps(request_obj.dict), status=400)
+        return Response(json.dumps(request_obj.dict), mimetype="application/json", status=400)
     try:
         resp_obj = server.send_msg(json.dumps(request_obj.dict))
-        return Response(resp_obj, status=201)
+        return Response(resp_obj, mimetype="application/json", status=201)
     except Exception:
         raise InvalidUsage("Unable to post to writer", status=500)
     # else:
@@ -91,7 +91,7 @@ def block_hash_exists(hash):
     # Ask for verification of hash
     to_send = json.dumps({"request_type": "verify", "hash": hash})
     resp_obj = server.send_msg(to_send)
-    return Response(resp_obj,status=200)
+    return Response(resp_obj, mimetype="application/json", status=200)
     
 
 if __name__ == "__main__":
