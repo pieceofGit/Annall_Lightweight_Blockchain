@@ -29,7 +29,9 @@
       ]
     }
   ],
+  "active_writer_set_id_list": [1, 2],
+  "active_reader_set_id_list": [],
   "NO_coord": 1,
   "modulus": 65537,
-  "version": "1.0"
+  "version": "0.2"
 }

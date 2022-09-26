@@ -1,17 +1,14 @@
-from operator import concat
 import os
 import argparse
 from threading import Thread
 import json
-import random
 import requests
 ## Own modules imported
 from protoengine import ProtoEngine
 from interfaces import (
     #BlockChainEngine,
     #ClientServer,
-    verbose_print,
-    vverbose_print
+    verbose_print
 )
 from tcpserver import TCP_Server, ClientHandler
 from protocom import ProtoCom
@@ -65,7 +62,7 @@ if __name__ == "__main__":
     bce = BlockchainDB(dbpath)
     print("Local block chain database successfully initialized")
 
-    if RUN_WRITER_API and id == 3:  # Run the WriterAPI as a thread on a reader
+    if RUN_WRITER_API and id == 1:  # Run the WriterAPI as a thread on a reader
         # The writer api needs access to the blockchain database for reading
         BCDB[0] = bce
         writer_api = WriterAPI(app)
