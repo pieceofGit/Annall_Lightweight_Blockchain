@@ -56,7 +56,7 @@ class ServerConnection:
             assumes that socket is ready to read """
         byte_length = self.socket.recv(4)
         length = int.from_bytes(byte_length, "big", signed=False)
-        print(">", self.read_msg.__name__, "Received message of length:", length)
+        # print(">", self.read_msg.__name__, "Received message of length:", length)
         if length == 0:
             return ""
         b = self.socket.recv(length)
@@ -64,9 +64,9 @@ class ServerConnection:
 
     def format_msg(self, msg: str) -> bytes:
         """ Format message to be sent over socket from string to bytes """
-        print(">", self.format_msg.__name__, "Length: ", len(msg), "Message: ", msg)
+        # verbose_print(">", self.format_msg.__name__, "Length: ", len(msg), "Message: ", msg)
         byte_msg = len(msg).to_bytes(4, "big", signed=False) + bytes(msg, "utf-8")
-        print(">", self.format_msg.__name__, "Message in bytes: ", byte_msg)
+        # verbose_print(">", self.format_msg.__name__, "Message in bytes: ", byte_msg)
         return byte_msg
 
     def verify_msg(self, block):

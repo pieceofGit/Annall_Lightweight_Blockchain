@@ -1,16 +1,14 @@
 
 
-import json
 from exceptionHandler import InvalidUsage
 from Crypto.PublicKey import RSA 
 from Crypto.Hash import SHA256 
 from Crypto.Signature import pkcs1_15
-
 def get_json(request):
     try:
-        return json.loads(request.data) 
+        return request.get_json(request.data) 
     except Exception:
-        raise InvalidUsage("The JSON could not be decoded", status_code=400)
+        raise InvalidUsage("The JSON could not be decoded", status=400)
 
 def verify_request(request_object):
     pub_key_exp = request_object['payload']['headers']['pubKey']

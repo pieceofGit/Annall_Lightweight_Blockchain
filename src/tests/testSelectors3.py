@@ -3,10 +3,9 @@ import socket
 import sys
 import json
 import time 
-import random
 import argparse
 
-verbose = True
+verbose = False
 vverbose = False
 
 
