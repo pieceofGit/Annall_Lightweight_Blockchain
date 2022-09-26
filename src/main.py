@@ -78,10 +78,11 @@ if __name__ == "__main__":
         verbose_print("[CONFIG LOCAL] Failed to get config from writer")
         with open(f"{CONFIG_PATH}/{conf_file}", "r") as f:
             data = json.load(f)
+        print("THE CONF: ", data)
+
     if LOCAL:
         with open(f"{CONFIG_PATH}/test_node_{id}/priv_key.json", "r") as f:
             priv_key = json.load(f)
-    print("THE CONF: ", conf)
     # Do not start writing or reading until up to date. writer or reader should be in the active set.
     # 
 
