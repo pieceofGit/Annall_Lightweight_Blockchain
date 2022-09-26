@@ -23,10 +23,10 @@ CWD = os.getcwd()
 print("WORKING DIRECTORY: ", os.getcwd())
 CONFIG_PATH = f"{CWD}/src"
 LOCAL = False    # If True, use local file for private key and separate databases
-if LOCAL:
-    DB_PATH = f"{CWD}/src"
-else:
-    DB_PATH = f"{CWD}/src/db"
+# if LOCAL:
+DB_PATH = f"{CWD}/src"
+# else:
+#     DB_PATH = f"{CWD}/src/db"
 
 PRIV_KEY_PATH = f"{CWD}/src"
 
@@ -80,9 +80,8 @@ if __name__ == "__main__":
             data = json.load(f)
         print("THE CONF: ", data)
 
-    if LOCAL:
-        with open(f"{CONFIG_PATH}/test_node_{id}/priv_key.json", "r") as f:
-            priv_key = json.load(f)
+    with open(f"{CONFIG_PATH}/test_node_{id}/priv_key.json", "r") as f:
+        priv_key = json.load(f)
     # Do not start writing or reading until up to date. writer or reader should be in the active set.
     # 
 
