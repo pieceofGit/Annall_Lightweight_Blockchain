@@ -16,7 +16,7 @@ app = Flask(__name__)
 # Connect to server
 TCP_PORT = 5001 # Connects to port of writer 1
 
-with open(f'../src/config-local.json') as config_file:   # If in top directory for debug
+with open(f'../src/config-remote.json') as config_file:   # If in top directory for debug
   config = json.load(config_file)
   #TODO: Should get config from WriterAPI and attempt to connect as a client to the first available active writer
   IP_ADDR = config["node_set"][0]["hostname"] 
