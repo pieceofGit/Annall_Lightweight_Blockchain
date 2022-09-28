@@ -1,4 +1,5 @@
 {
+  "is_local": false,
   "no_permitted_writers": 2,
   "node_set": [
     {

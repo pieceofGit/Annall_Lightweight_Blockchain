@@ -4,35 +4,24 @@ A WriterAPI for Annáll using Flask and Gunicorn.
 print("importing annall writer api")
 import json
 import os
-import argparse
 from flask import Flask, request, jsonify, Response
-import sys
-print("WORKING DIRECTORY",os.getcwd())
+from exceptionHandler import InvalidUsage
+
 PREPEND_PATH = os.getcwd() + "/src/"
-try: 
-    from exceptionHandler import InvalidUsage
-    from_main = True
-except:
-    from exceptionHandler import InvalidUsage
-    from_main = False
-# import sys 
+# Configurable variables
+FROM_MAIN = True    # Set to false if running in debug mode
+CONFIG = "config-local.json"    # Change for remote vs local setup
+
 BCDB = ["Before db initialization"]
+
 print("Starting annallClientAPI Flask application server")
-app = Flask(__name__)
-# Connect to server
-LOCAL = True
-if LOCAL:
-    if from_main:   # Running from command line in top directory
-        CONFIG_PATH = "config-local.json"
-    else:
-        CONFIG_PATH ="config-local.json"
-else:
-    CONFIG_PATH = "config-remote.json"
-print("config file in: ",PREPEND_PATH+CONFIG_PATH)
+print("config file in: ",PREPEND_PATH+CONFIG[0])
 
-with open(PREPEND_PATH+CONFIG_PATH, "r") as config_file:
+with open(PREPEND_PATH+CONFIG, "r") as config_file:
   config = json.load(config_file)
+  IS_LOCAL = config["is_local"]
 
+app = Flask(__name__)
 
 def add_new_writer(writer):
     # Create new writer object
@@ -44,7 +33,7 @@ def add_new_writer(writer):
             "hostname": writer["hostname"],
             "pub_key": writer["pub_key"]
         }
-        if LOCAL:
+        if IS_LOCAL[0]:
             new_writer["client_port"] = 5000 + id
             new_writer["protocol_port"] = 15000 + id
         else:
@@ -53,7 +42,7 @@ def add_new_writer(writer):
         # Add writer to writer set and save    
         config["node_set"].append(new_writer)
         try:
-            with open(CONFIG_PATH, "w") as file:
+            with open(CONFIG[0], "w") as file:
                 json.dump(config, file, indent=4)
         except:
             raise InvalidUsage("Could not access the json file", status_code=500)
@@ -126,7 +115,7 @@ def add_writer_to_set():
     # Adds writer to node set and returns the config
     # Assumes one node per public ip address if remote
     writer_to_add = get_json()
-    if not LOCAL:
+    if not IS_LOCAL[0]:
         try:
             if authenticate_writer(writer_to_add["hostname"]):  
                 raise InvalidUsage("Writer already whitelisted", status_code=400)
@@ -180,7 +169,7 @@ class WriterAPI():
         # Register classes and send init arguments
         self.app.run(host="127.0.0.1", port="8000", debug=False)
 
-if not from_main:
+if not FROM_MAIN:
     from src.blockchainDB import BlockchainDB
     CWD = os.getcwd()
     db_path = CWD + "../src/db/test_blockchain.db"

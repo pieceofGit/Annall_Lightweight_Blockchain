@@ -6,9 +6,9 @@ The type of request to the TCP server is handled by the request_type field.
 """
 import json
 from flask import Flask, request, jsonify, Response
-from serverConnection import ServerConnection
+from ClientAPI.serverConnection import ServerConnection
 from exceptionHandler import InvalidUsage
-from InputModels.BlockInputModel import BlockInputModel
+from ClientAPI.InputModels.BlockInputModel import BlockInputModel
 from clientfunctions import *
 # import sys
 print("Starting annallClientAPI Flask application server")

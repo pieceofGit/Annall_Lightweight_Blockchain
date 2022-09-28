@@ -22,16 +22,9 @@ RUN_WRITER_API = True   # If the api turns on, then it should be a reader of the
 CWD = os.getcwd()
 print("WORKING DIRECTORY: ", os.getcwd())
 CONFIG_PATH = f"{CWD}/src"
-LOCAL = False    # If True, use local file for private key and separate databases
-# if LOCAL:
 DB_PATH = f"{CWD}/src"
-# else:
-#     DB_PATH = f"{CWD}/src/db"
-
 PRIV_KEY_PATH = f"{CWD}/src"
-
 WRITER_API_PATH = "http://127.0.0.1:8000/"
-
 
 if __name__ == "__main__":
     print("MAIN STARTED")
@@ -52,7 +45,7 @@ if __name__ == "__main__":
     a = ap.parse_args()
     id = a.myID
     rounds = a.r
-    conf_file = a.conf
+    CONFIG = a.conf
     priv_key = a.privKey
     verbose_print("[ID]", id, " [ROUNDS]", rounds, " [conf]", a.conf, " [privKey]", priv_key)
      # Initialize the local database connection
@@ -76,15 +69,13 @@ if __name__ == "__main__":
         verbose_print("[CONFIG WRITER API] Got config from writer API")
     except:
         verbose_print("[CONFIG LOCAL] Failed to get config from writer")
-        with open(f"{CONFIG_PATH}/{conf_file}", "r") as f:
+        with open(f"{CONFIG_PATH}/{CONFIG}", "r") as f:
             data = json.load(f)
         print("THE CONF: ", data)
 
+    #TODO: Doesn't work for remote
     with open(f"{CONFIG_PATH}/test_node_{id}/priv_key.json", "r") as f:
         priv_key = json.load(f)
-    # Do not start writing or reading until up to date. writer or reader should be in the active set.
-    # 
-
 
     # Start Communication Engine - maintaining the peer-to-peer network of writers
     print("::> Starting up peer-to-peer network engine with id ", id)
