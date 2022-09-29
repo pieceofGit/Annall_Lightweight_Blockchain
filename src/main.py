@@ -10,10 +10,11 @@ from interfaces import (
     #ClientServer,
     verbose_print
 )
+from membershipData import MembershipData
 from tcpserver import TCP_Server, ClientHandler
 from protocom import ProtoCom
 from blockchainDB import BlockchainDB
-from annallWriterAPI import app, WriterAPI, BCDB
+from annallWriterAPI import app, WriterAPI, BCDB, MEM_DATA
 # from WriterAPI.annallWriterAPI import app, WriterAPI, BCDB
 # should put here some elementary command line argument processing
 # EG. parameters for where the config file is, number of writers (for testing), and rounds

@@ -11,7 +11,7 @@ PREPEND_PATH = os.getcwd() + "/src/"
 # Configurable variables
 FROM_MAIN = True    # Set to false if running in debug mode
 CONFIG = "config-local.json"    # Change for remote vs local setup
-
+MEM_DATA = ["Before class initialization"]
 BCDB = ["Before db initialization"]
 
 print("Starting annallClientAPI Flask application server")
