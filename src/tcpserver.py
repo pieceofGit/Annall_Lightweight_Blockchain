@@ -115,7 +115,6 @@ class ClientHandler(threading.Thread):
                 verbose_print("exception", type(e), e)
                 self.terminate = True
                 break
-
             
             if d["request_type"] == "verify":
                 # payload = f"{d['name']},{d['request_type']},{d['payload']}"

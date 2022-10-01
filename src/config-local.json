@@ -59,8 +59,8 @@
       "protocol_port": 15007
     }
   ],
-  "active_writer_set_id_list": [1, 2],
-  "active_reader_set_id_list": [3],
+  "writer_list": [1, 2],
+  "reader_list": [3],
   "NO_coord": 1,
   "modulus": 65537,
   "version": "0.2"

@@ -7,19 +7,25 @@ import os
 from flask import Flask, request, jsonify, Response
 from exceptionHandler import InvalidUsage
 
-PREPEND_PATH = os.getcwd() + "/src/"
+
 # Configurable variables
 FROM_MAIN = True    # Set to false if running in debug mode
+if FROM_MAIN:
+    PREPEND_PATH = os.getcwd() + "/src/"
+else:
+    PREPEND_PATH = os.getcwd() + "/"
+UPDATE_NUM = [0]
 CONFIG = "config-local.json"    # Change for remote vs local setup
 MEM_DATA = ["Before class initialization"]
 BCDB = ["Before db initialization"]
-
+IS_LOCAL = [True]
+MEM_DATA = ["Before object initialization"]
 print("Starting annallClientAPI Flask application server")
-print("config file in: ",PREPEND_PATH+CONFIG[0])
+print("config file in: ",PREPEND_PATH+CONFIG)
 
 with open(PREPEND_PATH+CONFIG, "r") as config_file:
   config = json.load(config_file)
-  IS_LOCAL = config["is_local"]
+  IS_LOCAL[0] = config["is_local"]
 
 app = Flask(__name__)
 
@@ -161,20 +167,36 @@ def get_blocks():
     else:
         return Response("Writer not whitelisted", status=400)
 
+
+@app.route("/reset", methods=["DELETE"])
+def delete_chain():
+    if authenticate_writer():
+        UPDATE_NUM[0] += 1
+        MEM_DATA[0].update = True
+    return Response(status=204)
+
+@app.route("/update", methods=["GET"])
+def get_update():
+    if authenticate_writer():
+        # Send update number of time of request and data
+        return Response(json.dumps({"update_number": UPDATE_NUM[0], "restart": True}))
+
+
 class WriterAPI():
-    def __init__(self, app):
+    def __init__(self, app, debug=False):
         self.app = app
+        self.debug = debug
     
     def run(self):
         # Register classes and send init arguments
-        self.app.run(host="127.0.0.1", port="8000", debug=False)
+        self.app.run(host="127.0.0.1", port="8000", debug=self.debug)
 
 if not FROM_MAIN:
     from src.blockchainDB import BlockchainDB
     CWD = os.getcwd()
-    db_path = CWD + "../src/db/test_blockchain.db"
+    db_path = CWD + "/db/test_blockchain.db"
     print(f"[DIRECTORY PATH] {db_path}")
     blocks_db = BlockchainDB(db_path)
-    program = WriterAPI(app)
+    program = WriterAPI(app, True)
     program.run()
     

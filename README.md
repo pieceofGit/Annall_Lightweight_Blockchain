@@ -48,7 +48,7 @@ The program has writers and readers of the blockchain, both writing to their own
 The program executes the rounds when all writers and readers are connected.
 The program's required set of writers and readers to start the blockchain are either set by the WriterAPI or with a local config file.
 Writer with ID=3 runs the WriterAPI and should be started first for using the WriterAPI.
-The writers and readers required to start are kept in the config file under "active_writer_set_id_list" and "active_reader_set_id_list".
+The writers and readers required to start are kept in the config file under "writer_list" and "reader_list".
 To send POST and GET requests, you run the ClientAPI/annallClientAPI.py or you can just run src/tests/testclient.py <port no.> without the ClientAPI which connects and sends transactions directly to the blockchain.
 
 # Example run

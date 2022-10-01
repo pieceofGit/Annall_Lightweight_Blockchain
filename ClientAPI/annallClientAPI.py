@@ -15,8 +15,8 @@ print("Starting annallClientAPI Flask application server")
 app = Flask(__name__)
 # Connect to server
 TCP_PORT = 5001 # Connects to port of writer 1
-
-with open(f'../src/config-remote.json') as config_file:   # If in top directory for debug
+# Adjust if config-local or config-remote
+with open(f'../src/config-local.json') as config_file:   # If in top directory for debug
   config = json.load(config_file)
   #TODO: Should get config from WriterAPI and attempt to connect as a client to the first available active writer
   IP_ADDR = config["node_set"][0]["hostname"] 
@@ -61,6 +61,7 @@ def get_blockchain():
     """ Returns blocks in a list of dicts per block """
     try:
         resp_obj = server.send_msg(json.dumps({"request_type": "read_chain"}))
+        print(resp_obj)
         return Response(resp_obj, mimetype="application/json")
     except Exception:
         raise InvalidUsage("Failed to read from writer", mimetype="application/json", status=500)

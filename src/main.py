@@ -2,7 +2,6 @@ import os
 import argparse
 from threading import Thread
 import json
-import requests
 ## Own modules imported
 from protoengine import ProtoEngine
 from interfaces import (
@@ -10,11 +9,11 @@ from interfaces import (
     #ClientServer,
     verbose_print
 )
-from membershipData import MembershipData
 from tcpserver import TCP_Server, ClientHandler
 from protocom import ProtoCom
 from blockchainDB import BlockchainDB
 from annallWriterAPI import app, WriterAPI, BCDB, MEM_DATA
+from membershipData import MembershipData
 # from WriterAPI.annallWriterAPI import app, WriterAPI, BCDB
 # should put here some elementary command line argument processing
 # EG. parameters for where the config file is, number of writers (for testing), and rounds
@@ -26,6 +25,7 @@ CONFIG_PATH = f"{CWD}/src"
 DB_PATH = f"{CWD}/src"
 PRIV_KEY_PATH = f"{CWD}/src"
 WRITER_API_PATH = "http://127.0.0.1:8000/"
+IS_WRITER_API = False
 
 if __name__ == "__main__":
     print("MAIN STARTED")
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     a = ap.parse_args()
     id = a.myID
     rounds = a.r
-    CONFIG = a.conf
+    config = a.conf
     priv_key = a.privKey
     verbose_print("[ID]", id, " [ROUNDS]", rounds, " [conf]", a.conf, " [privKey]", priv_key)
      # Initialize the local database connection
@@ -55,40 +55,31 @@ if __name__ == "__main__":
     print("::> Starting up Blockchain DB = using ", dbpath)
     bce = BlockchainDB(dbpath)
     print("Local block chain database successfully initialized")
-
+    mem_data = MembershipData(id, CONFIG_PATH, config, WRITER_API_PATH, bce, True)
+    MEM_DATA[0] = mem_data
     if RUN_WRITER_API and id == 1:  # Run the WriterAPI as a thread on a reader
         # The writer api needs access to the blockchain database for reading
+        IS_WRITER_API = True
         BCDB[0] = bce
         writer_api = WriterAPI(app)
         writer_api_thread = Thread(target=writer_api.run, name="WriterAPIThread")
         writer_api_thread.daemon = True
         writer_api_thread.start()
-    # Read config and other init stuff
-    try:
-        response = requests.get(WRITER_API_PATH + "config", {})
-        data = response.json()
-        verbose_print("[CONFIG WRITER API] Got config from writer API")
-    except:
-        verbose_print("[CONFIG LOCAL] Failed to get config from writer")
-        with open(f"{CONFIG_PATH}/{CONFIG}", "r") as f:
-            data = json.load(f)
-        print("THE CONF: ", data)
-
-    #TODO: Doesn't work for remote
+    
     with open(f"{CONFIG_PATH}/test_node_{id}/priv_key.json", "r") as f:
         priv_key = json.load(f)
+        keys = priv_key["priv_key"]
 
     # Start Communication Engine - maintaining the peer-to-peer network of writers
     print("::> Starting up peer-to-peer network engine with id ", id)
-    pComm = ProtoCom(id, data)
+    pComm = ProtoCom(id, mem_data)
     pComm.daemon = True
     pComm.start()
     print("Peer-to-peer network engine up  and running as:", pComm.name)
     
-   
     verbose_print("THE ID: ", id)
-    TCP_IP = data["node_set"][id - 1]["hostname"]
-    TCP_PORT = data["node_set"][id - 1]["client_port"] 
+    TCP_IP = mem_data.get_tcp_ip(id)
+    TCP_PORT = mem_data.get_tcp_port(id)
     print(f"TCP PORT: {TCP_PORT}")
     print("::> Starting up ClientServer thread")
     # TCPServer: name, IPv4_addr, port, RequestHandlerClass, bcdb,
@@ -101,13 +92,12 @@ if __name__ == "__main__":
     print("ClientServer up and running as:", cthread.name)
     # Start protocol engine
     print("::> Starting up BlockChainEngine")
-    keys = priv_key["priv_key"]
-    PE = ProtoEngine(id, tuple(keys), pComm, bce, clients)
+    PE = ProtoEngine(id, tuple(keys), pComm, bce, clients, mem_data)
     PE.set_rounds(rounds)
-    PE.set_conf(data)
+    # PE.set_conf(data)
     # Writers set to wait for connecting to until rounds start
-    PE.set_writers(data["active_writer_set_id_list"])
-    PE.set_readers(data["active_reader_set_id_list"])
+    # PE.set_writers(data["writer_list"])
+    # PE.set_readers(data["reader_list"])
 
     PEthread = Thread(target=PE.run_forever, name="ProtocolEngine")
     PEthread.start()

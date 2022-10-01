@@ -9,14 +9,14 @@ import time
 from datetime import datetime
 import ast
 
-import sqlite3
 import sys
 import argparse
-import random
 import os
 import json
 from protocom import ProtoCom
+from membershipData import MembershipData
 from tcpserver import TCP_Server, ClientHandler
+import requests 
 
 import interfaces
 from interfaces import (
@@ -127,6 +127,7 @@ class ProtoEngine(ProtocolEngine):
         comm: ProtocolCommunication,
         blockchain: interfaces.BlockChainEngine,
         clients: ClientServer,
+        mem_data: MembershipData
 
     ):  # what are the natural arguments
         assert isinstance(keys, tuple)
@@ -136,34 +137,22 @@ class ProtoEngine(ProtocolEngine):
 
         self.ID = id
         self.keys = keys    # Private keys
-
-        self.writer_list = []  # list of writer ID's
-        self.reader_list = [] # list of reader ID's
-        
+        self.mem_data = mem_data
+        self.update_num = 0        
         # Defining e
         self.modulus = 65537
         # For how many rounds the blockchain should run for
-        self.rounds = None
-        # Comes from the original config file (config.json) 
-        self.conf = None
-        
+        self.rounds = None        
         # Messages in our writer's queue
         self.message_queue = Queue()
-        
         self.latest_block = None
         # maintain a payload
         self.stashed_payload = None
-
 
     def set_rounds(self, round: int):
         ''' A round is a minting of a block, this defines for how many rounds the blockchain runs for'''
         assert isinstance(round, int)
         self.rounds = round
-
-    def set_conf(self, data):
-        ''' Assign config  '''
-        assert isinstance(data, object)
-        self.conf = data
 
     def sign_payload(self, payload: str):
         # keys of form [p, q, e]
@@ -179,16 +168,23 @@ class ProtoEngine(ProtocolEngine):
     def set_writers(self, writers: list):
         for w in writers:
             assert isinstance(w, int)
-        self.writer_list = writers
+        self.mem_data.writer_list = writers
     
     def set_readers(self, readers: list):
         for r in readers:
             assert isinstance(r, int)
-        self.reader_list = readers
+        self.mem_data.reader_list = readers
     
     def get_timestamp(self):
         # Returns time in Unix epoch time 
         return round(datetime.timestamp(datetime.now()))
+
+    def get_prev_hash(self):
+        if self.bcdb.length == 0:
+            return str(0)
+        else:
+            prev_hash = self.bcdb.get_latest_block(dict_form=False, col="hash")[0][0]
+            return str(prev_hash)
 
     def verify_block(self, block: Block):
         '''
@@ -201,7 +197,7 @@ class ProtoEngine(ProtocolEngine):
             writer = block.writerID
             payload = block.payload
             signature = int(block.writer_signature, 16)
-            writer_pubkey = self.conf["node_set"][int(writer) - 1]["pub_key"]
+            writer_pubkey = self.mem_data.conf["node_set"][int(writer) - 1]["pub_key"]
             D = bytes_to_long(payload.encode("utf-8")) % writer_pubkey
             res = pow(signature, self.keys[2], writer_pubkey)
             res = res % writer_pubkey
@@ -277,7 +273,7 @@ class ProtoEngine(ProtocolEngine):
         assert isinstance(round, int)
         ## NOT SURE WHY THIS IS HERE:  8 - 1 % (3+1) # 7 % 4 = 3
         ## TODO not clear if this really works, e.g. in the case if some node dies, or if the set of writers changes
-        coordinator = (round - 1) % (len(self.writer_list))
+        coordinator = (round - 1) % (len(self.mem_data.writer_list))
         return coordinator + 1
 
     def calculate_sum(self, numbers: list):
@@ -307,7 +303,7 @@ class ProtoEngine(ProtocolEngine):
         """Bootstrap to the writerset, using comm module
         """
         ## TODO: More suspicious is, this seems to block if any of the writers is not connected.
-        while len(self.comm.list_connected_peers()) != len(self.writer_list) + len(self.reader_list) - 1: # TODO: Needs more sophistication
+        while len(self.comm.list_connected_peers()) != len(self.mem_data.writer_list) + len(self.mem_data.reader_list) - 1: # TODO: Needs more sophistication
             time.sleep(1)
         print(f"ID={self.ID} -> connected and ready to build")
         return None
@@ -329,8 +325,8 @@ class ProtoEngine(ProtocolEngine):
         if round == 0:
             prev_hash = 0
         else:
-            prev_hash = self.bcdb.read_blocks(round - 1, col="hash", get_last_row=True)[0][0] 
-        prev_hash = str(prev_hash)
+            prev_hash = self.get_prev_hash()
+        prev_hash = str(prev_hash)  # Hash of latest block as the previous hash for new block
         # Returns payload of writer or arbitrary string if there is no payload
         vverbose_print(f"[PAYLOAD] the payload is: {payload} from the TCP server payload_queue")
         signature = self.sign_payload(payload)
@@ -357,7 +353,7 @@ class ProtoEngine(ProtocolEngine):
         canceller = int(parsed_message[1])
         round = int(parsed_message[0])
         coor_id = self.get_coordinatorID(round)
-        prev_hash = self.bcdb.read_blocks(round - 1, col="hash", get_last_row=True)[0][0]
+        prev_hash = self.get_prev_hash()
         prev_hash = str(prev_hash)
         timestamp = self.get_timestamp()
          
@@ -525,23 +521,20 @@ class ProtoEngine(ProtocolEngine):
 
         # Step 1 -
         self.check_for_old_cancel_message(round=round)
-        
-
         self.broadcast(msg_type="request", msg=round, round=round, send_to_readers=True)
+
         # Step 2 - Wait for numbers reply from all
         numbers = []
         no_recv_messages = 0
         # Currently waiting for a number from all active writers
         # MSG FORMAT <round nr>-<from id>-<to id>-<msg type>-<msg body>
-        while no_recv_messages < len(self.writer_list) + len(self.reader_list) - 1:
+        while no_recv_messages < len(self.mem_data.writer_list) + len(self.mem_data.reader_list) - 1:
             message = self._recv_msg(type="reply")
             if message is not None:
                 parsed_message = message.split("-")
                 from_id = ast.literal_eval(parsed_message[1])
-                if from_id in self.reader_list:
-                    no_recv_messages += 1    # Readers only send message for syncing
-                else:
-                    no_recv_messages += 1
+                no_recv_messages += 1
+                if from_id in self.mem_data.writer_list:
                     numbers.append([int(parsed_message[1]), int(parsed_message[4])])    #(id, otp)
             time.sleep(0.01)
 
@@ -549,6 +542,7 @@ class ProtoEngine(ProtocolEngine):
         winner = self.calculate_sum(numbers)    
         self.broadcast("announce", winner, round, send_to_readers=True)
         winner_id = winner[2]
+
         # Step 4 - Receive new block (from winner)
         message = None
         while message is None:
@@ -580,6 +574,18 @@ class ProtoEngine(ProtocolEngine):
 
         self.bcdb.insert_block(round, self.latest_block)
 
+    def check_for_updates(self):
+        # Requests an update from the node api
+        if not self.mem_data.is_api:
+            response = requests.get(self.mem_data.api_path + "update", {}).json()
+            # Gets info whether to restart blockchain
+            if response["update_number"] > self.update_num:
+                self.bcdb.truncate_table()
+                self.update_num = response["update_number"]
+        else:
+            if self.mem_data.update:
+                self.bcdb.truncate_table()
+                self.mem_data.update = False
     def run_forever(self):
         """
         """
@@ -592,6 +598,7 @@ class ProtoEngine(ProtocolEngine):
         print("ROUND: ", round)
         if self.comm.is_writer:
             while True:
+                self.check_for_updates()
                 coordinator = self.get_coordinatorID(round)
                 vverbose_print(f"ID: {self.ID}, CordinatorId: {coordinator}", coordinator == self.ID)
                 if coordinator == self.ID:
@@ -605,6 +612,7 @@ class ProtoEngine(ProtocolEngine):
                     break   # Stops the program
         else:
             while True:
+                self.check_for_updates()
                 coordinator = self.get_coordinatorID(round)
                 self.reader_round(round, coordinator)
                 round += 1

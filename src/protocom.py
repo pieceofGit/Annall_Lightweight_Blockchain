@@ -15,6 +15,7 @@ from interfaces import (
     verbose_print, 
     vverbose_print
 )
+from membershipData import MembershipData
 
 VERBOSE = False
 # **********************************
@@ -255,12 +256,12 @@ class RemoteEnd:
 
 
 class ProtoCom(ProtocolCommunication):
-    def __init__(self, self_id: int, conf: dict, name: str = "P2P : Protocol communication" ):
+    def __init__(self, self_id: int, mem_data: MembershipData, name: str = "P2P : Protocol communication" ):
         ProtocolCommunication.__init__(
             self, name)
         # set up
         self.id = self_id
-        self.conf = conf
+        self.mem_data = mem_data
         self.running = True
         self.conn_modulus = 0
         # lock is used to put on to and take off of msg_queue
@@ -274,8 +275,8 @@ class ProtoCom(ProtocolCommunication):
         self.listen_port = None
         self.is_writer = self.check_if_writer(self.id)
         # Setup two-way communication with active writers and readers
-        self.connect_to_nodes_in_conf_by_key("active_writer_set_id_list")
-        self.connect_to_nodes_in_conf_by_key("active_reader_set_id_list")
+        self.connect_to_nodes_in_conf_by_key("writer_list")
+        self.connect_to_nodes_in_conf_by_key("reader_list")
         verbose_print(f"[IS WRITER] node with id: {self.id} is a writer: {self.is_writer}")
         # set up listening socket
         # Making sure to not run this if either are undefined, unless it crashes
@@ -300,8 +301,8 @@ class ProtoCom(ProtocolCommunication):
 
     def connect_to_nodes_in_conf_by_key(self, list_key):
         try:
-            for i in self.conf[list_key]:
-                node = self.conf["node_set"][i-1]
+            for i in self.mem_data.conf[list_key]:
+                node = self.mem_data.conf["node_set"][i-1]
                 if i != self.id:
                     self.peers[i] = RemoteEnd(
                     node["id"], node["hostname"], node["protocol_port"], node["pub_key"], self.check_if_writer(node["id"])
@@ -314,8 +315,8 @@ class ProtoCom(ProtocolCommunication):
             return      
 
     def check_if_writer(self, id):
-        print(self.conf)
-        for i in self.conf["active_writer_set_id_list"]:
+        print(self.mem_data.conf)
+        for i in self.mem_data.conf["writer_list"]:
             if i == id:
                 return True
         return False

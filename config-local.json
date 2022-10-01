@@ -74,11 +74,11 @@
             "protocol_port": 15009
         }
     ],
-    "active_writer_set_id_list": [
+    "writer_list": [
         1,
         2
     ],
-    "active_reader_set_id_list": [
+    "reader_list": [
         3
     ],
     "NO_coord": 1,

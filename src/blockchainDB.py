@@ -3,11 +3,10 @@
 
 import os
 import sqlite3
-from sqlite3 import Error
 import json
 
 import interfaces
-from interfaces import verbose_print, vverbose_print
+from interfaces import verbose_print
 from block import Block
 
 class BlockchainDB(interfaces.BlockChainEngine):
@@ -39,10 +38,18 @@ class BlockchainDB(interfaces.BlockChainEngine):
         self.create_table()
         # If database exists, set self.length and initialize db
 
+    def truncate_table(self):
+        truncate_chain_table = """DELETE FROM chain"""
+        try:
+            self.cursor.execute(truncate_chain_table)
+            self.length = self.get_round_number()
+            self.db_connection.commit()
+        except Exception as e:
+            print("Error truncating chain table ", e)
+
     def create_table(self):
 
-        # drop_chain_table = """DROP TABLE IF EXISTS chain
-        # # """
+        # drop_chain_table = """DROP TABLE IF EXISTS chain"""
 
         create_chain_table = """CREATE TABLE IF NOT EXISTS chain (
             round integer PRIMARY KEY,
@@ -58,6 +65,7 @@ class BlockchainDB(interfaces.BlockChainEngine):
         try:
             # self.cursor.execute(drop_chain_table)
             self.cursor.execute(create_chain_table)
+            self.length = self.get_round_number()
             self.db_connection.commit()
         except Exception as e:
             print("Error creating chain table ", e)
@@ -102,7 +110,6 @@ class BlockchainDB(interfaces.BlockChainEngine):
             retrived = self.cursor.execute(query)
         except Exception as e:
             print("Error retriving blocks from db :", e)
-       
         return retrived.fetchall()
 
     def dict_factory(self, cursor, row):
@@ -117,14 +124,6 @@ class BlockchainDB(interfaces.BlockChainEngine):
                 d[col[0]] = row[idx]
         return d
 
-    def get_latest_block(self, dict_form=True, col="*"):
-        query = f"SELECT {col} FROM chain WHERE round >= {self.length - 1} ORDER BY round"
-        latest_block =self.get_query(query, dict_form)  # Returns list of dict
-        if dict_form:
-            return latest_block[0]
-        else:
-            return latest_block
-
     def get_blockchain(self, dict_form=True):
         query = f"SELECT * FROM chain WHERE round >= {0} ORDER BY round"
         return self.get_query(query, dict_form)
@@ -138,6 +137,19 @@ class BlockchainDB(interfaces.BlockChainEngine):
             query = f"SELECT {col} FROM chain WHERE round >= {begin} ORDER BY round"
         else:
             query = f"SELECT {col} FROM chain WHERE round >= {begin} AND round <= {end} ORDER BY round"
+        return self.get_query(query, dict_form)
+
+    def get_latest_block(self, dict_form=True, col="*"):    # Returns latest_block as list of one tuple or dict
+        query = f"SELECT {col} FROM chain WHERE round >= {self.length - 1} ORDER BY round"
+        latest_block = self.get_query(query, dict_form)  # Returns list of single dict
+        if len(latest_block):
+            if dict_form:
+                return latest_block[0]
+            return latest_block
+        return None
+    
+    def get_blockchain(self, dict_form=True):
+        query = f"SELECT * FROM chain WHERE round >= {0} ORDER BY round"
         return self.get_query(query, dict_form)
 
     def get_query(self, query, dict_form=False):
@@ -205,13 +217,17 @@ def __test_localDB():
 
     #Block(prev_hash, writerID, coordinatorID, winning_number, signature, timestamp, payload )
     genesis_block = Block("0", 0, 0, 0, "0", 0,  json.dumps({"type": "genesis block"}),)
-    # blocks_db.insert_block(0, genesis_block)
-    # blocks_db.insert_block(1, the_block)
-    # blocks_db.insert_block(2, the_block)
-    # blocks_db.insert_block(3, the_block)
-    # blocks_db.insert_block(4, the_block)
-    # blocks_db.insert_block(5, the_block)
-    # blocks_db.insert_block(6, the_block)
+    blocks_db.insert_block(0, genesis_block)
+    blocks_db.insert_block(1, the_block)
+    blocks_db.insert_block(2, the_block)
+    blocks_db.insert_block(3, the_block)
+    blocks_db.insert_block(4, the_block)
+    blocks_db.insert_block(5, the_block)
+    the_block = Block("correct prevHash", 1, 2, 0, "writer signature", 0, "the hash")
+    blocks_db.insert_block(6, the_block)
+    prev_hash = blocks_db.get_latest_block(dict_form=False, col="hash")[0][0]
+    print(prev_hash == "correct prevHash")
+    print(blocks_db.get_blockchain(True))
     # reading_blocks = len(blocks_db.read_blocks(0, 4))
     # print(f"[MESSAGE READ BLOCKS 1-4] The message: {msg}")
     # import time
@@ -223,6 +239,15 @@ def __test_localDB():
     # msg_get_range_old = blocks_db.read_blocks(3000, 10)
     msg_get_range_new = blocks_db.get_range_of_blocks(1)
     print("Blockchain: ", msg_get_range_new)
+    blocks_db.truncate_table()
+    # prev_hash = blocks_db.get_latest_block(dict_form=False, col="hash")[0][0]
+    # print("BEFORE FIRST ROW INSERTION",prev_hash)
+    genesis_block = Block("0", 0, 0, 0, "0", 0,  json.dumps({"type": "genesis block"}),)
+    blocks_db.insert_block(0, genesis_block)
+    msg_get_range_new = blocks_db.get_range_of_blocks(1)
+    prev_hash = blocks_db.get_latest_block(dict_form=False, col="hash")[0][0]
+    print("AFTER FIRST ROW INSERTION",prev_hash)
+
 
 
 
