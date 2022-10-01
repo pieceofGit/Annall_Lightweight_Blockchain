@@ -24,7 +24,7 @@ print("WORKING DIRECTORY: ", os.getcwd())
 CONFIG_PATH = f"{CWD}/src"
 DB_PATH = f"{CWD}/src"
 PRIV_KEY_PATH = f"{CWD}/src"
-WRITER_API_PATH = "http://127.0.0.1:8000/"
+WRITER_API_PATH = "http://176.58.116.107:15000/"
 IS_WRITER_API = False
 
 if __name__ == "__main__":

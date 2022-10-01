@@ -15,7 +15,7 @@ if FROM_MAIN:
 else:
     PREPEND_PATH = os.getcwd() + "/"
 UPDATE_NUM = [0]
-CONFIG = "config-local.json"    # Change for remote vs local setup
+CONFIG = "config-remote.json"    # Change for remote vs local setup
 MEM_DATA = ["Before class initialization"]
 BCDB = ["Before db initialization"]
 IS_LOCAL = [True]
