@@ -315,7 +315,6 @@ class ProtoCom(ProtocolCommunication):
             return      
 
     def check_if_writer(self, id):
-        print(self.mem_data.conf)
         for i in self.mem_data.conf["writer_list"]:
             if i == id:
                 return True

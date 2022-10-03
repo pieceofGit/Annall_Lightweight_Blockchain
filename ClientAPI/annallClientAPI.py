@@ -4,12 +4,13 @@ The Client API has a TCP socket connection to the blockchain TCP server on write
 The TCP server expects a json for all its request.
 The type of request to the TCP server is handled by the request_type field.
 """
+import ast
 import json
 from flask import Flask, request, jsonify, Response
 from ClientAPI.serverConnection import ServerConnection
 from exceptionHandler import InvalidUsage
-from ClientAPI.InputModels.BlockInputModel import BlockInputModel
 from clientfunctions import *
+from InputModels.BlockInputModel import BlockInputModel
 # import sys
 print("Starting annallClientAPI Flask application server")
 app = Flask(__name__)
@@ -44,7 +45,7 @@ def createSmartContracts():
             if res['payload']['headers']['type'] == typeToGet:
                 lis.append(res)
         except:
-            print("Couldnt find a type")
+            print("Couldn't find a type")
     print("Return list for the given type ", lis)
     lis = jsonify(lis)
     return Response(lis, mimetype="application/json",)
@@ -61,10 +62,10 @@ def get_blockchain():
     """ Returns blocks in a list of dicts per block """
     try:
         resp_obj = server.send_msg(json.dumps({"request_type": "read_chain"}))
-        print(resp_obj)
-        return Response(resp_obj, mimetype="application/json")
+        res_list = ast.literal_eval(resp_obj)
+        return Response(json.dumps(res_list[::-1]), mimetype="application/json")
     except Exception:
-        raise InvalidUsage("Failed to read from writer", mimetype="application/json", status=500)
+        raise InvalidUsage("Failed to read from writer", status=500)
 
 @app.errorhandler(400)
 def handle_bad_request(e):
@@ -96,4 +97,4 @@ def block_hash_exists(hash):
     
 
 if __name__ == "__main__":
-    app.run(debug=False)
+    app.run(debug=True, host="127.0.0.1", port=6000)
