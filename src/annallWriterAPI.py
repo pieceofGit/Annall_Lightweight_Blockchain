@@ -22,12 +22,11 @@ print(f"[DIRECTORY PATH] {db_path}")
 BCDB[0] = BlockchainDB(db_path)
 IS_LOCAL = [True]
 # MEM_DATA = ["Before object initialization"]
-print("Starting annallClientAPI Flask application server")
+print("Starting annallWriterAPI Flask application server")
 print("conf file in: ",PREPEND_PATH+CONFIG_PATH)
 API_PATH = "127.0.0.1:8000/"
 with open(PREPEND_PATH+CONFIG_PATH, "r") as config_file:
   conf = json.load(config_file)
-  CONF = [conf]
 MEM_DATA[0] = MembershipData(1, PREPEND_PATH, CONFIG_PATH, API_PATH, BCDB[0])
 with open(PREPEND_PATH+"config-writer-api-update.json", "w") as writer_api_conf:
     json.dump({"update_number": 0}, writer_api_conf, indent=4)    
