@@ -174,8 +174,8 @@ def handle_invalid_usage(error):
 
 @app.route("/blocks", methods=["DELETE"])
 def delete_chain():
-    if authenticate_writer():
-        UPDATE_NUM[0] += 1
+    # if authenticate_writer():
+    UPDATE_NUM[0] += 1
     with open(PREPEND_PATH+"config-writer-api-update.json", "r") as writer_api_conf:
         conf = json.load(writer_api_conf)
         conf["update_number"] = UPDATE_NUM[0]
@@ -185,9 +185,9 @@ def delete_chain():
 
 @app.route("/update", methods=["GET"])
 def get_update():
-    if authenticate_writer():
-        # Send update number of time of request and data
-        return Response(json.dumps({"update_number": UPDATE_NUM[0], "restart": True}))
+    # if authenticate_writer():
+    # Send update number of time of request and data
+    return Response(json.dumps({"update_number": UPDATE_NUM[0], "restart": True}))
 
 
 class WriterAPI():
