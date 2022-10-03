@@ -16,7 +16,6 @@ import json
 from protocom import ProtoCom
 from membershipData import MembershipData
 from tcpserver import TCP_Server, ClientHandler
-import requests 
 
 import interfaces
 from interfaces import (
@@ -575,17 +574,10 @@ class ProtoEngine(ProtocolEngine):
         self.bcdb.insert_block(round, self.latest_block)
 
     def check_for_updates(self):
-        # Requests an update from the node api
-        if not self.mem_data.is_api:
-            response = requests.get(self.mem_data.api_path + "update", {}).json()
-            # Gets info whether to restart blockchain
-            if response["update_number"] > self.update_num:
-                self.bcdb.truncate_table()
-                self.update_num = response["update_number"]
-        else:
-            if self.mem_data.update:
-                self.bcdb.truncate_table()
-                self.mem_data.update = False
+        """Requests an update from the writer api to check if delete blocks"""
+        if self.mem_data.check_delete_blocks():
+            self.bcdb.truncate_table()
+
     def run_forever(self):
         """
         """

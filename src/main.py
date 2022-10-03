@@ -12,7 +12,7 @@ from interfaces import (
 from tcpserver import TCP_Server, ClientHandler
 from protocom import ProtoCom
 from blockchainDB import BlockchainDB
-from annallWriterAPI import app, WriterAPI, BCDB, MEM_DATA
+# from annallWriterAPI import app, WriterAPI, BCDB, MEM_DATA
 from membershipData import MembershipData
 # from WriterAPI.annallWriterAPI import app, WriterAPI, BCDB
 # should put here some elementary command line argument processing
@@ -21,11 +21,9 @@ from membershipData import MembershipData
 RUN_WRITER_API = True   # If the api turns on, then it should be a reader of the blockchain
 CWD = os.getcwd()
 print("WORKING DIRECTORY: ", os.getcwd())
-CONFIG_PATH = f"{CWD}/src"
+CONFIG_PATH = f"{CWD}/src/"
 DB_PATH = f"{CWD}/src"
 PRIV_KEY_PATH = f"{CWD}/src"
-WRITER_API_PATH = "http://127.0.0.1:8000/"
-IS_WRITER_API = False
 
 if __name__ == "__main__":
     print("MAIN STARTED")
@@ -43,11 +41,13 @@ if __name__ == "__main__":
     ap.add_argument("-r", default=0, type=int, help="number of rounds")
     ap.add_argument("-conf", default="config-local.json", type=str, help="config file for writers")
     ap.add_argument("-privKey", default="priv_key.json", type=str, help="private key file for writer under /src")
+    ap.add_argument("-writerApiPath", default="http://127.0.0.1:8000/", type=str, help="private key file for writer under /src")
     a = ap.parse_args()
     id = a.myID
     rounds = a.r
-    config = a.conf
+    config_file = a.conf
     priv_key = a.privKey
+    writer_api_path = a.writerApiPath
     verbose_print("[ID]", id, " [ROUNDS]", rounds, " [conf]", a.conf, " [privKey]", priv_key)
      # Initialize the local database connection
     #   -- this is the local copy of the blockchain
@@ -55,16 +55,16 @@ if __name__ == "__main__":
     print("::> Starting up Blockchain DB = using ", dbpath)
     bce = BlockchainDB(dbpath)
     print("Local block chain database successfully initialized")
-    mem_data = MembershipData(id, CONFIG_PATH, config, WRITER_API_PATH, bce, True)
-    MEM_DATA[0] = mem_data
-    if RUN_WRITER_API and id == 1:  # Run the WriterAPI as a thread on a reader
-        # The writer api needs access to the blockchain database for reading
-        IS_WRITER_API = True
-        BCDB[0] = bce
-        writer_api = WriterAPI(app)
-        writer_api_thread = Thread(target=writer_api.run, name="WriterAPIThread")
-        writer_api_thread.daemon = True
-        writer_api_thread.start()
+    mem_data = MembershipData(id, CONFIG_PATH, config_file, writer_api_path, bce)
+    # MEM_DATA[0] = mem_data
+    # if RUN_WRITER_API and id == 1:  # Run the WriterAPI as a thread on a reader
+    #     # The writer api needs access to the blockchain database for reading
+    #     IS_WRITER_API = True
+    #     BCDB[0] = bce
+    #     writer_api = WriterAPI(app)
+    #     writer_api_thread = Thread(target=writer_api.run, name="WriterAPIThread")
+    #     writer_api_thread.daemon = True
+    #     writer_api_thread.start()
     
     with open(f"{CONFIG_PATH}/test_node_{id}/priv_key.json", "r") as f:
         priv_key = json.load(f)
