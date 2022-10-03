@@ -48,7 +48,7 @@ if __name__ == "__main__":
     config_file = a.conf
     priv_key = a.privKey
     writer_api_path = a.writerApiPath
-    verbose_print("[ID]", id, " [ROUNDS]", rounds, " [conf]", a.conf, " [privKey]", priv_key)
+    verbose_print("[ID]", id, " [ROUNDS]", rounds)
      # Initialize the local database connection
     #   -- this is the local copy of the blockchain
     dbpath = f"{DB_PATH}/test_node_{id}/blockchain.db"
