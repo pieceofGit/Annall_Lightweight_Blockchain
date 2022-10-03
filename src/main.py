@@ -39,7 +39,7 @@ if __name__ == "__main__":
     ap.add_argument("-myID", default=0, type=int,
                     help="ID fyrir skrifara, mandatory")
     ap.add_argument("-r", default=0, type=int, help="number of rounds")
-    ap.add_argument("-conf", default="config-local.json", type=str, help="config file for writers")
+    ap.add_argument("-conf", default="config-remote.json", type=str, help="config file for writers")
     ap.add_argument("-privKey", default="priv_key.json", type=str, help="private key file for writer under /src")
     ap.add_argument("-writerApiPath", default="http://127.0.0.1:8000/", type=str, help="private key file for writer under /src")
     a = ap.parse_args()
