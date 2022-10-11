@@ -126,7 +126,7 @@ class ClientHandler(threading.Thread):
                 self.send_message_to_client(resp)
             elif d["request_type"] == "read_chain":
                 # Gets back chain in a list of dictionaries
-                blockchain = self.bcdb.read_blocks(0, read_entire_chain=True)
+                blockchain = self.bcdb.get_blockchain()
                 # Send back entire blockchain json object
                 self.send_message_to_client(json.dumps(blockchain))
             else:   # "request_type == "block"
