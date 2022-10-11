@@ -1,2 +1,2 @@
 #!/bin/bash
-nohup gunicorn -w 1 --chdir ./ClientAPI annallClientAPI:app > /dev/null 2>&1&
+nohup gunicorn -w 4 --chdir ./ClientAPI annallClientAPI:app > clientAPI.out 2>&1&

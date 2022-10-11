@@ -1,1 +1,1 @@
-python3 ./src/main.py -myID 5 -r 20 -conf config-remote.json -writerApiPath http://176.58.116.107:70/
+python3 ./src/main.py -myID 5 -r 20 -conf config-remote.json -writerApiPath http://176.58.116.107:70/ 
