@@ -70,7 +70,7 @@ class ClientHandler(threading.Thread):
             verbose_print(">!! Failed to read length of message")
             return ""
         if length > BUFFER_SIZE:
-            verbose_print(">!! Message size too large")
+            verbose_print(f">!! Message size too large. Message size: {length} Buffer size: {BUFFER_SIZE}")
             return ""
         try:
             # Get the message data
@@ -103,7 +103,7 @@ class ClientHandler(threading.Thread):
         msg = json.dumps({"Server": "Hello", "name": self.name})
         self.send_message_to_client(msg)
         # Only receive the first message. Use message length        
-        data = self.get_message_from_client()
+        data = self.get_message_from_client()   #TODO: Sometime fails here on message size too large
         self.name = data["name"]
         self.payload_id = data["payload_id"]
         self.send_ack()
@@ -126,7 +126,7 @@ class ClientHandler(threading.Thread):
                 self.send_message_to_client(resp)
             elif d["request_type"] == "read_chain":
                 # Gets back chain in a list of dictionaries
-                blockchain = self.bcdb.get_blockchain()
+                blockchain = self.bcdb.read_blocks(0, read_entire_chain=True)
                 # Send back entire blockchain json object
                 self.send_message_to_client(json.dumps(blockchain))
             else:   # "request_type == "block"

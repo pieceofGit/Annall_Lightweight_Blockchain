@@ -42,6 +42,7 @@ class TestClientAPI(unittest.TestCase):
         response = requests.get(client_path+"blocks")
         time.sleep(1)   # Takes time to add block to blockchain
         self.assertEqual(response.status_code, 200, "GET blocks in GET blocks/<hash>/verified")
+        # print("RESPONSE JSON", response.json())
         latest_block_hash = response.json()[0]["hash"]
         response = requests.get(client_path+"blocks/"+latest_block_hash+ "/verified")
         self.assertEqual(response.status_code, 200, "GET blocks/<hash>/verified status code")
@@ -52,7 +53,19 @@ class TestClientAPI(unittest.TestCase):
         for i in range(0,100):
             response = requests.get(client_path+"blocks")
             self.assertEqual(response.status_code, 200, f"Request {i}")
+    
+    def test_post_blocks_load(self):
+        for i in range(0,100):
+            response = requests.post(client_path+"blocks", payload_json)
+            self.assertEqual(response.status_code, 201, f"Request {i}")
 
+    def test_post__get_blocks_load(self):
+        for i in range(0,100):
+            response = requests.post(client_path+"blocks", payload_json)
+            self.assertEqual(response.status_code, 201, f"Request {i}")
+            response = requests.get(client_path+"blocks")
+            self.assertEqual(response.status_code, 200, f"Request {i}")
+                    
 
 if __name__ == "__main__":
     client_path = "http://185.3.94.49:80/"

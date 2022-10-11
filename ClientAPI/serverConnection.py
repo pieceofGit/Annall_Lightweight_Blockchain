@@ -36,7 +36,7 @@ class ServerConnection:
                 msg = self.read_msg() # Server sends back who he is
                 # We send back who we are and server sends ACK back
                 ack = self.send_msg(json.dumps({"payload_id": 1, "name": "Client"}))
-                print(f"[ACK] {ack}")   
+                print(f"Connection with writer established at: {self.TCP_IP}{self.tcp_port}")   
                 running = True
             except:
                 count += 1

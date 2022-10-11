@@ -78,6 +78,7 @@ if __name__ == "__main__":
     print("Peer-to-peer network engine up  and running as:", pComm.name)
     
     verbose_print("THE ID: ", id)
+    # Get ip and port to bind to for clients
     TCP_IP = mem_data.get_tcp_ip(id)
     TCP_PORT = mem_data.get_tcp_port(id)
     print(f"TCP PORT: {TCP_PORT}")
