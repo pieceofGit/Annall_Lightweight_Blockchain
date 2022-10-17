@@ -112,6 +112,7 @@ def handle_invalid_usage(error):
 def get_config():    
     # Returns the conf file if writer is authenticated
     if authenticate_writer():
+        print("THE CONF":, conf)
         return Response(json.dumps(conf), mimetype="application/json", status=200)
     else:
         raise InvalidUsage("Writer not whitelisted", status_code=400)
