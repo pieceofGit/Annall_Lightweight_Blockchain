@@ -45,6 +45,36 @@ class ServerConnection:
                     break
                 time.sleep(1)
 
+    def send_data_msg(self, msg: str):
+        """ Formats message to bytes and sends to server and replies with data"""
+        self.socket.sendall(self.format_msg(msg))
+        # Wait for acknowledgement and return
+        return self.read_data_msg()
+
+
+    def read_data_msg(self) -> str:
+        """ Reads messages from socket while buffer is not empty\n
+            assumes that socket is ready to read """
+        b = None
+        byte_length = self.socket.recv(4)
+        length = int.from_bytes(byte_length, "big", signed=False)
+        while length:
+
+            print(">", self.read_msg.__name__, "Received message of length:", length)
+            if b:
+                b += self.socket.recv(length)
+            b = self.socket.recv(length)
+            
+            print(f"[SIZE OF received data] {len(b)} [length of message] {length}")
+            length -= len(b)
+        if b:
+            return b.decode("utf-8")
+        else:
+            return ""
+        
+        
+
+
     def send_msg(self, msg: str):
         """ Formats message to bytes and sends to server and replies with ACK"""
         self.socket.sendall(self.format_msg(msg))

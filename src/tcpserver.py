@@ -51,7 +51,7 @@ class ClientHandler(threading.Thread):
     
     def send_message_to_client(self, msg):
         byte_msg = self.format_msg(msg)
-        self.connection.send(byte_msg)
+        self.connection.sendall(byte_msg)
 
     def get_message_from_client(self):
         """Handles getting message.
@@ -117,8 +117,6 @@ class ClientHandler(threading.Thread):
                 break
             
             if d["request_type"] == "verify":
-                # payload = f"{d['name']},{d['request_type']},{d['payload']}"
-                # if self.check_existence(d["hash"], payload):
                 if self.check_existence(d["hash"]):
                     resp = json.dumps({"verified": True,})
                 else:
@@ -126,9 +124,12 @@ class ClientHandler(threading.Thread):
                 self.send_message_to_client(resp)
             elif d["request_type"] == "read_chain":
                 # Gets back chain in a list of dictionaries
-                blockchain = self.bcdb.read_blocks(0, read_entire_chain=True)
+                blockchain = self.bcdb.get_blockchain()
                 # Send back entire blockchain json object
                 self.send_message_to_client(json.dumps(blockchain))
+            elif d["request_type"] == "get_missing_blocks":
+                missing_blocks = self.bcdb.get_missing_blocks(d["hash"])
+                self.send_message_to_client(json.dumps(missing_blocks))
             else:   # "request_type == "block"
                 # Add new message to payload queue and send back ACK
                 self.payload_id = d["payload_id"]

@@ -12,7 +12,7 @@ from membershipData import MembershipData
 # Configurable variables
 PREPEND_PATH = os.getcwd() + "/"
 UPDATE_NUM = [0]
-CONFIG_PATH = "config-remote.json"    # Change for remote vs local setup
+CONFIG_PATH = "config-local.json"    # Change for remote vs local setup
 MEM_DATA = ["Before object initialization"]
 BCDB = ["Before db initialization"]
 CWD = os.getcwd()
@@ -23,8 +23,8 @@ IS_LOCAL = [True]
 # MEM_DATA = ["Before object initialization"]
 print("Starting annallWriterAPI Flask application server")
 # print("conf file in: ",PREPEND_PATH+CONFIG_PATH)
-# API_PATH = "127.0.0.1:8000/"
-API_PATH = "176.58.116.107:70"
+API_PATH = "127.0.0.1:8000/"
+# API_PATH = "176.58.116.107:70"
 with open(PREPEND_PATH+CONFIG_PATH, "r") as config_file:
   conf = json.load(config_file)
 MEM_DATA[0] = MembershipData(1, PREPEND_PATH, CONFIG_PATH, API_PATH, BCDB[0])
@@ -106,13 +106,13 @@ def handle_invalid_usage(error):
     response.status_code = error.status_code
     return response
 
-# @app.route("/conf", methods=["GET"])
-# def get_config():    
-#     # Returns the conf file if writer is authenticated
-#     if authenticate_writer():
-#         return Response(json.dumps(conf), mimetype="application/json", status=200)
-#     else:
-#         raise InvalidUsage("Writer not whitelisted", status_code=400)
+@app.route("/config", methods=["GET"])
+def get_config():    
+    # Returns the conf file if writer is authenticated
+    if authenticate_writer():
+        return Response(json.dumps(conf), mimetype="application/json", status=200)
+    else:
+        raise InvalidUsage("Writer not whitelisted", status_code=400)
 
 # @app.route("/conf", methods=["POST"])
 # def add_writer_to_set():

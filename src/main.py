@@ -56,16 +56,7 @@ if __name__ == "__main__":
     bce = BlockchainDB(dbpath)
     print("Local block chain database successfully initialized")
     mem_data = MembershipData(id, CONFIG_PATH, config_file, writer_api_path, bce)
-    # MEM_DATA[0] = mem_data
-    # if RUN_WRITER_API and id == 1:  # Run the WriterAPI as a thread on a reader
-    #     # The writer api needs access to the blockchain database for reading
-    #     IS_WRITER_API = True
-    #     BCDB[0] = bce
-    #     writer_api = WriterAPI(app)
-    #     writer_api_thread = Thread(target=writer_api.run, name="WriterAPIThread")
-    #     writer_api_thread.daemon = True
-    #     writer_api_thread.start()
-    
+
     with open(f"{CONFIG_PATH}/test_node_{id}/priv_key.json", "r") as f:
         priv_key = json.load(f)
         keys = priv_key["priv_key"]

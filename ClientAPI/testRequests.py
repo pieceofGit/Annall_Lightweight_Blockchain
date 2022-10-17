@@ -51,7 +51,8 @@ class TestClientAPI(unittest.TestCase):
     def test_get_blocks_load(self):
         """Should always return the blockchain with a 200 status code"""
         for i in range(0,100):
-            response = requests.get(client_path+"blocks")
+            headers = {"User-Agent": "PostmanRuntime/7.29.2","Accept": "*/*", "Accept-Encoding": "gzip, deflate, br"}
+            response = requests.get(client_path+"blocks", headers=headers)
             self.assertEqual(response.status_code, 200, f"Request {i}")
     
     def test_post_blocks_load(self):
@@ -59,19 +60,19 @@ class TestClientAPI(unittest.TestCase):
             response = requests.post(client_path+"blocks", payload_json)
             self.assertEqual(response.status_code, 201, f"Request {i}")
 
-    def test_post__get_blocks_load(self):
+    def test_post_get_blocks_load(self):
         for i in range(0,100):
             response = requests.post(client_path+"blocks", payload_json)
             self.assertEqual(response.status_code, 201, f"Request {i}")
             response = requests.get(client_path+"blocks")
             self.assertEqual(response.status_code, 200, f"Request {i}")
                     
-
+ 
 if __name__ == "__main__":
-    client_path = "http://185.3.94.49:80/"
-    writer_path = "http://176.58.116.107:70/"
-    # client_path = "http://127.0.0.1:6000/"
-    # writer_path = "http://127.0.0.1:8000/"
+    # client_path = "http://185.3.94.49:80/"
+    # writer_path = "http://176.58.116.107:70/"
+    client_path = "http://127.0.0.1:6000/"
+    writer_path = "http://127.0.0.1:8000/"
     payload_dict = {"payload": {"object": "value"}}
     payload_json = json.dumps({"payload": {"object": "value"}})
     unittest.main()

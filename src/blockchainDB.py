@@ -92,6 +92,17 @@ class BlockchainDB(interfaces.BlockChainEngine):
         except Exception as e:
             print("Error inserting block to chain db ", e)
 
+    def get_missing_blocks(self, hash: str, dict_form=True):
+        """Should return blocks after hash. Returns latest block if equal length"""
+        cond_string = f'hash == "{hash}"'
+        entry = self.select_entry(cond_string, dict_form=True)
+        if entry:
+            return self.get_range_of_blocks(begin=entry[0]["round"])
+        else:
+            # Hash not in blockchain, return full blockchain
+            return self.get_blockchain()
+
+
     def get_round_number(self):
         try:
             query = "SELECT MAX (round) FROM chain"
@@ -101,16 +112,16 @@ class BlockchainDB(interfaces.BlockChainEngine):
         except:
             return 0
 
-    def select_entry(self, condition: str, col: str = "*"):
+    def select_entry(self, condition: str, col: str = "*", dict_form=False):
         """ Retrieve block with specific condition
         """
         assert isinstance(condition, str)
         query = f"SELECT {col} FROM chain WHERE {condition}"
+
         try:
-            retrived = self.cursor.execute(query)
+            return self.get_query(query=query, dict_form=dict_form)
         except Exception as e:
-            print("Error retriving blocks from db :", e)
-        return retrived.fetchall()
+            print("Error retrieving blocks from db :", e)
 
     def dict_factory(self, cursor, row):
         d = {}
@@ -129,7 +140,7 @@ class BlockchainDB(interfaces.BlockChainEngine):
         return self.get_query(query, dict_form)
 
     def get_range_of_blocks(self, begin, end=None, col="*", dict_form=True):
-        """ Returns blocks within range """
+        """Returns blocks within given range"""
         assert isinstance(begin ,int)
         if end is not None:
             assert isinstance(end, int)
@@ -153,6 +164,7 @@ class BlockchainDB(interfaces.BlockChainEngine):
         return self.get_query(query, dict_form)
 
     def get_query(self, query, dict_form=False):
+        """Helper function for all queries"""
         to_return = []
         try: 
             if dict_form:
@@ -166,43 +178,6 @@ class BlockchainDB(interfaces.BlockChainEngine):
             verbose_print("Error retrieving blocks from db")
         return to_return
 
-    def read_blocks(self, begin, end=None, col="*", get_last_row=False, read_entire_chain=False):
-        """ Retrieve blocks with from and including start to end
-            If end is None, retrieve only the one block
-            Returns a list of blocks retrieved
-
-            What if none satisfies?
-            What type of exceptions
-        """
-        assert isinstance(begin ,int)
-        if end is not None:
-            assert isinstance(end, int)
-
-        verbose_print("read_blocks ", begin, end, col, get_last_row, read_entire_chain)
-        to_return = []
-
-        if get_last_row:  # If discrepancy between round and length of list because of arbitrarypayload
-            query = f"SELECT {col} FROM chain WHERE round >= {self.length - 1} ORDER BY round"
-        elif read_entire_chain:   # Returns a list of tuples for each transaction
-            query = f"SELECT * FROM chain WHERE round >= {0} ORDER BY round"
-        elif end is None:
-            query = f"SELECT {col} FROM chain WHERE round >= {begin} ORDER BY round"
-        else:
-            query = f"SELECT {col} FROM chain WHERE round >= {begin} AND round <= {end} ORDER BY round"
-        try: 
-            if read_entire_chain:     # Get back list of dictionary object for each block
-                self.db_connection.row_factory = self.dict_factory  
-            else:   # Send back list of tuples
-                self.db_connection.row_factory = None
-            cursor = self.db_connection.cursor()
-            retrieved = cursor.execute(query)
-            to_return = retrieved.fetchall()
-        except Exception as e:
-            print("Error retrieving blocks from db")
-            print(e)        
-        return to_return
-
-
 def __test_localDB():
 
     CWD = os.getcwd()
@@ -213,21 +188,20 @@ def __test_localDB():
 
      
     the_block = Block("prevHash", 1, 2, 0, "writer signature", 0, "the hash")
-    # the_block = ("prevHash", 1, 2, json.dumps({"the payload": 1}), 0, "writer signature", "the hash")
-
     #Block(prev_hash, writerID, coordinatorID, winning_number, signature, timestamp, payload )
     genesis_block = Block("0", 0, 0, 0, "0", 0,  json.dumps({"type": "genesis block"}),)
-    blocks_db.insert_block(0, genesis_block)
-    blocks_db.insert_block(1, the_block)
-    blocks_db.insert_block(2, the_block)
-    blocks_db.insert_block(3, the_block)
-    blocks_db.insert_block(4, the_block)
-    blocks_db.insert_block(5, the_block)
-    the_block = Block("correct prevHash", 1, 2, 0, "writer signature", 0, "the hash")
-    blocks_db.insert_block(6, the_block)
-    prev_hash = blocks_db.get_latest_block(dict_form=False, col="hash")[0][0]
-    print(prev_hash == "correct prevHash")
-    print(blocks_db.get_blockchain(True))
+    second_block = Block("0", 0, 0, 0, "0", 0,  json.dumps({"type": "second block"}),)
+    third_block = Block("0", 0, 0, 0, "0", 0,  json.dumps({"type": "third block"}),)
+    fourth_block = Block("0", 0, 0, 0, "0", 0,  json.dumps({"type": "fourth block"}),)
+    # blocks_db.insert_block(0, genesis_block)
+    # blocks_db.insert_block(0, second_block)
+    # blocks_db.insert_block(0, third_block)
+    # blocks_db.insert_block(0, fourth_block)
+    # the_block = Block("correct prevHash", 1, 2, 0, "writer signature", 0, "the hash")
+    # blocks_db.insert_block(6, the_block)
+    # prev_hash = blocks_db.get_latest_block(dict_form=False, col="hash")[0][0]
+    # print(prev_hash == "correct prevHash")
+    # print(blocks_db.get_blockchain(True))
     # reading_blocks = len(blocks_db.read_blocks(0, 4))
     # print(f"[MESSAGE READ BLOCKS 1-4] The message: {msg}")
     # import time
@@ -237,16 +211,20 @@ def __test_localDB():
     # print("Blockchain length: ", msg_old==msg_new)
     # #to_json = msg[0]['payload']
     # msg_get_range_old = blocks_db.read_blocks(3000, 10)
-    msg_get_range_new = blocks_db.get_range_of_blocks(1)
-    print("Blockchain: ", msg_get_range_new)
-    blocks_db.truncate_table()
+    # msg_get_range_new = blocks_db.get_range_of_blocks(1)
+    # print("Blockchain: ", msg_get_range_new)
+    # blocks_db.truncate_table()
     # prev_hash = blocks_db.get_latest_block(dict_form=False, col="hash")[0][0]
     # print("BEFORE FIRST ROW INSERTION",prev_hash)
-    genesis_block = Block("0", 0, 0, 0, "0", 0,  json.dumps({"type": "genesis block"}),)
-    blocks_db.insert_block(0, genesis_block)
-    msg_get_range_new = blocks_db.get_range_of_blocks(1)
-    prev_hash = blocks_db.get_latest_block(dict_form=False, col="hash")[0][0]
-    print("AFTER FIRST ROW INSERTION",prev_hash)
+    # genesis_block = Block("0", 0, 0, 0, "0", 0,  json.dumps({"type": "genesis block"}),)
+    # blocks_db.insert_block(0, genesis_block)
+    # blocks_db.insert_block(0, genesis_block)
+    # blocks_db.insert_block(0, genesis_block)
+    # blocks_db.insert_block(0, genesis_block)
+    # msg_get_range_new = blocks_db.get_range_of_blocks(1)
+    # prev_hash = blocks_db.get_latest_block(dict_form=False, col="hash")[0][0]
+    # print("AFTER FIRST ROW INSERTION",prev_hash)
+    print(blocks_db.get_missing_blocks("0xb76ab6fc1949fec304292ef76892002699e9d15fa279b32d085ae43904787380", True))
 
 
 

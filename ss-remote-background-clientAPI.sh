@@ -1,2 +1,2 @@
 #!/bin/bash
-nohup gunicorn -w 4 --chdir ./ClientAPI annallClientAPI:app > clientAPI.out 2>&1&
+nohup gunicorn --workers=1 --threads=4  --chdir ./ClientAPI annallClientAPI:app > clientAPI.out 2>&1&
