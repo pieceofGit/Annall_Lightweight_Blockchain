@@ -8,7 +8,6 @@ import sys
 import ast
 import json
 from flask import Flask, request, jsonify, Response
-from py import process
 from ClientAPI.serverConnection import ServerConnection
 from exceptionHandler import InvalidUsage
 from clientfunctions import *
