@@ -32,7 +32,8 @@ class TestClientAPI(unittest.TestCase):
         time.sleep(1)
         response = requests.get(client_path+"blocks")
         self.assertEqual(response.status_code, 200, "GET blocks status code")
-        latest_block = response.json()[0]["payload"]
+        latest_blocks_json = response.json()
+        latest_block = latest_blocks_json[0]["payload"]
         self.assertEqual(latest_block, payload_dict["payload"], "GET blocks, latest block")
 
     def test_get_by_hash(self):
@@ -43,7 +44,8 @@ class TestClientAPI(unittest.TestCase):
         time.sleep(1)   # Takes time to add block to blockchain
         self.assertEqual(response.status_code, 200, "GET blocks in GET blocks/<hash>/verified")
         # print("RESPONSE JSON", response.json())
-        latest_block_hash = response.json()[0]["hash"]
+        latest_blocks = response.json()
+        latest_block_hash = latest_blocks[0]["hash"]
         response = requests.get(client_path+"blocks/"+latest_block_hash+ "/verified")
         self.assertEqual(response.status_code, 200, "GET blocks/<hash>/verified status code")
         self.assertEqual(response.json(), {"verified": True}, "GET blocks/<hash>/verified object")

@@ -59,7 +59,7 @@
     }
   ],
   "writer_list": [1, 2],
-  "reader_list": [3],
+  "reader_list": [],
   "NO_coord": 1,
   "modulus": 65537,
   "version": "0.2"
