@@ -49,7 +49,7 @@ class ServerConnection:
         """ Formats message to bytes and sends to server and replies with data"""
         self.socket.sendall(self.format_msg(msg))
         # Wait for acknowledgement and return
-        return self.read_data_msg()
+        return self.read_msg()
 
 
     def read_data_msg(self) -> str:
