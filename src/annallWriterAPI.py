@@ -12,7 +12,7 @@ from membershipData import MembershipData
 # Configurable variables
 PREPEND_PATH = os.getcwd() + "/"
 UPDATE_NUM = [0]
-CONFIG_PATH = "config-local.json"    # Change for remote vs local setup
+CONFIG_PATH = "config-remote.json"    # Change for remote vs local setup
 MEM_DATA = ["Before object initialization"]
 BCDB = ["Before db initialization"]
 CWD = os.getcwd()
