@@ -24,6 +24,7 @@ class MembershipData:
 
     def set_lists(self):
         """ Updates the active sets """
+        print(self.conf)
         self.writer_list = self.conf["writer_list"]
         self.reader_list = self.conf["reader_list"]
             
