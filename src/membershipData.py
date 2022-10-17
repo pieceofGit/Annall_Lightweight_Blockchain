@@ -31,8 +31,8 @@ class MembershipData:
         """ Get conf if in an active set, else posts to be reader or writer """
         try:
             response = requests.get(self.api_path + "config", {})
-            verbose_print("[CONFIG node API] Got config from node API")
             self.conf = response.json()
+            verbose_print("[CONFIG node API] Got config from node API")
         except Exception as e:
             verbose_print("[CONFIG LOCAL] Failed to get config from writer", e)
     

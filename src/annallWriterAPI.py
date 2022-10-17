@@ -23,8 +23,8 @@ IS_LOCAL = [True]
 # MEM_DATA = ["Before object initialization"]
 print("Starting annallWriterAPI Flask application server")
 # print("conf file in: ",PREPEND_PATH+CONFIG_PATH)
-API_PATH = "127.0.0.1:8000/"
-# API_PATH = "176.58.116.107:70"
+# API_PATH = "127.0.0.1:8000/"
+API_PATH = "176.58.116.107:70"
 with open(PREPEND_PATH+CONFIG_PATH, "r") as config_file:
   conf = json.load(config_file)
 MEM_DATA[0] = MembershipData(1, PREPEND_PATH, CONFIG_PATH, API_PATH, BCDB[0])
