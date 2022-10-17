@@ -62,6 +62,7 @@ def add_new_writer(writer):
 def authenticate_writer():
     # Checks if public ip address of request is in writer list
     ip_address = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
+    print(f"IP ADDRESS OF NODE; {ip_address}")
     for obj in conf["node_set"]:
         if ip_address in obj["hostname"]:
             return True
