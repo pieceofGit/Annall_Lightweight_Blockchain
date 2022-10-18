@@ -29,7 +29,7 @@ server = ServerConnection(IP_ADDR, TCP_PORT)
 with open("bcdb.json", "w") as bcdb_file:
     try:
         resp_obj = server.send_data_msg(json.dumps({"request_type": "read_chain"}))
-        bcdb = ast.literal_eval(resp_obj)
+        bcdb = json.loads(resp_obj)
         json.dump(bcdb, bcdb_file, indent=4)
     except Exception as e:
         print(f"Failed to fetch blocks from writer: {e}")
@@ -93,7 +93,7 @@ def get_blockchain():
     """ Returns blocks in a list of dicts per block """
     try:
         resp_obj = server.send_data_msg(json.dumps({"request_type": "read_chain"}))
-        res_list = ast.literal_eval(resp_obj)
+        res_list = json.loads(resp_obj)
         return Response(json.dumps(res_list[::-1]), mimetype="application/json")
     except Exception:
         # print(sys.getsizeof(resp_obj))
@@ -110,7 +110,7 @@ def get_blocks():
         latest_block_hash = ""
     try:
         resp_obj = server.send_data_msg(json.dumps({"request_type": "get_missing_blocks", "hash": latest_block_hash}))
-        res_list = ast.literal_eval(resp_obj)
+        res_list = json.loads(resp_obj)
         add_blocks(res_list)
         return Response(json.dumps(bcdb[::-1]), mimetype="application/json")
     except Exception as e:
