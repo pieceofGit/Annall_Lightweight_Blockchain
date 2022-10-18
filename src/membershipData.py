@@ -38,6 +38,7 @@ class MembershipData:
             verbose_print("[CONFIG LOCAL] Failed to get config from writer", e)
     
     def check_delete_blocks(self):
+        response = None
         if self.is_api:
             with open(self.prepend_path + "config-writer-api-update.json", "r") as writer_conf:
                 response = json.load(writer_conf)
@@ -47,7 +48,7 @@ class MembershipData:
                 response = requests.get(self.api_path + "update", {}).json()
             except Exception as e:
                 verbose_print(f"[UPDATE FAIL] failed to get update from writer {e}")
-        if response["update_number"] > self.update_number:
+        if response and response["update_number"] > self.update_number:
             self.update_number = response["update_number"]
             return True
         return False
