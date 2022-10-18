@@ -1,6 +1,6 @@
 import json
 import requests
-from interfaces import verbose_print
+from interfaces import verbose_print, vverbose_print
 
 class MembershipData:
     def __init__(self, id, prepend_path, conf_file, api_path, bcdb):
@@ -47,7 +47,7 @@ class MembershipData:
             try:
                 response = requests.get(self.api_path + "update", {}).json()
             except Exception as e:
-                verbose_print(f"[UPDATE FAIL] failed to get update from writer {e}")
+                vverbose_print(f"[UPDATE FAIL] failed to get update from writer {e}")
         if response and response["update_number"] > self.update_number:
             self.update_number = response["update_number"]
             return True
