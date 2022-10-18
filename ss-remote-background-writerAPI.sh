@@ -1,3 +1,3 @@
 #!/bin/bash
-nohup gunicorn -w 1 --chdir ./src annallWriterAPI:app > writerAPI.out 2>&1
+nohup gunicorn --workers=1 --threads=4 --chdir ./src annallWriterAPI:app > writerAPI.out 2>&1
 
