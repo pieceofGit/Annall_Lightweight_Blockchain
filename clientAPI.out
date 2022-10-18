@@ -1,33 +1,4 @@
-[2022-10-18 13:57:05 +0000] [12545] [INFO] Starting gunicorn 20.1.0
-[2022-10-18 13:57:05 +0000] [12545] [INFO] Listening at: http://127.0.0.1:8000 (12545)
-[2022-10-18 13:57:05 +0000] [12545] [INFO] Using worker: gthread
-[2022-10-18 13:57:05 +0000] [12548] [INFO] Booting worker with pid: 12548
-[2022-10-18 13:59:07 +0000] [12545] [WARNING] Worker with pid 12548 was terminated due to signal 9
-[2022-10-18 13:59:07 +0000] [12981] [INFO] Booting worker with pid: 12981
-[2022-10-18 13:59:28 +0000] [12545] [WARNING] Worker with pid 12981 was terminated due to signal 9
-[2022-10-18 13:59:28 +0000] [13080] [INFO] Booting worker with pid: 13080
-[2022-10-18 14:00:19 +0000] [13080] [INFO] Worker exiting (pid: 13080)
-Starting annallClientAPI Flask application server
-5000
-Tried connecting 10 times to writer
-Failed to fetch blocks from writer: [Errno 32] Broken pipe
-[2022-10-18 14:00:19 +0000] [13301] [INFO] Booting worker with pid: 13301
-[2022-10-18 14:00:29 +0000] [13301] [INFO] Worker exiting (pid: 13301)
-Starting annallClientAPI Flask application server
-5000
-Tried connecting 10 times to writer
-Failed to fetch blocks from writer: [Errno 32] Broken pipe
-[2022-10-18 14:00:29 +0000] [13337] [INFO] Booting worker with pid: 13337
-[2022-10-18 14:00:50 +0000] [13337] [INFO] Worker exiting (pid: 13337)
-Starting annallClientAPI Flask application server
-5000
-Tried connecting 10 times to writer
-Failed to fetch blocks from writer: [Errno 32] Broken pipe
-[2022-10-18 14:00:50 +0000] [13405] [INFO] Booting worker with pid: 13405
-[2022-10-18 14:00:56 +0000] [12545] [INFO] Handling signal: term
-[2022-10-18 14:01:00 +0000] [13405] [INFO] Worker exiting (pid: 13405)
-Starting annallClientAPI Flask application server
-5000
-Tried connecting 10 times to writer
-Failed to fetch blocks from writer: [Errno 32] Broken pipe
-[2022-10-18 14:01:00 +0000] [12545] [INFO] Shutting down: Master
+[2022-10-18 14:16:50 +0000] [17121] [INFO] Starting gunicorn 20.1.0
+[2022-10-18 14:16:50 +0000] [17121] [INFO] Listening at: http://127.0.0.1:8000 (17121)
+[2022-10-18 14:16:50 +0000] [17121] [INFO] Using worker: gthread
+[2022-10-18 14:16:50 +0000] [17125] [INFO] Booting worker with pid: 17125
