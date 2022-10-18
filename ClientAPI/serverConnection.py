@@ -14,7 +14,7 @@ test_conf["writerlist"][2] = {"ip": "127.0.0.1", "protocol_port": 15002}
 test_conf["writerlist"][3] = {"ip": "127.0.0.1", "protocol_port": 15003}
 # test_conf["writerlist"][4] = {"ip": "127.0.0.1", "protocol_port": 15004}
 TEST_SERVER_CONNECTION = False
-
+BUFFER_SIZE = 
 class ServerConnection:
     def __init__(self, ip_addr, tcp_port):
         # On initialization, connect to server
@@ -58,15 +58,14 @@ class ServerConnection:
         b = None
         byte_length = self.socket.recv(4)
         length = int.from_bytes(byte_length, "big", signed=False)
-        while length:
-
-            print(">", self.read_msg.__name__, "Received message of length:", length)
-            if b:
-                b += self.socket.recv(length)
-            b = self.socket.recv(length)
-            
-            print(f"[SIZE OF received data] {len(b)} [length of message] {length}")
-            length -= len(b)
+        # while length:
+        #     print(">", self.read_msg.__name__, "Received message of length:", length)
+        #     if b:
+        #         b += self.socket.recv(BUFFER_SIZE)
+        #     else:
+        b = self.socket.recv(length)
+            # print(f"[SIZE OF received data] {len(b)} [length of message] {length}")
+            # length -= BUFFER_SIZE
         if b:
             return b.decode("utf-8")
         else:
