@@ -88,7 +88,7 @@ class ServerConnection:
         # print(">", self.read_msg.__name__, "Received message of length:", length)
         if length == 0:
             return ""
-        b = self.socket.recv(length)
+        b = self.socket.recv(length, socket.MSG_WAITALL)
         return b.decode("utf-8")
 
     def format_msg(self, msg: str) -> bytes:
