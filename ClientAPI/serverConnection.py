@@ -63,7 +63,8 @@ class ServerConnection:
             print(">", self.read_msg.__name__, "Received message of length:", length)
             if b:
                 b += self.socket.recv(length)
-            b = self.socket.recv(length)
+            else:
+                b = self.socket.recv(length)
             
             print(f"[SIZE OF received data] {len(b)} [length of message] {length}")
             length -= len(b)
