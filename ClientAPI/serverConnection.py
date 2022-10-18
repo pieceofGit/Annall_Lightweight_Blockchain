@@ -14,7 +14,7 @@ test_conf["writerlist"][2] = {"ip": "127.0.0.1", "protocol_port": 15002}
 test_conf["writerlist"][3] = {"ip": "127.0.0.1", "protocol_port": 15003}
 # test_conf["writerlist"][4] = {"ip": "127.0.0.1", "protocol_port": 15004}
 TEST_SERVER_CONNECTION = False
-BUFFER_SIZE = 
+BUFFER_SIZE = 4096
 class ServerConnection:
     def __init__(self, ip_addr, tcp_port):
         # On initialization, connect to server
