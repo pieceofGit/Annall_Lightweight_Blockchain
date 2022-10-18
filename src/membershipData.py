@@ -45,8 +45,8 @@ class MembershipData:
             # Remote request for update
             try:
                 response = requests.get(self.api_path + "update", {}).json()
-            except requests.JSONDecodeError:
-                verbose_print("[UPDATE FAIL] failed to get update from writer")
+            except Exception as e:
+                verbose_print(f"[UPDATE FAIL] failed to get update from writer {e}")
         if response["update_number"] > self.update_number:
             self.update_number = response["update_number"]
             return True
