@@ -53,8 +53,9 @@ To send POST and GET requests, you run the ClientAPI/annallClientAPI.py or you c
 
 # Example run
 
-1. Open three terminals with the venv activated
-2. run "./ss3-local.sh" to start the first node which activates the Writer API
-3. run "./ss2-local.sh" and "./ss1-local.sh" separately
-4. run "gunicorn -b 127.0.0.1:5000 annallClientAPI:app" to connect to writer 1 and sends requests.
+1. Open four terminals with the venv activated
+2. run "./ss-local-writerAPI.sh" for central communications with nodes.
+3. run "./ss1-local.sh" to start the first node
+3. run "./ss2-local.sh" to start the second node
+4. run "./ss-local-clientAPI.sh" to start the client api for sending requests
 5. Send successive POST and GET requests and see whether your transaction has been posted to the blockchain.
