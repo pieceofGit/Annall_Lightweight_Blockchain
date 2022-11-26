@@ -1,1 +1,0 @@
-rm ./src/test_node_1/blockchain.db ./src/test_node_2/blockchain.db ./src/test_node_3/blockchain.db ./src/test_node_4/blockchain.db ./src/test_node_5/blockchain.db

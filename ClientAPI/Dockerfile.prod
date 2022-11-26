@@ -1,0 +1,8 @@
+FROM python:3.8-slim-buster
+USER root
+COPY requirements.txt requirements.txt
+EXPOSE 80
+RUN pip3 install -r requirements.txt
+COPY . /app
+WORKDIR /app
+ENTRYPOINT ["./gunicornProd.sh"]

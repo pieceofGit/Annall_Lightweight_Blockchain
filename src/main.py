@@ -5,62 +5,45 @@ import json
 ## Own modules imported
 from protoengine import ProtoEngine
 from interfaces import (
-    #BlockChainEngine,
-    #ClientServer,
     verbose_print
 )
-from tcpserver import TCP_Server, ClientHandler
+from tcp_server import TCP_Server, ClientHandler
 from protocom import ProtoCom
-from blockchainDB import BlockchainDB
-# from annallWriterAPI import app, WriterAPI, BCDB, MEM_DATA
-from membershipData import MembershipData
-# from WriterAPI.annallWriterAPI import app, WriterAPI, BCDB
-# should put here some elementary command line argument processing
-# EG. parameters for where the config file is, number of writers (for testing), and rounds
-# Define explicitly the paths
-RUN_WRITER_API = True   # If the api turns on, then it should be a reader of the blockchain
+from models.blockchainDB import BlockchainDB
+from models.membershipData import MembershipData
+
 CWD = os.getcwd()
-print("WORKING DIRECTORY: ", os.getcwd())
 CONFIG_PATH = f"{CWD}/src/"
-DB_PATH = f"{CWD}/src"
 PRIV_KEY_PATH = f"{CWD}/src"
 
 if __name__ == "__main__":
-    print("MAIN STARTED")
+    print("MAIN STARTED", flush=True)
     ap = argparse.ArgumentParser()
-    # ap.add_argument('-file', help='input data file (default stdin)')
-    """ap.add_argument(
-       "configfile",
-        nargs="?",
-        type=argparse.FileType("r"),
-        default=src/,
-        help="input data file (default stdin)",
-    )"""
     ap.add_argument("-myID", default=0, type=int,
                     help="ID fyrir skrifara, mandatory")
     ap.add_argument("-r", default=0, type=int, help="number of rounds")
     ap.add_argument("-conf", default="config-remote.json", type=str, help="config file for writers")
     ap.add_argument("-privKey", default="priv_key.json", type=str, help="private key file for writer under /src")
-    ap.add_argument("-writerApiPath", default="http://127.0.0.1:8000/", type=str, help="private key file for writer under /src")
+    ap.add_argument("-db", default=None, type=str, help="Set if shared db in docker")
     a = ap.parse_args()
     id = a.myID
     rounds = a.r
     config_file = a.conf
     priv_key = a.privKey
-    writer_api_path = a.writerApiPath
+    db_path = a.db
     verbose_print("[ID]", id, " [ROUNDS]", rounds)
      # Initialize the local database connection
     #   -- this is the local copy of the blockchain
-    dbpath = f"{DB_PATH}/test_node_{id}/blockchain.db"
-    print("::> Starting up Blockchain DB = using ", dbpath)
-    bce = BlockchainDB(dbpath)
+    if not db_path:
+        db_path = f"src/testNodes/test_node_{id}/blockchain.db"
+    print("::> Starting up Blockchain DB = using ", db_path)
+    bce = BlockchainDB(db_path)
     print("Local block chain database successfully initialized")
-    mem_data = MembershipData(id, CONFIG_PATH, config_file, writer_api_path, bce)
+    mem_data = MembershipData(id, CONFIG_PATH, config_file, bce)
 
-    with open(f"{CONFIG_PATH}/test_node_{id}/priv_key.json", "r") as f:
+    with open(f"{CONFIG_PATH}/testNodes/test_node_{id}/priv_key.json", "r") as f:
         priv_key = json.load(f)
         keys = priv_key["priv_key"]
-
     # Start Communication Engine - maintaining the peer-to-peer network of writers
     print("::> Starting up peer-to-peer network engine with id ", id)
     pComm = ProtoCom(id, mem_data)
