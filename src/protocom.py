@@ -1,5 +1,4 @@
-from PCommMsg import pMsg
-from PCommMsg import pMsgTyp
+from p_comm_msg import pMsg, pMsgTyp
 #import interfaces
 import threading
 import socket
@@ -15,7 +14,7 @@ from interfaces import (
     verbose_print, 
     vverbose_print
 )
-from membershipData import MembershipData
+from models.membershipData import MembershipData
 
 VERBOSE = False
 # **********************************
@@ -288,7 +287,7 @@ class ProtoCom(ProtocolCommunication):
                 socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.listen_sock.setblocking(False)
             verbose_print(f"Listening on port: {self.listen_port}")
-            self.listen_sock.bind((self.ip, self.listen_port))
+            self.listen_sock.bind(("", self.listen_port))
             # TODO decide what number - lets not decide and k make it big
             self.listen_sock.listen(100)
             # TODO for all sockets conn.setblocking(False) when using selectors

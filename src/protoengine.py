@@ -14,8 +14,8 @@ import argparse
 import os
 import json
 from protocom import ProtoCom
-from membershipData import MembershipData
-from tcpserver import TCP_Server, ClientHandler
+from models.membershipData import MembershipData
+from tcp_server import TCP_Server, ClientHandler
 
 import interfaces
 from interfaces import (
@@ -26,8 +26,8 @@ from interfaces import (
     vverbose_print,
 )
 
-from blockchainDB import BlockchainDB
-from block import Block
+from models.blockchainDB import BlockchainDB
+from models.block import Block
 
 NoneType = type(None)
 
@@ -304,6 +304,7 @@ class ProtoEngine(ProtocolEngine):
         ## TODO: More suspicious is, this seems to block if any of the writers is not connected.
         while len(self.comm.list_connected_peers()) != len(self.mem_data.writer_list) + len(self.mem_data.reader_list) - 1: # TODO: Needs more sophistication
             time.sleep(1)
+            print("WAITING TO CONNECT")
         print(f"ID={self.ID} -> connected and ready to build")
         return None
 

@@ -1,0 +1,55 @@
+version: "3.9"  # optional since v1.27.0
+services:
+  writer_api:
+    container_name: writer_api
+    build:
+      context: ./src/WriterAPI
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8000:8000"
+    networks: 
+      - "annall_network"
+    expose:
+      - 8000
+  annall_1:
+    container_name: annall_1
+    build:
+      context: .
+      dockerfile: Dockerfile.dev1
+    ports:
+      - "5001:5001"
+      - "15000:15000"
+    networks: 
+      - "annall_network"
+    expose:
+      - 15000
+  annall_2:
+    container_name: annall_2
+    build:
+      dockerfile: Dockerfile.dev2
+      context: .
+    ports:
+      - "5002:5002"
+      - "15001:15001"
+    networks: 
+      - "annall_network"
+    expose:
+      - 15001
+  client_api:
+    build:
+      context: ./ClientAPI
+      dockerfile: Dockerfile.dev
+    container_name: client_api
+    ports:
+      - "6000:6000"
+    networks: 
+      - "annall_network"
+    expose:
+      - 6000
+networks:
+  annall_network:
+    driver: bridge
+
+  
+  
+  

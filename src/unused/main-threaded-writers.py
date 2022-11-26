@@ -14,7 +14,7 @@ from interfaces import (
 )
 from queue import Queue
 import json
-from tcpserver import TCP_Server, ClientHandler
+from tcp_server import TCP_Server, ClientHandler
 from protocom import ProtoCom
 
 ## should put here some elementary command line argument processing

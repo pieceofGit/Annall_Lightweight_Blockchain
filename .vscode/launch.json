@@ -11,7 +11,7 @@
       "program": "${workspaceFolder}//src//main.py",
       "console": "integratedTerminal",
       "justMyCode": true,
-      "args": ["-myID", "1", "-r 0", "-conf", "config-local.json"],
+      "args": ["-myID", "1", "-r 0", "-conf", "configs/config-local.json"],
       "cwd": "${workspaceFolder}"
     },
     {
@@ -38,11 +38,11 @@
       "name": "Python: ClientAPI",
       "type": "python",
       "request": "launch",
-      "program": "${file}",
+      "program": "${workspaceFolder}//ClientAPI//wsgiDev.py",
       "console": "integratedTerminal",
       "justMyCode": true,
       //   "args": [""],
-      "cwd": "${fileDirname}"
+      "cwd": "${workspaceFolder}//ClientAPI"
     },
     {
       "name": "Python: WriterAPI",
@@ -70,7 +70,8 @@
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal",
-      "justMyCode": true
+      "justMyCode": true,
+      "cwd": "${fileDirname}"
     }
   ]
 }
