@@ -1,6 +1,6 @@
 FROM python:3.8-slim-buster
 USER root
-COPY ../requirements.txt requirements.txt
+COPY requirements.txt requirements.txt
 EXPOSE 5001 15000
 RUN pip3 install -r requirements.txt
 COPY . /app

@@ -1,7 +1,7 @@
 {
   "no_permitted_writers": 2,
   "writer_api": {
-    "hostname": "176.58.116.107",
+    "hostname": "85.3.94.49",
     "port": "70"
   },
   "client_api": {
