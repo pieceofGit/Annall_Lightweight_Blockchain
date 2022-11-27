@@ -25,6 +25,7 @@ class ProdConfig(Config):
     with open(f"{CONFIG_NAME}") as config_file:   # If in top directory for debug
         CONF = json.load(config_file)
     IS_LOCAL = False
+    HOST_PORT = 70
 
 class DevConfig(Config):
     FLASK_ENV = 'development'
