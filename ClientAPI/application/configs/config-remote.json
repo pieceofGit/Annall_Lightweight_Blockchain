@@ -2,11 +2,11 @@
   "no_permitted_writers": 2,
   "writer_api": {
     "hostname": "85.3.94.49",
-    "port": "70"
+    "port": "8000"
   },
   "client_api": {
     "hostname": "85.3.94.49",
-    "port": "80"
+    "port": "6000"
   },
   "node_set": [
     {

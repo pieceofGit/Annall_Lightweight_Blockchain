@@ -5,4 +5,4 @@ EXPOSE 5000 15001
 RUN pip3 install -r requirements.txt
 COPY . /app
 WORKDIR /app
-ENTRYPOINT ["../scripts/ss1-remote.sh"]
+ENTRYPOINT ["scripts/ss1-remote.sh"]

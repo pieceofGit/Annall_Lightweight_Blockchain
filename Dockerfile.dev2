@@ -5,4 +5,4 @@ EXPOSE 5002 15001
 RUN pip3 install -r requirements.txt
 COPY . /app
 WORKDIR /app
-ENTRYPOINT ["../scripts/ss2-local-docker.sh"]
+ENTRYPOINT ["scripts/ss2-local-docker.sh"]
