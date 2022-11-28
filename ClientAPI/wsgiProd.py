@@ -1,4 +1,4 @@
-from . import init_prod_app
+from application import init_prod_app
 
 app = init_prod_app()
 

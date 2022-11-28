@@ -10,6 +10,7 @@ def init_prod_app():
         from . import routes
         app.register_blueprint(routes.annall)
         return app
+    
 def init_dev_app():
     """Initialize the core application."""
     app = Flask(__name__, instance_relative_config=False)
