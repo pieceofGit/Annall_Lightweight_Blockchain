@@ -1,2 +1,2 @@
 #!/bin/bash
-gunicorn -w 1 --chdir ./ClientAPI wsgiProd:app -b 127.0.0.1:80
+gunicorn -w 1 --chdir ./ClientAPI wsgiProd:app -b 127.0.0.1:6000
