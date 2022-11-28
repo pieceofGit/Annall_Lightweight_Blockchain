@@ -65,7 +65,7 @@ def get_config():
     # else:
     #     raise InvalidUsage("Writer not whitelisted", status_code=400)
 
-@app.route("/conf", methods=["POST"])
+@app.route("/config", methods=["POST"])
 def add_writer_to_set():
     """ required: {
         "name": string,
@@ -85,16 +85,22 @@ def add_writer_to_set():
     # Append api to writer_set
     add_new_writer(writer_to_add)
     return Response(status=201)
+def get_update_num():
+    with open(app.config["CONF_WRITER_FILE"], "r") as writer_api_conf:
+        update_num = json.load(writer_api_conf)
+        print(update_num)
+        return update_num["update_number"]
 
 @app.route("/blocks", methods=["DELETE"])
 def delete_chain():
     # if authenticate_writer():
-    app.config["UPDATE_NUM"] += 1
+    with open(app.config["CONF_WRITER_FILE"], "r") as writer_api_conf:
+        update_num = json.load(writer_api_conf)
     with open(app.config["CONF_WRITER_FILE"], "w") as writer_api_conf:
-        json.dump({"update_num":app.config["UPDATE_NUM"]}, writer_api_conf, indent=4)    
+        json.dump({"update_number":update_num["update_number"]+1}, writer_api_conf, indent=4)    
     return Response(status=204)
 
 @app.route("/update", methods=["GET"])
 def get_update():
     """Returns number of latest update"""
-    return Response(json.dumps({"update_number": app.config["UPDATE_NUM"], "restart": True}), mimetype="application/json")
+    return Response(json.dumps({"update_number": get_update_num(), "restart": True}), mimetype="application/json")
