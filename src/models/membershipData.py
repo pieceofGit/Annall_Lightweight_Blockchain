@@ -26,7 +26,7 @@ class MembershipData:
     def get_remote_conf(self):
         """ Get conf if in an active set, else posts to be reader or writer """
         try:
-            response = requests.get(self.api_path + "config", {})
+            response = requests.get(self.api_path + "config", {}, timeout=5)
             verbose_print("[CONFIG node API] Got config from node API")
             self.conf = response.json()
         except Exception as e:
