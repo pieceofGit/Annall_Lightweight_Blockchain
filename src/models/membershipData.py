@@ -13,7 +13,7 @@ class MembershipData:
         self.bcdb = bcdb
         with open(self.prepend_path + self.conf_file_name, "r") as conf_file:
             self.conf = json.load(conf_file)
-            self.api_path = f'http://{self.conf["writer_api"]["hostname"]}:{self.conf["writer_api"]["port"]}/config'
+            self.api_path = f'http://{self.conf["writer_api"]["hostname"]}:{self.conf["writer_api"]["port"]}/'
             self.get_remote_conf()
         self.set_lists()
         self.update_number = 0
