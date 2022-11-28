@@ -6,7 +6,7 @@ def init_prod_app():
     app.config.from_object('config.ProdConfig')
     with app.app_context():
         # Include our Routes
-        from application import routes
+        from . import routes
         return app
 
 def init_dev_app():
