@@ -6,7 +6,6 @@ def init_prod_app():
     app.config.from_object('config.ProdConfig')
     with app.app_context():
         # Include our Routes
-        app.config.from_object('config.ProdConfig')
         app.config["SERVER"] = ServerConnection(app.config["IP_ADDR"], app.config["TCP_PORT"])
         from . import routes
         app.register_blueprint(routes.annall)
