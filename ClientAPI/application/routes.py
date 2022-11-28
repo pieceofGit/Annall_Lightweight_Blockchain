@@ -71,18 +71,15 @@ def get_blocks():
     """ Returns blocks in a list of dicts per block.
     The client only fetches blocks it does not already have. """
     if len(app.config["BCDB"]):
-        print(app.config["BCDB"][-1])
         latest_block_hash = app.config["BCDB"][-1]["hash"]
     else:
         latest_block_hash = ""
     try:
         resp_obj = app.config["SERVER"].send_data_msg(json.dumps({"request_type": "get_missing_blocks", "hash": latest_block_hash}))
-        print("LAST CHAR: ", resp_obj[-1])
         res_list = json.loads(resp_obj)
         add_blocks(res_list)
         return Response(json.dumps(app.config["BCDB"][::-1]), mimetype="application/json")
     except Exception as e:
-        # print(sys.getsizeof(resp_obj))
         raise InvalidUsage(f"Failed to read from writer {e}", status=500)
 
 @annall.errorhandler(400)
