@@ -131,7 +131,6 @@ class ClientHandler(threading.Thread):
                 missing_blocks = self.bcdb.get_missing_blocks(d["hash"])
                 print(len(missing_blocks))
                 print(len(json.dumps(missing_blocks)))
-                print(missing_blocks[-1])
                 self.send_message_to_client(json.dumps(missing_blocks))
             else:   # "request_type == "block"
                 # Add new message to payload queue and send back ACK
