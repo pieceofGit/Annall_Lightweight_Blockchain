@@ -26,7 +26,7 @@ class ProdConfig(Config):
         CONF = json.load(config_file)
         IP_ADDR = CONF["node_set"][0]["hostname"]
         TCP_PORT = CONF["node_set"][0]["client_port"]
-    HOST_PORT = "80"
+    HOST_PORT = "5000"
 
 class DevConfig(Config):
     FLASK_ENV = 'development'
