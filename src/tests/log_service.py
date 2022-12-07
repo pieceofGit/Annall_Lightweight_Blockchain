@@ -1,6 +1,6 @@
 import json
 import ssl
-from blockBroker import BlockBroker
+from ..blockBroker import BlockBroker
 # parameters = pika.ConnectionParameters(
 #     host='b-1d97e372-ff08-4b61-85e1-5ad197032218.mq.us-west-2.amazonaws.com',
 #     port=5671,
