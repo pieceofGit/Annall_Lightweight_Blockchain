@@ -30,8 +30,8 @@ class BlockBroker:
             self.channel.queue_declare(queue=self.queue_name, durable=True)
             # Bind the queue to a specific exchange with a routing key
             self.channel.queue_bind(exchange=self.exchange_name, queue=self.queue_name, routing_key=self.routing_key)
-        except:
-            print("Failed to setup connection")
+        except Exception as e:
+            print("Failed to setup connection", e)
 
     def _publish_block(self, block: str):
         self.channel.basic_publish(exchange=self.exchange_name, routing_key=self.routing_key, body=block)
@@ -40,7 +40,8 @@ class BlockBroker:
         """Publishes block to block_queue with 2 attempts"""
         try:
             self._publish_block(block)
-        except:
+        except Exception as e:
+            print("Failed to publish to queue", e)
             self.setup_connection()
             try:
                 self._publish_block(block)
