@@ -16,7 +16,7 @@ import json
 from protocom import ProtoCom
 from models.membershipData import MembershipData
 from tcp_server import TCP_Server, ClientHandler
-
+from blockBroker import BlockBroker
 import interfaces
 from interfaces import (
     ProtocolCommunication,
@@ -25,7 +25,6 @@ from interfaces import (
     verbose_print,
     vverbose_print,
 )
-
 from models.blockchainDB import BlockchainDB
 from models.block import Block
 
@@ -147,7 +146,9 @@ class ProtoEngine(ProtocolEngine):
         self.latest_block = None
         # maintain a payload
         self.stashed_payload = None
-
+        # PubSub queue and exchange
+        self.broker = BlockBroker()        
+                    
     def set_rounds(self, round: int):
         ''' A round is a minting of a block, this defines for how many rounds the blockchain runs for'''
         assert isinstance(round, int)
@@ -369,6 +370,11 @@ class ProtoEngine(ProtocolEngine):
         self.latest_block = cancel_block
         return cancel_block
 
+    def publish_block(self):
+        """Winning writer fetches latest block in chain and publishes it to queue"""
+        latest_block = self.bcdb.get_latest_block()
+        self.broker.publish_block(json.dumps(latest_block))
+        
     def check_for_old_cancel_message(self, round):
         message = self._recv_msg(type="cancel")
         if message is not None:
@@ -432,7 +438,6 @@ class ProtoEngine(ProtocolEngine):
                 self.latest_block = block
         vverbose_print(f"[LATEST BLOCK] the latest block is: {self.latest_block}")
         self.bcdb.insert_block(round, self.latest_block)
-        
 
     # The round for the writer when you are not coordinator
     def writer_round(self, round: int, coordinatorID: int):
@@ -509,9 +514,10 @@ class ProtoEngine(ProtocolEngine):
             # Cancel the round
             verbose_print("[ROUND CANCEL] round was cancelled because it was not verified")
             self.cancel_round("Round not verified", round)
-
         vverbose_print(f"[LATEST BLOCK] the latest block is: {self.latest_block}")
         self.bcdb.insert_block(round, self.latest_block)
+        self.publish_block()
+
 
     def coordinator_round(self, round: int):
         

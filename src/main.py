@@ -11,7 +11,6 @@ from tcp_server import TCP_Server, ClientHandler
 from protocom import ProtoCom
 from models.blockchainDB import BlockchainDB
 from models.membershipData import MembershipData
-
 CWD = os.getcwd()
 CONFIG_PATH = f"{CWD}/src/"
 PRIV_KEY_PATH = f"{CWD}/src"
@@ -80,5 +79,6 @@ if __name__ == "__main__":
     # finalization and cleanup
     # PEthread is not a daemon
     PEthread.join() # MainThread awaits here for cleanup
+    PE.broker.connection.close()    # Close rabbitmq broker connection
     # Associated daemon threads are killed when the program ends
     
