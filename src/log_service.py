@@ -1,3 +1,4 @@
+"""Example of a subscriber to BlockBroker that prints out messages from queue"""
 import json
 import ssl
 from blockBroker import BlockBroker
