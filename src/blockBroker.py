@@ -34,7 +34,10 @@ class BlockBroker:
             verbose_print("Failed to setup connection", e)
 
     def _publish_block(self, block: str):
+        print("publishing to queue")
         self.channel.basic_publish(exchange=self.exchange_name, routing_key=self.routing_key, body=block)
+        print("done publishing to queue")
+
         
     def publish_block(self, block: str):
         """Publishes block to block_queue with 2 attempts"""
