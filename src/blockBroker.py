@@ -1,6 +1,6 @@
 import ssl
 import pika
-
+from interfaces import verbose_print
 class BlockBroker:
 
     def __init__(self):
@@ -13,7 +13,7 @@ class BlockBroker:
         
     def setup_connection(self):
         try:
-            print("Setting up Rabbitmq connection again")
+            verbose_print("Setting up Rabbitmq connection again")
             # SSL Context for TLS configuration of Amazon MQ for RabbitMQ
             ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
             ssl_context.set_ciphers('ECDHE+AESGCM:!ECDSA')
@@ -31,7 +31,7 @@ class BlockBroker:
             # Bind the queue to a specific exchange with a routing key
             self.channel.queue_bind(exchange=self.exchange_name, queue=self.queue_name, routing_key=self.routing_key)
         except Exception as e:
-            print("Failed to setup connection", e)
+            verbose_print("Failed to setup connection", e)
 
     def _publish_block(self, block: str):
         self.channel.basic_publish(exchange=self.exchange_name, routing_key=self.routing_key, body=block)
@@ -41,11 +41,11 @@ class BlockBroker:
         try:
             self._publish_block(block)
         except Exception as e:
-            print("Failed to publish to queue", e)
+            verbose_print("Failed to publish to queue", e)
             self.setup_connection()
             try:
                 self._publish_block(block)
             except:
-                print("Failed to publish block to queue")
+                verbose_print("Failed to publish block to queue")
 
         
