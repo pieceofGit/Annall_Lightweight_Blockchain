@@ -22,7 +22,7 @@ class BlockBroker:
         self.setup_connection()
         
     def setup_connection(self):
-        try:°
+        try:
             self.channel = self.connection.channel()
             # Declare the exchange, if it doesn't exist
             self.channel.exchange_declare(exchange=self.exchange_name, exchange_type='direct', durable=True)
