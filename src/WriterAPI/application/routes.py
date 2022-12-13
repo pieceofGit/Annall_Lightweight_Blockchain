@@ -39,11 +39,9 @@ def add_new_writer(writer):
 def authenticate_writer():
     # Checks if public ip address of request is in writer list
     ip_address = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
-    print(ip_address)
     for obj in app.config["CONF"]["node_set"]:
         if ip_address in obj["hostname"] or ip_address == "172.17.0.1":
             return True
-    print(ip_address)
     return False
 
 def get_json():
@@ -88,7 +86,6 @@ def add_writer_to_set():
 def get_update_num():
     with open(app.config["CONF_WRITER_FILE"], "r") as writer_api_conf:
         update_num = json.load(writer_api_conf)
-        print(update_num)
         return update_num["update_number"]
 
 @app.route("/blocks", methods=["DELETE"])
