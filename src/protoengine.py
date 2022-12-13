@@ -516,7 +516,7 @@ class ProtoEngine(ProtocolEngine):
             self.cancel_round("Round not verified", round)
         vverbose_print(f"[LATEST BLOCK] the latest block is: {self.latest_block}")
         self.bcdb.insert_block(round, self.latest_block)
-        self.publish_block()
+        # self.publish_block()
 
 
     def coordinator_round(self, round: int):
