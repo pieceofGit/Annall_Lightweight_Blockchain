@@ -103,7 +103,7 @@ class ClientHandler(threading.Thread):
         self.send_message_to_client(msg)
         # Only receive the first message. Use message length        
         data = self.get_message_from_client()   #TODO: Sometime fails here on message size too large
-        self.name = data["name"]
+        self.name = data["name"]    # Returns here on message size too large and causes thread error. 
         self.payload_id = data["payload_id"]
         self.send_ack()
         # Service client requests until client terminates

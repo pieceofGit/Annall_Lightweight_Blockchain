@@ -13,6 +13,7 @@ class BlockBroker:
         
     def setup_connection(self):
         try:
+            print("Setting up Rabbitmq connection again")
             # SSL Context for TLS configuration of Amazon MQ for RabbitMQ
             ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
             ssl_context.set_ciphers('ECDHE+AESGCM:!ECDSA')
