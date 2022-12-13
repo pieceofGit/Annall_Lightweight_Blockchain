@@ -36,12 +36,12 @@ class MembershipData:
   
         # Remote request for update
         try:
-            response = requests.get(self.api_path + "update", {}).json()
+            response = requests.get(self.api_path + "update", {}, timeout=2).json()
             if response["update_number"] > self.update_number:
                 self.update_number = response["update_number"]
                 return True
         except:
-            vverbose_print("Failed to make requests to remote writer API")
+            verbose_print("Failed to make request to remote writer API")
             return False
         
     def get_tcp_ip(self, id):

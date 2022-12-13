@@ -581,7 +581,7 @@ class ProtoEngine(ProtocolEngine):
         self.bcdb.insert_block(round, self.latest_block)
 
     def check_for_updates(self):
-        """Requests an update from the writer api to check if delete blocks"""
+        """Requests an update from the writer api to check if it should delete all blocks and restart blockchain"""
         if self.mem_data.check_delete_blocks():
             self.bcdb.truncate_table()
 
