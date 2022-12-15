@@ -7,8 +7,7 @@ def log_data(ch, method, properties, data):
     data = json.loads(data)
     print(data)
 client.channel.basic_consume(on_message_callback=log_data,
-                      queue=client.queue_name,
-                      auto_ack=True)
+                      queue=client.queue_name)
 
 client.channel.start_consuming()
 client.connection.close()

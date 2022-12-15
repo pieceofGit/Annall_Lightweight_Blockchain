@@ -604,7 +604,6 @@ class ProtoEngine(ProtocolEngine):
                     self.coordinator_round(round)
                 else:
                     self.writer_round(round, coordinator)
-    
                 vverbose_print(f"[ROUND COMPLETE] round {round} finished with writer with ID {coordinator} as  the coordinator")
                 round += 1
                 if round > self.rounds and self.rounds:
@@ -614,9 +613,9 @@ class ProtoEngine(ProtocolEngine):
                 self.check_for_updates()
                 coordinator = self.get_coordinatorID(round)
                 self.reader_round(round, coordinator)
-                round += 1
                 if round > self.rounds and self.rounds:
                     break   # Stops the program
+                round += 1
                 vverbose_print(f"[ROUND COMPLETE] round {round} finished with writer with ID {coordinator} as  the coordinator")
 
 
