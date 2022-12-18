@@ -9,7 +9,7 @@ class BlockBroker:
         self.channel = None
         self.exchange_name = "block_exchange"
         self.routing_key = "create_block"
-        self.setup_connection()
+        # self.setup_connection()
         
     def setup_connection(self):
             # SSL Context for TLS configuration of Amazon MQ for RabbitMQ
@@ -40,13 +40,15 @@ class BlockBroker:
     def publish_block(self, block: str):
         """Publishes block to block_queue with 2 attempts"""
         try:
+            self.setup_connection()
             self._publish_block(block)
+            self.connection.close()
         except Exception as e:
             print("Failed to publish to queue", e)
-            self.setup_connection()
-            try:
-                self._publish_block(block)
-            except:
-                print("Failed to publish block to queue after attempting to setup connection")
+            # self.setup_connection()
+            # try:
+            #     self._publish_block(block)
+            # except:
+            #     print("Failed to publish block to queue after attempting to setup connection")
 
         

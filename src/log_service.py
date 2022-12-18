@@ -7,6 +7,7 @@ client = BlockBroker()
 def log_data(ch, method, properties, data):
     data = json.loads(data)
     print(data)
+client.setup_connection()
 client.queue_connect(queue) # create and bind to queue
 client.channel.basic_consume(on_message_callback=log_data,
                       queue=queue,
