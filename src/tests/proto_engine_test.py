@@ -132,7 +132,7 @@ def test_engine(id: int, rounds: int, no_writers: int):
         if (i + 1) != id:
             wlist.append(i + 1)
     w.set_writers(wlist)
-    w.run_forever()
+    w.run()
     time.sleep(id)
     global_list.append(w.bcdb.read_blocks(0, 10))
 
@@ -262,7 +262,7 @@ def test_engine(id: int, rounds: int, no_writers: int):
         if (i + 1) != id:
             wlist.append(i + 1)
     w.set_writers(wlist)
-    w.run_forever()
+    w.run()
     time.sleep(id)
     global_list.append(w.bcdb.read_blocks(0, 10))
 

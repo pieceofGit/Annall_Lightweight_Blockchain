@@ -10,13 +10,15 @@ class MembershipData:
         self.writer_list = None
         self.reader_list = None
         self.conf = None
+        self.current_version = None
+        self.proposed_version = None
         self.bcdb = bcdb
         with open(self.prepend_path + self.conf_file_name, "r") as conf_file:
             self.conf = json.load(conf_file)
             self.api_path = f'http://{self.conf["writer_api"]["hostname"]}:{self.conf["writer_api"]["port"]}/'
             self.get_remote_conf()
         self.set_lists()
-        self.update_number = 0
+        self.reset_number = 0
 
     def set_lists(self):
         """ Updates the active sets """
@@ -29,16 +31,20 @@ class MembershipData:
             response = requests.get(self.api_path + "config", {}, timeout=5)
             verbose_print("[CONFIG node API] Got config from node API")
             self.conf = response.json()
+            # 
+            if self.current_version and self.conf["membership_version"] > self.current_version:
+                self.proposed_version = self.conf["membership_version"]
+            else:
+                self.current_version = self.conf["membership_version"]
         except Exception as e:
             verbose_print("[CONFIG LOCAL] Failed to get config from writer", e)
-    
+            
     def check_delete_blocks(self):
-  
         # Remote request for update
         try:
             response = requests.get(self.api_path + "update", {}, timeout=2).json()
-            if response["update_number"] > self.update_number:
-                self.update_number = response["update_number"]
+            if response["reset_number"] > self.reset_number:
+                self.reset_number = response["reset_number"]
                 return True
         except:
             verbose_print("Failed to make request to remote writer API")

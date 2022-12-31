@@ -1,4 +1,5 @@
 {
+  "membership_version": 1,
   "no_permitted_writers": 2,
   "writer_api": {
     "hostname": "176.58.116.107",

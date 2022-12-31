@@ -195,7 +195,7 @@ class ClientServer:
     def __init__(self):  # what are the natural arguments
         pass
 
-    def run_forever(self):
+    def run(self):
         pass
 
     def retrieve_request(self):
@@ -234,7 +234,7 @@ class ProtocolEngine:
         self.bcdb = blockchain
         self.clients = clients
 
-    def run_forever(self):
+    def run(self):
         pass
 
     def run():
@@ -299,7 +299,7 @@ def __test_interfaces():
 
     print("Testing ClientServer")
     clients = ClientServer()
-    cthread = Thread(target=clients.run_forever)
+    cthread = Thread(target=clients.run)
     cthread.start()
     print("ClientServer up and running in thread:", cthread.name)
     if clients.retrieve_request() is not None:
@@ -311,7 +311,7 @@ def __test_interfaces():
     print("testing setting up ProtocolEngine")
 
     PE = ProtocolEngine(1, pComm, bcdb, clients)
-    PEthread = Thread(target=PE.run_forever)
+    PEthread = Thread(target=PE.run)
     PEthread.start()
     print("Protocol Engine up and running in thread:", PEthread.name)
 

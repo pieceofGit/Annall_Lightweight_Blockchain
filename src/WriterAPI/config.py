@@ -10,10 +10,10 @@ class Config:
     """Base config."""
     # SECRET_KEY = environ.get('SECRET_KEY')
     # SESSION_COOKIE_NAME = environ.get('SESSION_COOKIE_NAME')
-    with open("application/configs/config-writer-api-update.json", "w") as writer_api_conf:
+    with open("application/configs/reset-chain-update.json", "w") as writer_api_conf:
         json.dump({"update_number": 0}, writer_api_conf, indent=4)    
     UPDATE_NUM = 0
-    CONF_WRITER_FILE = baseDir+"/application/configs/config-writer-api-update.json"
+    CONF_RESET_FILE = baseDir+"/application/configs/reset-chain-update.json"
     HOST_PORT = 8000
     HOST_IP = "0.0.0.0"
 

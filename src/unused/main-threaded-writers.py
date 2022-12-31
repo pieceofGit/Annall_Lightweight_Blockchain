@@ -77,7 +77,7 @@ def run_writer_thread(id: int, rounds: int, writers: int):
             wlist.append(i + 1)
     PE.set_writers(wlist)
 
-    PEthread = Thread(target=PE.run_forever, name="ProtocolEngine")
+    PEthread = Thread(target=PE.run, name="ProtocolEngine")
     # PEthread.start()
     print("Protocol Engine up and running as:", PEthread.name)
 

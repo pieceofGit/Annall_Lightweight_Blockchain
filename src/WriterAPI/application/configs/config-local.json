@@ -1,4 +1,5 @@
 {
+  "membership_version": 1,
   "no_permitted_writers": 5,
   "writer_api": {
     "hostname": "127.0.0.1",
@@ -8,7 +9,7 @@
     "hostname": "127.0.0.1",
     "port": "6000"
   },
-  
+
   "node_set": [
     {
       "name": "writer_1",

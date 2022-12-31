@@ -73,7 +73,7 @@ if __name__ == "__main__":
     # PE.set_writers(data["writer_list"])
     # PE.set_readers(data["reader_list"])
 
-    PEthread = Thread(target=PE.run_forever, name="ProtocolEngine")
+    PEthread = Thread(target=PE.run, name="ProtocolEngine")
     PEthread.start()
     print("Protocol Engine up and running as:", PEthread.name)
     # finalization and cleanup

@@ -303,6 +303,7 @@ class ProtoEngine(ProtocolEngine):
         """Bootstrap to the writerset, using comm module
         """
         ## TODO: More suspicious is, this seems to block if any of the writers is not connected.
+        # Either program starting up or node is in waiting list
         while len(self.comm.list_connected_peers()) != len(self.mem_data.writer_list) + len(self.mem_data.reader_list) - 1: # TODO: Needs more sophistication
             time.sleep(1)
             print("WAITING TO CONNECT")
@@ -581,16 +582,14 @@ class ProtoEngine(ProtocolEngine):
         self.bcdb.insert_block(round, self.latest_block)
 
     def check_for_updates(self):
-        """Requests an update from the writer api to check if it should delete all blocks and restart blockchain"""
+        """Requests an update from the writer api to check if it should delete all blocks and restart the blockchain"""
         if self.mem_data.check_delete_blocks():
             self.bcdb.truncate_table()
 
-    def run_forever(self):
+    def run(self):
         """
         """
-        # Expects all writers to join. Program does not start until all writers are all connected
-        # TODO: Define a Quorate set, cannot insist on all writers being present
-        #       Note: most likely need a consensus on which writers are present
+        # Expects all active nodes to join. Program does not start until all active nodes are all connected
         self.join_writer_set()
         print("[ALL JOINED] all writers have joined the writer set")
         round = self.bcdb.length    # TODO: Not possible for catch-up node
@@ -722,7 +721,7 @@ def test_engine(id: int, rounds: int, no_writers: int):
         if (i + 1) != id:
             wlist.append(i + 1)
     w.set_writers(wlist)
-    w.run_forever()
+    w.run()
     time.sleep(id)
     global_list.append(w.bcdb.read_blocks(0, 10))
 

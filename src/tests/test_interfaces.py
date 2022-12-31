@@ -46,7 +46,7 @@ to_json = msg[0]['payload']
 
 # print("Testing ClientServer")
 # clients = ClientServer()
-# cthread = Thread(target=clients.run_forever)
+# cthread = Thread(target=clients.run)
 # cthread.start()
 # print("ClientServer up and running in thread:", cthread.name)
 # if clients.retrieve_request() is not None:
@@ -58,7 +58,7 @@ to_json = msg[0]['payload']
 # print("testing setting up ProtocolEngine")
 
 # PE = ProtocolEngine(pComm, bcdb, clients)
-# PEthread = Thread(target=PE.run_forever)
+# PEthread = Thread(target=PE.run)
 # PEthread.start()
 # print("Protocol Engine up and running in thread:", PEthread.name)
 

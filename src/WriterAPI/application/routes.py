@@ -1,5 +1,6 @@
 """ 
-A WriterAPI for Annáll using Flask and Gunicorn.
+An API for Annáll nodes using Flask and Gunicorn.
+The API handles membership changes for Annall nódes 
 """
 import json
 import os
@@ -28,6 +29,7 @@ def add_new_writer(writer):
             new_writer["protocol_port"] = 5000
         # Add writer to writer set and save    
         app.config["CONF"]["node_set"].append(new_writer)
+        app.config["CONF"]["membership_version"] += 1   # Version change for update to set. Perhaps should update when activated
         try:
             with open(app.config["CONFIG_NAME"], "w") as file:
                 json.dump(app.config["CONF"], file, indent=4)
@@ -40,7 +42,7 @@ def authenticate_writer():
     # Checks if public ip address of request is in writer list
     ip_address = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
     for obj in app.config["CONF"]["node_set"]:
-        if ip_address in obj["hostname"] or ip_address == "172.17.0.1":
+        if ip_address in obj["hostname"] or app.config["IS_LOCAL"]:
             return True
     return False
 
@@ -84,16 +86,16 @@ def add_writer_to_set():
     add_new_writer(writer_to_add)
     return Response(status=201)
 def get_update_num():
-    with open(app.config["CONF_WRITER_FILE"], "r") as writer_api_conf:
+    with open(app.config["CONF_RESET_FILE"], "r") as writer_api_conf:
         update_num = json.load(writer_api_conf)
         return update_num["update_number"]
 
 @app.route("/blocks", methods=["DELETE"])
 def delete_chain():
     # if authenticate_writer():
-    with open(app.config["CONF_WRITER_FILE"], "r") as writer_api_conf:
+    with open(app.config["CONF_RESET_FILE"], "r") as writer_api_conf:
         update_num = json.load(writer_api_conf)
-    with open(app.config["CONF_WRITER_FILE"], "w") as writer_api_conf:
+    with open(app.config["CONF_RESET_FILE"], "w") as writer_api_conf:
         json.dump({"update_number":update_num["update_number"]+1}, writer_api_conf, indent=4)    
     return Response(status=204)
 

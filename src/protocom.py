@@ -128,14 +128,11 @@ class RemoteEnd:
             verbose_print(">!! Failed to read length of message")
             return ""
         try:
-            # print("Reading message")
             b = self.socket.recv(length)
         except Exception as e:
             verbose_print(">!! Failed to read message with:", e)
         decb = b.decode("utf-8")
         return decb
-        # else:
-        #    raise Exception("Connection not active")
 
     def recv_bytes(self) -> str:
         byte_length = self.socket.recv(4)
@@ -173,8 +170,6 @@ class RemoteEnd:
             verbose_print(">!! Failed to read message with:", e)
         decb = b.decode("utf-8")
         return decb
-        # else:
-        #    raise Exception("Connection not active")
 
     @staticmethod
     def read_c_request(socket):
@@ -225,9 +220,7 @@ class RemoteEnd:
                 verbose_print("Failed with exception:", e)
                 raise e
             # [type], [r_id], [self_id]
-            vverbose_print("Received:", msg)
             try:
-                vverbose_print(f"protocom splitting message: {msg}")
                 tokens = msg.split(pMsg.sep, maxsplit=4)
                 if tokens[0] == pMsgTyp.c_ack:
                     return tokens[1:]
@@ -273,7 +266,7 @@ class ProtoCom(ProtocolCommunication):
         self.ip = None
         self.listen_port = None
         self.is_writer = self.check_if_writer(self.id)
-        # Setup two-way communication with active writers and readers
+        # Setup remote_end object for communication with active writers and readers
         self.connect_to_nodes_in_conf_by_key("writer_list")
         self.connect_to_nodes_in_conf_by_key("reader_list")
         verbose_print(f"[IS WRITER] node with id: {self.id} is a writer: {self.is_writer}")
@@ -333,8 +326,6 @@ class ProtoCom(ProtocolCommunication):
                   self.list_connected_peers())
         in_conn, in_addr = listen_sock.accept()
         in_conn.settimeout(4)  # Only for accepting
-        # tmpRemoteEnd = RemoteEnd(None, in_addr[0], in_addr[1])
-        # tmpRemoteEnd.accept(in_conn)
         try:
             tokens = RemoteEnd.read_c_request(in_conn)
         except Exception as e:
@@ -393,7 +384,7 @@ class ProtoCom(ProtocolCommunication):
             in_conn.close()
 
     def init_con_all(self):
-        """ Attempt to connect to ONE unconnected writers
+        """ Attempts to connect to ONE unconnected writer
 
             Iterates through one writer on each call
 
@@ -408,9 +399,8 @@ class ProtoCom(ProtocolCommunication):
         # n = random.randrange(start=0, stop=len(self.peers.keys()))
         # rearrange list such that it starts on index n
         w_list = list(set(w_list) - set(self.list_connected_peers()))
-        if len(w_list) == 0:
+        if len(w_list) == 0:    # Connected to all nodes in network
             self.conn_modulus = 0
-            # print("All peers connected")
             return
         self.conn_modulus += 1
         if self.conn_modulus >= len(w_list):
@@ -547,9 +537,11 @@ class ProtoCom(ProtocolCommunication):
         self.running = False
 
     def num_connection(self):
+        """Returns number of connected peers"""
         return len(self.list_connected_peers())
 
     def list_connected_peers(self):
+        """Returns a list of node peers"""
         c_p = []
         for peer in self.peers.values():
             if peer.is_active:
