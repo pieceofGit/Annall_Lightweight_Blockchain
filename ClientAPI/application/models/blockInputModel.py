@@ -15,7 +15,7 @@ class BlockInputModel:
             return request_obj["payload"]
         else:
             self.error = True
-            return "Missing key 'payload' in JSON request object"
+            return "Missing key 'payload' in request object"
     
     
     

@@ -9,6 +9,7 @@ from interfaces import (
 )
 from tcp_server import TCP_Server, ClientHandler
 from protocom import ProtoCom
+from downloader import Downloader
 from models.blockchainDB import BlockchainDB
 from models.membershipData import MembershipData
 CWD = os.getcwd()
@@ -16,7 +17,7 @@ CONFIG_PATH = f"{CWD}/src/"
 PRIV_KEY_PATH = f"{CWD}/src"
 
 if __name__ == "__main__":
-    print("MAIN STARTED", flush=True)
+    print("MAIN STARTED")
     ap = argparse.ArgumentParser()
     ap.add_argument("-myID", default=0, type=int,
                     help="ID fyrir skrifara, mandatory")
@@ -24,12 +25,14 @@ if __name__ == "__main__":
     ap.add_argument("-conf", default="config-remote.json", type=str, help="config file for writers")
     ap.add_argument("-privKey", default="priv_key.json", type=str, help="private key file for writer under /src")
     ap.add_argument("-db", default=None, type=str, help="Set if shared db in docker")
+    ap.add_argument("-isWriter", default=True, type=bool, help="Set if shared db in docker")
     a = ap.parse_args()
     id = a.myID
     rounds = a.r
     config_file = a.conf
     priv_key = a.privKey
     db_path = a.db
+    is_writer = a.isWriter
     verbose_print("[ID]", id, " [ROUNDS]", rounds)
      # Initialize the local database connection
     #   -- this is the local copy of the blockchain
@@ -38,7 +41,10 @@ if __name__ == "__main__":
     print("::> Starting up Blockchain DB = using ", db_path)
     bce = BlockchainDB(db_path)
     print("Local block chain database successfully initialized")
-    mem_data = MembershipData(id, CONFIG_PATH, config_file, bce)
+    mem_data = MembershipData(id, CONFIG_PATH, config_file, bce, is_writer)
+    # Fetch blocks until all stored in database to prevent timeout on node activation and the wrong data
+    # Tells membershipdata thread to activate node when all data fetched
+    downloader = Downloader(mem_data, bce)
 
     with open(f"{CONFIG_PATH}/testNodes/test_node_{id}/priv_key.json", "r") as f:
         priv_key = json.load(f)
@@ -68,10 +74,6 @@ if __name__ == "__main__":
     print("::> Starting up BlockChainEngine")
     PE = ProtoEngine(id, tuple(keys), pComm, bce, clients, mem_data)
     PE.set_rounds(rounds)
-    # PE.set_conf(data)
-    # Writers set to wait for connecting to until rounds start
-    # PE.set_writers(data["writer_list"])
-    # PE.set_readers(data["reader_list"])
 
     PEthread = Thread(target=PE.run, name="ProtocolEngine")
     PEthread.start()

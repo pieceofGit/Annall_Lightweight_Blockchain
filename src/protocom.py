@@ -292,6 +292,7 @@ class ProtoCom(ProtocolCommunication):
             self.msg_queue = []
 
     def connect_to_nodes_in_conf_by_key(self, list_key):
+        """Setup RemoteEnd object for all active writers and readers"""
         try:
             for i in self.mem_data.conf[list_key]:
                 node = self.mem_data.conf["node_set"][i-1]
@@ -307,6 +308,7 @@ class ProtoCom(ProtocolCommunication):
             return      
 
     def check_if_writer(self, id):
+        """Returns boolean for if reader or writer node"""
         for i in self.mem_data.conf["writer_list"]:
             if i == id:
                 return True

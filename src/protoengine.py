@@ -590,9 +590,23 @@ class ProtoEngine(ProtocolEngine):
         """
         """
         # Expects all active nodes to join. Program does not start until all active nodes are all connected
+        
+        # Waiting nodes connect to everyone and fetch missing blocks. They may be piggybacking on some node and getting the latest blocks
+        # All nodes have a thread to periodically fetch the latest config file. A coordinator can push to proposing a new version of the config.
+        # Then in the next round, a coordinator sees that a proposed version is the same as it fetches, and sets it as the current version.
+        # In this round, the coordinator sends that we have moved to a different version and that there is a new current version.
+        
+        # Long-term, catch-up should happen before activation. If 20GB, then waiting for an hour if node is activated.
+        # The node has access to all current nodes before it adds itself and should fetch through their client API for all blocks.
+        # Get all blockchain from one node and check yourself with a signature on your latest block. If 51% agree, continue, else reset to next node.
+        # After getting all blocks, continue fetching while not connected to all nodes.
+        # The coordinator of a round is the first to open a connection to the new node. It should send the round number along when it was proposed to be added.
+        # The node then knows the round number and knows that it is added in the next round and can get data up to that point and then wait for the next coordinator.
+        # ? Next coordinator does not comply
+        # It sends a cancel block to all nodes, but the round could be complete... the next one should comply and wait for the request by the new node.
         self.join_writer_set()
         print("[ALL JOINED] all writers have joined the writer set")
-        round = self.bcdb.length    # TODO: Not possible for catch-up node
+        round = self.bcdb.length    
         print("ROUND: ", round)
         if self.comm.is_writer:
             while True:

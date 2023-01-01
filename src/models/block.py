@@ -74,6 +74,15 @@ class Block(i_Block):
         b = Block(prev_hash, int(writerID), int(coordinatorID), int(winning_number), writer_signature, int(timestamp), payload )
         if this_hash == b.this_hash:
             return b
+        verbose_print("Error: trying to create an inconsistent Block - this_hash does not match")
+        return None
+    
+    @classmethod
+    def from_dict(block : dict): ## Factory to create a block from a tuple
+        
+        b = Block(block.prev_hash, int(block.writerID), int(block.coordinatorID), int(block.winning_number), block.writer_signature, int(block.timestamp), block.payload)
+        if block.this_hash == b.this_hash:
+            return b
         
         verbose_print("Error: trying to create an inconsistent Block - this_hash does not match")
         return None

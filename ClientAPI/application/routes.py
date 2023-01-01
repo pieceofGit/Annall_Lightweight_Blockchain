@@ -5,10 +5,12 @@ The TCP server expects a json for all its request.
 The type of request to the TCP server is handled by the request_type field.
 """
 import json
+from tkinter import E
 from flask import request, jsonify, Response, Blueprint
 from application.exceptionHandler import InvalidUsage
 from application.clientFunctions import *
 from application.models.blockInputModel import BlockInputModel
+from application.models.latestBlockInputModel import LatestBlockInputModel
 from flask import current_app as app
 # from configs.flaskConfig import FlaskConfig
 # Blueprint Configuration
@@ -34,6 +36,16 @@ def add_blocks(missing_blocks):
         for i in missing_blocks[1::]:
             app.config["BCDB"].append(i)
         json.dump(app.config["BCDB"], bcdb_file, indent=4)
+
+def fetch_missing_blocks():
+    """Fetches all blocks missing to local copy"""
+    if len(app.config["BCDB"]):
+        latest_block_hash = app.config["BCDB"][-1]["hash"]
+    else:
+        latest_block_hash = ""
+    resp_obj = app.config["SERVER"].send_data_msg(json.dumps({"request_type": "get_missing_blocks", "hash": latest_block_hash}))
+    res_list = json.loads(resp_obj)
+    add_blocks(res_list)
 
 @annall.errorhandler(InvalidUsage)
 def handle_invalid_usage(error):
@@ -66,18 +78,28 @@ def testWallet():
     requestObject = request.get_json(request)
     return Response({}, mimetype="application/json")
 
+@annall.route("/missing_blocks", methods=["GET"])
+def get_missing_blocks():
+    """Returns blocks, including the block of the round number sent"""
+    request_json = request.get_json(request)
+    request_obj = LatestBlockInputModel(request_json)
+    if request_obj.error:
+        return Response(json.dumps(request_obj.dict), mimetype="application/json", status=400)
+    try:
+        fetch_missing_blocks()
+        if len(app.config["BCDB"]):
+            return Response(json.dumps(app.config["BCDB"][request_obj.round:]), mimetype="application/json")
+        else:
+            return Response(json.dumps([]), mimetype="application/json")
+    except Exception as e:
+        raise InvalidUsage(f"Failed to read from writer {e}", status=500)
+
 @annall.route("/blocks", methods=["GET"])
 def get_blocks():
     """ Returns blocks in a list of dicts per block.
     The client only fetches blocks it does not already have. """
-    if len(app.config["BCDB"]):
-        latest_block_hash = app.config["BCDB"][-1]["hash"]
-    else:
-        latest_block_hash = ""
     try:
-        resp_obj = app.config["SERVER"].send_data_msg(json.dumps({"request_type": "get_missing_blocks", "hash": latest_block_hash}))
-        res_list = json.loads(resp_obj)
-        add_blocks(res_list)
+        fetch_missing_blocks()
         return Response(json.dumps(app.config["BCDB"][::-1]), mimetype="application/json")
     except Exception as e:
         raise InvalidUsage(f"Failed to read from writer {e}", status=500)

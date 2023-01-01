@@ -48,11 +48,11 @@
       "name": "Python: WriterAPI",
       "type": "python",
       "request": "launch",
-      "program": "${file}",
+      "program": "${workspaceFolder}//src//WriterAPI//wsgiDev.py",
       "console": "integratedTerminal",
       "justMyCode": true,
       //   "args": [""],
-      "cwd": "${fileDirname}"
+      "cwd": "${workspaceFolder}//src//WriterAPI"
     },
     {
       "name": "Python: GMain",
