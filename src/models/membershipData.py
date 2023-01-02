@@ -25,6 +25,8 @@ class MembershipData:
             self.conf = json.load(conf_file)
             self.api_path = f'http://{self.conf["writer_api"]["hostname"]}:{self.conf["writer_api"]["port"]}/'
         # Nodes post to be in active set
+        self.get_remote_conf()
+        self.set_lists()
 
     def set_lists(self):
         """ Updates the active sets """

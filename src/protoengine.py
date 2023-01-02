@@ -373,8 +373,9 @@ class ProtoEngine(ProtocolEngine):
 
     def publish_block(self):
         """Winning writer fetches latest block in chain and publishes it to queue"""
-        latest_block = self.bcdb.get_latest_block()
-        self.broker.publish_block(json.dumps(latest_block))
+        if not self.mem_data.conf["is_local"]:
+            latest_block = self.bcdb.get_latest_block()
+            self.broker.publish_block(json.dumps(latest_block))
         
     def check_for_old_cancel_message(self, round):
         message = self._recv_msg(type="cancel")

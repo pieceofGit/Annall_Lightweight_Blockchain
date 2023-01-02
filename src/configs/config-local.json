@@ -1,5 +1,6 @@
 {
   "no_permitted_writers": 5,
+  "is_local": true,
   "writer_api": {
     "hostname": "127.0.0.1",
     "port": "8000"
@@ -8,7 +9,7 @@
     "hostname": "127.0.0.1",
     "port": "6000"
   },
-  
+
   "node_set": [
     {
       "name": "writer_1",

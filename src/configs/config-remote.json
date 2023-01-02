@@ -1,5 +1,6 @@
 {
   "no_permitted_writers": 2,
+  "is_local": false,
   "writer_api": {
     "hostname": "185.3.94.49",
     "port": "70"

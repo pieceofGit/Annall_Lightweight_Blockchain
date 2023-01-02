@@ -26,6 +26,7 @@ if __name__ == "__main__":
     ap.add_argument("-privKey", default="priv_key.json", type=str, help="private key file for writer under /src")
     ap.add_argument("-db", default=None, type=str, help="Set if shared db in docker")
     ap.add_argument("-isWriter", default=True, type=bool, help="Set if shared db in docker")
+    
     a = ap.parse_args()
     id = a.myID
     rounds = a.r
@@ -81,6 +82,5 @@ if __name__ == "__main__":
     # finalization and cleanup
     # PEthread is not a daemon
     PEthread.join() # MainThread awaits here for cleanup
-    PE.broker.connection.close()    # Close rabbitmq broker connection
     # Associated daemon threads are killed when the program ends
     

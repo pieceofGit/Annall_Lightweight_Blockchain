@@ -1,5 +1,6 @@
 {
   "no_permitted_writers": 5,
+  "is_local": true,
   "writer_api": {
     "hostname": "writer_api",
     "port": "8000"
