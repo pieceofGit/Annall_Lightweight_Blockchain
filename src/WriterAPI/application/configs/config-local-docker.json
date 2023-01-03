@@ -1,5 +1,6 @@
 {
   "membership_version": 1,
+  "is_local": false,
   "no_permitted_writers": 5,
   "writer_api": {
     "hostname": "writer_api",

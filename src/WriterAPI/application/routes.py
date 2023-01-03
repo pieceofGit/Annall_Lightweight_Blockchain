@@ -90,14 +90,14 @@ def activate_node():
                 update = True
                 if node_to_activate["id"] in app.config["CONF"]["writer_list"]:
                     app.config["CONF"]["writer_list"].remove(node_to_activate["id"])
-        if update:
+        if update:  #TODO: What if membership version is updated before new version is applied. Should just move to next num always.
             app.config["CONF"]["membership_version"] += 1   # Update version number of membership
         save_conf_file()
         return Response(json.dumps(app.config["CONF"]), mimetype="application/json", status=201)
     except Exception as e:
         raise InvalidUsage(json.dumps(f"The JSON could not be decoded. Error: {e}"), status_code=400)
 
-@app.route("/deactivate_node", methods=["POST"])
+@app.route("/deactivate_node", methods=["POST"])    #TODO: Add PUT on editing node details and increment version number. 
 def deactivate_node():
     """
         Adds node to active reader or writer set and returns new config
@@ -109,7 +109,7 @@ def deactivate_node():
     # TODO: Should be a signature, not an id to make changes for a node
     node_to_deactivate = get_dict()
     update = False
-    request_obj = ActivateNodeInputModel(node_to_deactivate)
+    request_obj = ActivateNodeInputModel(node_to_deactivate)    # Could add check here for message signature
     if request_obj.error:
         return Response(json.dumps(request_obj.dict), mimetype="application/json", status=400)
     try:

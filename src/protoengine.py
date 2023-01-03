@@ -15,6 +15,7 @@ import os
 import json
 from protocom import ProtoCom
 from models.membershipData import MembershipData
+from src.downloader import Downloader
 from tcp_server import TCP_Server, ClientHandler
 from blockBroker import BlockBroker
 import interfaces
@@ -125,7 +126,8 @@ class ProtoEngine(ProtocolEngine):
         comm: ProtocolCommunication,
         blockchain: interfaces.BlockChainEngine,
         clients: ClientServer,
-        mem_data: MembershipData
+        mem_data: MembershipData,
+        downloader: Downloader
 
     ):  # what are the natural arguments
         assert isinstance(keys, tuple)
@@ -147,7 +149,8 @@ class ProtoEngine(ProtocolEngine):
         # maintain a payload
         self.stashed_payload = None
         # PubSub queue and exchange
-        self.broker = BlockBroker()        
+        self.broker = BlockBroker()       
+        self.downloader = Downloader() 
                     
     def set_rounds(self, round: int):
         ''' A round is a minting of a block, this defines for how many rounds the blockchain runs for'''
@@ -302,14 +305,61 @@ class ProtoEngine(ProtocolEngine):
     def join_writer_set(self):
         """Bootstrap to the writerset, using comm module
         """
+        # ? How do nodes handle a new membership version when one is being proposed? 
+        # TODO: Nodes only add at most one reader and one writer in a round. 
+        # A coordinator can propose one new writer and reader to active set.
+        # Any number of nodes can be proposed to be removed from the active set. 
+        # New node continuously updates its current version while waiting and gets sent the current version number when added to consensus.
         ## TODO: More suspicious is, this seems to block if any of the writers is not connected.
         # Either program starting up or node is in waiting list
-        while len(self.comm.list_connected_peers()) != len(self.mem_data.writer_list) + len(self.mem_data.reader_list) - 1: # TODO: Needs more sophistication
+        while (len(self.comm.list_connected_peers()) / (len(self.mem_data.writer_list) + len(self.mem_data.reader_list))) < 0.5: # TODO: Needs more sophistication
+            # Startup node means that the node is in the active list. 
+            # Could have an empty list and wait until nodes are activated. 
+            # Blockchain could be turned on and off. The last running nodes need to be the ones to startup the blockchain. 
+            # Or the blockchain is stamped on the bitcoin network. What is the cost of that though?
+            # The external party is controlling the membership statically. The nodes handle the dynamism of the membership management.
+            # Assume there is an external api for signing up. It runs separately from the blockchain. On startup, nodes get some version of this active membership list.
+            # The version number may be different. The coordinator shares the active list, round number, and the list version. 
+            # The hash version should be signed by the external party for verification. 
+            # Node 1: [1,2], Node 3: [1,2,3], Node 2: [1,2,3].
+                # 1
+                # Node 1 connects to node 2 and starts consensus.
+                # Node 2 connects to node 1 and 3 and starts consensus.
+                # Node 3 connects to node node 2 and waits to connect to node 1.
+                # 2
+                # Node 1 selects itself as coordinator
+                # Node 2 selects node 3 as coordinator
+            # ? How can this be fixed?
+                # Connect the version number, the membership API, and node consensus about the current version
+            # Idea: nodes communicate their version and fetch the latest version until all nodes agree. 
+                # 1 Same as before
+                # Node 1 and Node 2 communicate their version number.
+                # Node 3 gets added by Node 1.
+                # When node reach agreement with the version number, they start consensus round.
+                # Coordinator fetches the membership config and proposes new version if it has changes.
+                # Problem: Nodes do not fetch the same version number. 
+            # ? How should change in membership be handled?
+                # Either should fetch specific version or if proposing coordinator has the same proposed version when he is a proposer, it becomes the current version.
+                # Every node has proposed the same version and the original proposer sets the new proposal as the new version.
+                #  ? Effect on waiting node logic
+                    # waiting node continues to update its version.
+            # TODO: Simplest to propose a version number and other nodes fetch the same version
+            # ? Nodes do not need to propose the latest version, only a later version number. Honest nodes eventually move everyone to latest version.
+            # ? With fetch latest solution, malicious nodes could continuously activate and deactivate to increase the version number.
+            
+            if not self.mem_data.is_genesis_node:
+                # Consensus is ongoing while node waits, and node needs to stay updated
+                # 1. get new config
+                self.mem_data.waiting_node_get_conf()
+                # 2. get latest blocks
+                self.downloader.download_db() # Problem with updating active set if not all up to date.
             time.sleep(1)
             print("WAITING TO CONNECT")
         print(f"ID={self.ID} -> connected and ready to build")
         return None
-
+        # ? Connect to at least 51% and move on. Running nodes can at least start consensus and add unconnected nodes to penalty box.
+        # Nodes should be able to run without being connected to everyone.
+        # Node needs to ask for data from other nodes if it does not get the latest block. 
     def cancel_round(self, cancel_log: str, round: int):
         """
         Cancel the round, send cancel message to errbody and write cancel block
@@ -439,7 +489,7 @@ class ProtoEngine(ProtocolEngine):
             else:   # Winner and block verified
                 self.latest_block = block
         vverbose_print(f"[LATEST BLOCK] the latest block is: {self.latest_block}")
-        self.bcdb.insert_block(round, self.latest_block)
+        self.bcdb.insert_block(round, self.latest_block)    # Rounds in consensus different from stored in db
 
     # The round for the writer when you are not coordinator
     def writer_round(self, round: int, coordinatorID: int):
@@ -605,6 +655,26 @@ class ProtoEngine(ProtocolEngine):
         # The node then knows the round number and knows that it is added in the next round and can get data up to that point and then wait for the next coordinator.
         # ? Next coordinator does not comply
         # It sends a cancel block to all nodes, but the round could be complete... the next one should comply and wait for the request by the new node.
+        
+        
+        # 1. Node waits until it is activated
+        while not self.mem_data.node_activated:
+            time.sleep(0.5)
+        # 2. Node attempts to connect to all active nodes
+        
+        # Could be round retry with different coordinator.
+        # Both round robin rounds and within a round retry. 
+        # A new node could wait for a specific coordinator to join. Could send request when all joined. 
+        # Not possible for start of blockchain.
+        # Rule: If not in preset node list, other nodes are waiting for it.
+        # A node has to send a deactivate request to not end in penalty box.
+        # Nodes don't need to have the same round number in the consensus to join.
+        # Coordinator shares the round number in its request. 
+        # New nodes set the round number after getting it from the coordinator.
+        # On blockchain start, all nodes have an empty blockchain and they are not in the waiting list.
+        # Nodes in the preset list do not go through the waiting list.
+        
+        # Node should just wait for a message from any coordinator to join. 
         self.join_writer_set()
         print("[ALL JOINED] all writers have joined the writer set")
         round = self.bcdb.length    
