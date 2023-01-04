@@ -28,7 +28,7 @@ def add_new_writer(writer):
         else:
             new_writer["client_port"] = 5000
             new_writer["protocol_port"] = 5000
-        # Add writer to writer set and save    
+        # Add writer to writer set and save
         app.config["CONF"]["node_set"].append(new_writer)
         save_conf_file()
     except Exception as e:
