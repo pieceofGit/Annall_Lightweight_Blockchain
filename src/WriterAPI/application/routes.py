@@ -33,6 +33,7 @@ def add_new_writer(writer):
         save_conf_file()
     except Exception as e:
         raise InvalidUsage(f"Could not decode JSON {e}", status_code=400)
+    
 def save_conf_file():
     try:
         with open(app.config["CONFIG_NAME"], "w") as file:
