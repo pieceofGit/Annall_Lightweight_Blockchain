@@ -12,34 +12,25 @@ from application.models.activateNodeInputModel import ActivateNodeInputModel
 # Configurable variables
 print("Starting annallWriterAPI Flask application server")
 
-def add_new_writer(writer):
-    # Create new writer object
+def add_new_node(node):
+    # Create new node object
     try:
-        id = len(app.config["CONF"]["node_set"]) + 1
-        new_writer = {
-            "name": writer["name"],
+        new_node = {
+            "name": node["name"],
             "id": id,
-            "hostname": writer["hostname"],
-            "pub_key": writer["pub_key"]
+            "hostname": node["hostname"],
+            "pub_key": node["pub_key"]
         }
         if app.config["IS_LOCAL"]:
-            new_writer["client_port"] = 5000 + id
-            new_writer["protocol_port"] = 15000 + id - 1
+            new_node["client_port"] = 5000 + id
+            new_node["protocol_port"] = 15000 + id - 1
         else:
-            new_writer["client_port"] = 5000
-            new_writer["protocol_port"] = 5000
-        # Add writer to writer set and save
-        app.config["CONF"]["node_set"].append(new_writer)
-        save_conf_file()
+            new_node["client_port"] = 5000
+            new_node["protocol_port"] = 5000
+        # Add node to node set and save
+        app.config["DB"].add_to_node_set()
     except Exception as e:
         raise InvalidUsage(f"Could not decode JSON {e}", status_code=400)
-    
-def save_conf_file():
-    try:
-        with open(app.config["CONFIG_NAME"], "w") as file:
-            json.dump(app.config["CONF"], file, indent=4)
-    except:
-        raise InvalidUsage("Could not access the json file", status_code=500)
 
 def authenticate_writer():
     # Checks if public ip address of request is in writer list

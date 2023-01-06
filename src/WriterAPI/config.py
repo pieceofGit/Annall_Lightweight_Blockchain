@@ -1,10 +1,10 @@
-"""Flask configuration."""
+"""Flask configuration for Writer API"""
 from os import environ, path
 import json
+from application.configDB import ConfigDB
+from pymongo import MongoClient
 
 baseDir = path.abspath(path.dirname(__file__))
-# load_dotenv(path.join(baseDir, '.env'))
-
 
 class Config:
     """Base config."""
@@ -35,6 +35,8 @@ class DevConfig(Config):
     with open(f"{CONFIG_NAME}") as config_file:   # If in top directory for debug
         CONF = json.load(config_file)
     HOST_IP = "127.0.0.1"
+    DB = ConfigDB() # Connection to db. 
+    
 
 class DevConfigDocker(Config):
     FLASK_ENV = 'development'
