@@ -4,7 +4,7 @@ import json
 from models.block import Block
 from interfaces import verbose_print
 
-class Downloader:
+classDownloader:
     def __init__(self, mem_data, bcdb) -> None:
         self.mem_data = mem_data
         self.bcdb = bcdb

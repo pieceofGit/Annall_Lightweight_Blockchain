@@ -1,11 +1,12 @@
 """Gets json object for endpoint /activate_node and checks input"""
-class ActivateNodeInputModel:
+class CreateNodeInputModel:
     def __init__(self, request_obj) -> None:
         self.req_obj = request_obj
         self.error = False
-        self.id = self.get_input("id", int)
-        self.is_writer = self.get_input("is_writer", bool)
-        self.dict = {"id": self.id, "is_writer": self.is_writer}
+        self.name = self.get_input("name", str)
+        self.hostname = self.get_input("hostname", str)
+        self.pub_key = str(self.get_input("pub_key", int))
+        self.dict = {"name": self.name, "hostname": self.hostname, "pub_key": self.pub_key}
         
     def get_input(self, key, key_type):
         if key in self.req_obj.keys():
@@ -17,7 +18,8 @@ class ActivateNodeInputModel:
         else:
             self.error = True
         return f"Missing key '{key}' or missing value for key '{key}' in request object"    
-        
+    
+
             
     
     

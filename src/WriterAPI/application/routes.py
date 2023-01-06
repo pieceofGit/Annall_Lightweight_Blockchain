@@ -8,6 +8,7 @@ from flask import Flask, request, jsonify, Response, current_app as app
 from sympy import im
 from application.exceptionHandler import InvalidUsage
 from application.models.activateNodeInputModel import ActivateNodeInputModel
+from application.models.createNodeInputModel import CreateNodeInputModel
 
 # Configurable variables
 print("Starting annallWriterAPI Flask application server")
@@ -15,6 +16,7 @@ print("Starting annallWriterAPI Flask application server")
 def add_new_node(node):
     # Create new node object
     try:
+        id = app.config["DB"].get_new_node_id()
         new_node = {
             "name": node["name"],
             "id": id,
@@ -28,7 +30,10 @@ def add_new_node(node):
             new_node["client_port"] = 5000
             new_node["protocol_port"] = 5000
         # Add node to node set and save
-        app.config["DB"].add_to_node_set()
+        
+        return app.config["DB"].add_to_node_set(new_node)
+    except ValueError:
+        raise InvalidUsage(f"Node with key pub_key already exists", status_code=409)
     except Exception as e:
         raise InvalidUsage(f"Could not decode JSON {e}", status_code=400)
 
@@ -40,7 +45,7 @@ def authenticate_writer():
             return True
     return False
 
-def get_dict():
+def load_json():
     try:
         return json.loads(request.data) 
     except Exception:
@@ -55,77 +60,54 @@ def handle_invalid_usage(error):
 @app.route("/activate_node", methods=["POST"])
 def activate_node():
     """
-        Adds node to active reader or writer set and returns new config. Removes it from other active list.
+        Adds node to active reader or writer set and returns new config. 
+        If node is in another active set it is removed from it.
         required: {
             "id": int,
             "is_writer": bool
         }
     """
     # TODO: Should be a signature, not an id to make changes for a node
-    node_to_activate = get_dict()
-    update = False
-    request_obj = ActivateNodeInputModel(node_to_activate)
-    if request_obj.error:
-        return Response(json.dumps(request_obj.dict), mimetype="application/json", status=400)
+    node_input_model = ActivateNodeInputModel(load_json())
+    if node_input_model.error:
+        return Response(json.dumps(node_input_model.dict), mimetype="application/json", status=400)
     try:
-        if node_to_activate["is_writer"]:
-            # Node is writer
-            if node_to_activate["id"] not in app.config["CONF"]["writer_list"]:
-                app.config["CONF"]["writer_list"].append(node_to_activate["id"])
-                update = True
-                if node_to_activate["id"] in app.config["CONF"]["reader_list"]:
-                    app.config["CONF"]["reader_list"].remove(node_to_activate["id"])
-        else:
-            # Node is reader
-            if node_to_activate["id"] not in app.config["CONF"]["reader_list"]:
-                app.config["CONF"]["reader_list"].append(node_to_activate["id"])
-                update = True
-                if node_to_activate["id"] in app.config["CONF"]["writer_list"]:
-                    app.config["CONF"]["writer_list"].remove(node_to_activate["id"])
-        if update:  #TODO: What if membership version is updated before new version is applied. Should just move to next num always.
-            app.config["CONF"]["membership_version"] += 1   # Update version number of membership
-        save_conf_file()
-        return Response(json.dumps(app.config["CONF"]), mimetype="application/json", status=201)
+        latest_conf = app.config["DB"].activate_node(id=node_input_model.id, is_writer=node_input_model.is_writer)
+        return Response(json.dumps(latest_conf), mimetype="application/json", status=201)
+    except ValueError:
+        return Response(json.dumps(f"Node already in active set"), mimetype="application/json", status=409)
+    except KeyError:
+        return Response(json.dumps(f"Node with id {node_input_model.id} not found"), mimetype="application/json", status=404)
     except Exception as e:
-        raise InvalidUsage(json.dumps(f"The JSON could not be decoded. Error: {e}"), status_code=400)
+        raise InvalidUsage(json.dumps(f"Failed to complete request. Error: {e}"), status_code=500)
 
 @app.route("/deactivate_node", methods=["POST"])    #TODO: Add PUT on editing node details and increment version number. 
 def deactivate_node():
     """
-        Adds node to active reader or writer set and returns new config
+        Removes node from active reader or writer set and returns NoContent
         required: {
             "id": int,
             "is_writer": bool
         }
     """
     # TODO: Should be a signature, not an id to make changes for a node
-    node_to_deactivate = get_dict()
-    update = False
-    request_obj = ActivateNodeInputModel(node_to_deactivate)    # Could add check here for message signature
-    if request_obj.error:
-        return Response(json.dumps(request_obj.dict), mimetype="application/json", status=400)
+    node_input_model = ActivateNodeInputModel(load_json())
+    if node_input_model.error:
+        return Response(json.dumps(node_input_model.dict), mimetype="application/json", status=400)
     try:
-        if node_to_deactivate["is_writer"]:
-            # Node is writer
-            if node_to_deactivate["id"] in app.config["CONF"]["writer_list"]:
-                app.config["CONF"]["writer_list"].remove(node_to_deactivate["id"])
-                update = True
-        else:
-            # Node is reader
-            if node_to_deactivate["id"] in app.config["CONF"]["reader_list"]:
-                app.config["CONF"]["reader_list"].remove(node_to_deactivate["id"])
-                update = True
-        if update:
-            app.config["CONF"]["membership_version"] += 1   # Update version number of membership
-        save_conf_file()
-        return Response(status=204)
+        latest_conf = app.config["DB"].deactivate_node(id=node_input_model.id, is_writer=node_input_model.is_writer)
+        return Response(json.dumps({"id": latest_conf}), mimetype="application/json", status=204)
+    except ValueError:
+        return Response(json.dumps(f"Node not in active set"), mimetype="application/json", status=409)
+    except KeyError:
+        return Response(json.dumps(f"Node with id {node_input_model.id} not found"), mimetype="application/json", status=404)
     except Exception as e:
-        raise InvalidUsage(json.dumps(f"The JSON could not be decoded. Error: {e}"), status_code=400)
+        raise InvalidUsage(json.dumps(f"Failed to complete request. Error: {e}"), status_code=500)
 
 @app.route("/config", methods=["GET"])
 def get_config():    
     # Returns the conf file if writer is authenticated
-    return Response(json.dumps(app.config["CONF"]), mimetype="application/json", status=200)
+    return Response(json.dumps(app.config["DB"].get_latest_config()), mimetype="application/json", status=200)
     # else:
     #     raise InvalidUsage("Writer not whitelisted", status_code=400)
 
@@ -139,15 +121,17 @@ def add_node():
     """
     # Adds writer to node set and returns the conf
     # Assumes one node per public ip address if remote
-    writer_to_add = get_dict()
+    node_input_model = CreateNodeInputModel(load_json())
+    if node_input_model.error:
+        return Response(json.dumps(node_input_model.dict), mimetype="application/json", status=400)
     if not app.config["IS_LOCAL"]:
         try:
-            if authenticate_writer(writer_to_add["hostname"]):
+            if authenticate_writer(node_input_model.hostname):
                 raise InvalidUsage("Writer already whitelisted", status_code=400)
         except:
             raise InvalidUsage("The JSON could not be decoded", status_code=400)
     # Append api to writer_set
-    add_new_writer(writer_to_add)
+    add_new_node(node_input_model.dict)
     return Response(status=201)
 
 def get_update_num():

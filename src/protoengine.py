@@ -195,16 +195,14 @@ class ProtoEngine(ProtocolEngine):
         '''
         assert isinstance(block, Block)
 
-        # new_block = Block.from_tuple(block)
         if block is not None:
             writer = block.writerID
             payload = block.payload
             signature = int(block.writer_signature, 16)
-            writer_pubkey = self.mem_data.conf["node_set"][int(writer) - 1]["pub_key"]
+            writer_pubkey = int(self.mem_data.conf["node_set"][int(writer) - 1]["pub_key"])  #TODO: Should not completely rely on id since the node_set is dynamic
             D = bytes_to_long(payload.encode("utf-8")) % writer_pubkey
             res = pow(signature, self.keys[2], writer_pubkey)
             res = res % writer_pubkey
-            
             # Get the hash based on what is in the block
             # hash = hash_block(block)  - invariant, part of block construction
             signature_correct = res == D
@@ -542,7 +540,7 @@ class ProtoEngine(ProtocolEngine):
                 return
             if not self.verify_block(block):
                 self.cancel_round("Block not correct", round)   # Sets latest block as cancel block
-            else:   # Block ok on our end
+            else:
                 # Check if other writer cancelled block
                 message = self._recv_msg(type="cancel")
                 if message is not None:

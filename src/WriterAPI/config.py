@@ -35,7 +35,7 @@ class DevConfig(Config):
     with open(f"{CONFIG_NAME}") as config_file:   # If in top directory for debug
         CONF = json.load(config_file)
     HOST_IP = "127.0.0.1"
-    DB = ConfigDB() # Connection to db. 
+    DB = ConfigDB(CONF) # Connection to db. 
     
 
 class DevConfigDocker(Config):
