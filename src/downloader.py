@@ -13,7 +13,7 @@ class Downloader:
         return f'http://{self.mem_data.conf["node_set"][num]["hostname"]}:{self.mem_data.conf["node_set"][num]["client_port"]}/'
 
     def verify_latest_block(self):
-        """Check if node latest block is verified by at least 51% of network. If not, drop our db"""
+        """Check if node latest block is verified by at least 51% of network. If not, drop our db and catch up"""
         latest_block = self.bcdb.get_latest_block()
         trusted_nodes = []
         reader_and_writer_list = self.mem_data.writer_list + self.mem_data.reader_list

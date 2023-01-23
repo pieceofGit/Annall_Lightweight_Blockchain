@@ -101,3 +101,42 @@ signed_payload = sign_payload(node_1_keys, "johnny")
 # verify_block(payload, signature, keys, pub_key, block):
 node_1_pub_key = '6587849500818316161519508278916854824201302152793630979346725188602264462651268740217047928962253207403830618696453825975409521538077356628137373401104759'
 print(verify_block("johnny", signed_payload, node_1_keys, node_1_pub_key, True), "TRUEEE")
+
+
+def calculate_sum(modulus, numbers: list):
+    """Numbers is a list of <ID, number> pairs. This function calculates the pad for the round from the numbers using xor
+    then it calculates which ID corresponds to the number 'closest' to the pad. Returns a list of length 3, containing
+    [<id number pairs>, <pad>, <winner_id>]
+    Tiebreaker decided by lower ID number
+    """
+    assert isinstance(numbers, list)
+
+    pad = 0
+    for number in numbers:
+        print(pad, number)
+        pad ^= number[1]
+        print(pad, number)
+    # Same as pad = pad%self.modulus
+    pad %= modulus
+    # calculate winner, finds the minimum difference for all submitted numbers from the calculated pad.
+    winner, number = min(
+        numbers,
+        key=lambda x: [
+            min((x[1] - pad) % modulus, (pad - x[1]) % modulus),
+            x[0],
+        ],
+    )
+    return [numbers, pad, winner]
+def generate_pad():
+    ''' Generates a number '''
+    modulus = 65537
+    # TODO: This needs to be changed to use an already generated pad
+    assert modulus > 0
+    import os
+    x = os.urandom(8)
+    import struct
+    number = struct.unpack("Q", x)[0]
+    return number % modulus
+print(calculate_sum(65537, [(1, generate_pad()),(2, generate_pad()), (3,generate_pad())]))
+# 1000, 0000
+print(1^0)

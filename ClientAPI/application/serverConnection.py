@@ -68,24 +68,6 @@ class ServerConnection:
             pos += buffer
         return bytes(b_arr).decode("utf-8")
 
-        # while length > 0:
-
-        #     print(">", self.read_msg.__name__, "Received message of length:", length)
-        #     if b:
-        #         b += self.socket.recv(length)
-        #     else:
-        #         b = self.socket.recv(length)
-            
-        #     print(f"[SIZE OF received data] {len(b)} [length of message] {length}")
-        #     length -= len(b)
-        # if b:
-        #     return b.decode("utf-8")
-        # else:
-        #     return ""
-        
-        
-
-
     def send_msg(self, msg: str):
         """ Formats message to bytes and sends to server and replies with ACK"""
         self.socket.sendall(self.format_msg(msg))

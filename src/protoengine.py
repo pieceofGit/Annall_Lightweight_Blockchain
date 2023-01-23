@@ -426,6 +426,7 @@ class ProtoEngine(ProtocolEngine):
             self.broker.publish_block(json.dumps(latest_block))
         
     def check_for_old_cancel_message(self, round):
+        """Checks for cancel blocks of previous rounds and overwrites block with cancel block"""
         message = self._recv_msg(type="cancel")
         if message is not None:
             parsed_message = message.split("-")
@@ -445,7 +446,6 @@ class ProtoEngine(ProtocolEngine):
             time.sleep(0.01)
         # Step 2 - Generate next number and transmit to Coordinator
         pad = self.generate_pad()
-        # pad = -1    # Send negative number since others always give a positive number
         self._send_msg(round, "reply", pad, sent_to=coordinatorID)
 
         # Step 3 - Waiting for annoucement from the Coordinator
@@ -517,9 +517,9 @@ class ProtoEngine(ProtocolEngine):
         vverbose_print(f"[WINNER WRITER] writer with ID {winner[2]} won the round")
         
         if winner_verified and self.ID == winner[2]:
-            # I WON
+            # Node is winner
             # First check if the previous round was cancelled and I had not seen the message yet
-            self.check_for_old_cancel_message(round)    #TODO: Should probably be in reader_round
+            self.check_for_old_cancel_message(round)
             block = self.create_block(pad, coordinatorID, round)    # Returns false if payload queue is empty
             self.latest_block = block
             # Broadcast our newest block before writing into chain
@@ -530,6 +530,7 @@ class ProtoEngine(ProtocolEngine):
 
         elif winner_verified:
             # Wait for a block to verify
+            # Node gets block, does not check for cancel block from others. 
             message = None
             while message is None:
                 message = self._recv_msg(type="block", recv_from=winner[2], round=round)    # Gets back tuple block
@@ -560,14 +561,12 @@ class ProtoEngine(ProtocolEngine):
                 else:   # Winner and block verified
                     self.latest_block = block
         else:
-            # Round is not verified
-            # Cancel the round
+            # Round failed verification. Round cancelled
             verbose_print("[ROUND CANCEL] round was cancelled because it was not verified")
             self.cancel_round("Round not verified", round)
         vverbose_print(f"[LATEST BLOCK] the latest block is: {self.latest_block}")
         self.bcdb.insert_block(round, self.latest_block)
         self.publish_block()
-
 
     def coordinator_round(self, round: int):
         
@@ -575,7 +574,7 @@ class ProtoEngine(ProtocolEngine):
 
         assert isinstance(round, int)
 
-        # Step 1 -
+        # Step 1 - 
         self.check_for_old_cancel_message(round=round)
         self.broadcast(msg_type="request", msg=round, round=round, send_to_readers=True)
 
