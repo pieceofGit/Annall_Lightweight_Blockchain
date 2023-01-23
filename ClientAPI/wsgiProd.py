@@ -1,5 +1,6 @@
+import os
+print(os.getcwd())
 from application import init_prod_app
-
 app = init_prod_app()
 
 if __name__ == "__main__":
