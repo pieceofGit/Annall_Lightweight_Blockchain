@@ -1,3 +1,7 @@
+import os
+CWD = os.getcwd()
+
+
 from application import init_dev_docker_app
 
 

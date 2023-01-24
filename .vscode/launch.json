@@ -35,10 +35,20 @@
       "cwd": "${workspaceFolder}"
     },
     {
-      "name": "Python: ClientAPI",
+      "name": "Python: ClientAPI Local",
       "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}//ClientAPI//wsgiDev.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      //   "args": [""],
+      "cwd": "${workspaceFolder}//ClientAPI"
+    },
+    {
+      "name": "Python: ClientAPI Remote",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}//ClientAPI//wsgiProd.py",
       "console": "integratedTerminal",
       "justMyCode": true,
       //   "args": [""],

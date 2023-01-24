@@ -58,13 +58,17 @@ class ServerConnection:
     def read_data_msg(self) -> str:
         """ Reads messages from socket while buffer is not empty\n
             assumes that socket is ready to read """
+        self.socket.settimeout(3)
         byte_length = self.socket.recv(4)
+        self.socket.settimeout(None)
         buffer = 4096
         b_arr = bytearray(byte_length)
         pos = 0
         msg_len = int.from_bytes(byte_length, "big", signed=False)
         while pos < msg_len:
+            self.socket.settimeout(3)
             b_arr[pos:pos+buffer] = self.socket.recv(buffer)
+            self.socket.settimeout(None)
             pos += buffer
         return bytes(b_arr).decode("utf-8")
 

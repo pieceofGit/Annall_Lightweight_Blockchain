@@ -12,6 +12,9 @@ services:
     expose:
       - 8000
   annall_1:
+    volumes:
+    - ~/testNodes/test_node_1:/app//:ro
+
     container_name: annall_1
     build:
       context: .
