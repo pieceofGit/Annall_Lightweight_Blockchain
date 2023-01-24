@@ -76,7 +76,7 @@ class BlockchainDB():
             return self.get_range_of_blocks(begin=entry[0]["round"])
         else:
             # Hash not in blockchain, return full blockchain
-            return self.get_blockchain()
+            return None
 
 
     def get_round_number(self):

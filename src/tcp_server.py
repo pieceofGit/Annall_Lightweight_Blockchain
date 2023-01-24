@@ -122,16 +122,6 @@ class ClientHandler(threading.Thread):
                 else:
                     resp = json.dumps({"verified": False,})
                 self.send_message_to_client(resp)
-            elif d["request_type"] == "read_chain":
-                # Gets back chain in a list of dictionaries
-                blockchain = self.bcdb.get_blockchain()
-                # Send back entire blockchain json object
-                self.send_message_to_client(json.dumps(blockchain))
-            elif d["request_type"] == "get_missing_blocks":
-                missing_blocks = self.bcdb.get_missing_blocks(d["hash"])
-                print(len(missing_blocks))
-                print(len(json.dumps(missing_blocks)))
-                self.send_message_to_client(json.dumps(missing_blocks))
             else:   # "request_type == "block"
                 # Add new message to payload queue and send back ACK
                 self.payload_id = d["payload_id"]
