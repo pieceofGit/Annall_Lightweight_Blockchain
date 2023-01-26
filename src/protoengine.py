@@ -656,7 +656,8 @@ class ProtoEngine(ProtocolEngine):
         
         # 1. Node waits until it is activated
         while not self.mem_data.node_activated:
-            time.sleep(0.5)
+            time.sleep(1)
+        # Node has successfully fetched blockchain and been added to the active node set
         # 2. Node attempts to connect to all active nodes
         
         # Could be round retry with different coordinator.

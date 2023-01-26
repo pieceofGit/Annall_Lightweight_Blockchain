@@ -27,7 +27,7 @@ class MembershipData:
         # Assumes e.g. node declares itself as writer if writer
         self.get_remote_conf()
         self.set_lists()        
-        self.is_genesis_node = self.id in self.reader_list or self.id in self.writer_list
+        self.is_genesis_node = self.id in self.reader_list or self.id in self.writer_list   # Genesis nodes start up without needing to fetch data
 
     def set_lists(self):
         """ Updates the active sets """
