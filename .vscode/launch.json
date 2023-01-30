@@ -21,7 +21,7 @@
       "program": "${workspaceFolder}//src//main.py",
       "console": "integratedTerminal",
       "justMyCode": true,
-      "args": ["-myID", "2", "-r 0", "-conf", "config-local.json"],
+      "args": ["-myID", "2", "-r 0", "-conf", "configs/config-local.json"],
       "cwd": "${workspaceFolder}"
     },
     {
@@ -31,7 +31,7 @@
       "program": "${workspaceFolder}//src//main.py",
       "console": "integratedTerminal",
       "justMyCode": true,
-      "args": ["-myID", "3", "-r 0", "-conf", "config-local.json"],
+      "args": ["-myID", "3", "-r 0", "-conf", "configs/config-local.json"],
       "cwd": "${workspaceFolder}"
     },
     {

@@ -45,9 +45,6 @@ if __name__ == "__main__":
     mem_data = MembershipData(id, CONFIG_PATH, config_file, bce, is_writer)
     # Fetch blocks until all stored in database to prevent timeout on node activation and the wrong data
     # Tells membershipdata thread to activate node when all data fetched
-    downloader = Downloader(mem_data, bce)
-    dlThread = Thread(target=downloader.download_db, name="DownloadThread")
-    dlThread.start()
     with open(f"{CONFIG_PATH}/testNodes/test_node_{id}/priv_key.json", "r") as f:
         priv_key = json.load(f)
         keys = priv_key["priv_key"]
@@ -74,9 +71,8 @@ if __name__ == "__main__":
     print("ClientServer up and running as:", cthread.name)
     # Start protocol engine
     print("::> Starting up BlockChainEngine")
-    PE = ProtoEngine(id, tuple(keys), pComm, bce, clients, mem_data, downloader)
+    PE = ProtoEngine(id, tuple(keys), pComm, bce, clients, mem_data)
     PE.set_rounds(rounds)
-
     PEthread = Thread(target=PE.run, name="ProtocolEngine")
     PEthread.start()
     print("Protocol Engine up and running as:", PEthread.name)

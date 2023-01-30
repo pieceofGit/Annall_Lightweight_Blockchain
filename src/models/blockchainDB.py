@@ -20,6 +20,7 @@ class BlockchainDB(interfaces.BlockChainEngine):
     def __init__(self, db_path : str = ":memory:"):
         ## Missing conditionals and exceptions
         self.db_path = db_path
+        print(db_path)
         self.db_connection = sqlite3.connect(db_path, check_same_thread=False) # TODO: How can we circumvent check_same_thread?
         self.cursor = self.db_connection.cursor()
         self.initilize_table()

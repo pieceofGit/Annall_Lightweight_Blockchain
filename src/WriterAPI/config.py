@@ -11,7 +11,7 @@ class Config:
     # SECRET_KEY = environ.get('SECRET_KEY')
     # SESSION_COOKIE_NAME = environ.get('SESSION_COOKIE_NAME')
     with open("application/configs/reset-chain-update.json", "w") as writer_api_conf:
-        json.dump({"update_number": 0}, writer_api_conf, indent=4)    
+        json.dump({"reset_number": 0}, writer_api_conf, indent=4)    
     UPDATE_NUM = 0
     CONF_RESET_FILE = baseDir+"/application/configs/reset-chain-update.json"
     HOST_PORT = 8000

@@ -35,6 +35,7 @@ def get_blocks():
 @annall.route("/missing_blocks", methods=["GET"])
 def get_missing_blocks():
     """Returns blocks appended after round number."""
+    print(request)
     request_json = request.get_json(request)
     request_obj = LatestBlockInputModel(request_json)
     if request_obj.error:
@@ -44,7 +45,7 @@ def get_missing_blocks():
         if request_obj.round > latest_block["round"] or request_obj.round < 0:
             return Response(json.dumps({"error": f"Blockchain length {latest_block['round']} but got round number {request_obj.round}"}), mimetype="application/json", status=404)
         if latest_block: # Blockchain is not empty. Return missing blocks
-            missing_blocks = app.config["BCDB"].get_missing_blocks(request_obj.hash) 
+            missing_blocks = app.config["BCDB"].get_missing_blocks(request_obj.hash)
             if missing_blocks:
                 return Response(json.dumps(missing_blocks), mimetype="application/json", status=200)
             else:
@@ -54,9 +55,9 @@ def get_missing_blocks():
     except Exception as e:
         raise InvalidUsage(f"Failed to read database {e}", status=500)
 
-@annall.errorhandler(400)
-def handle_bad_request(e):
-    return Response(json.dumps({"error": "Could not parse the request object"}), mimetype="application/json", status=400)
+# @annall.errorhandler(400)
+# def handle_bad_request(e):
+#     return Response(json.dumps({"error": f"Could not parse the request object {e}"}), mimetype="application/json", status=400)
 
 @annall.route("/blocks", methods=["POST"])
 def insert_block():

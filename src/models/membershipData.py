@@ -4,6 +4,9 @@
 import json
 import requests
 from interfaces import verbose_print, vverbose_print
+from downloader import Downloader
+from threading import Thread
+
 
 class MembershipData:
     def __init__(self, id, prepend_path, conf_file, bcdb, is_writer):
@@ -28,6 +31,13 @@ class MembershipData:
         self.get_remote_conf()
         self.set_lists()        
         self.is_genesis_node = self.id in self.reader_list or self.id in self.writer_list   # Genesis nodes start up without needing to fetch data
+        if not self.is_genesis_node:
+            downloader = Downloader(self, bcdb)
+            dlThread = Thread(target=downloader.download_db, name="DownloadThread")
+            dlThread.start()
+        else:
+            verbose_print("NODE ACTIVATED")
+            self.node_activated = True
 
     def set_lists(self):
         """ Updates the active sets """
@@ -43,7 +53,6 @@ class MembershipData:
         except Exception as e:
             verbose_print("[CONFIG LOCAL] Failed to get config from writer", e)
 
-    
     def get_remote_conf(self):
         """Running nodes ask for config and update proposed version"""
         try:
@@ -84,15 +93,15 @@ class MembershipData:
         self.waiting_list.extend(list(set(writer_list)+set(reader_list)-set(self.writer_list)-set(self.reader_list)-set(self.waiting_list)))
         self.disconnect_list.extend(list(set(self.writer_list)+set(self.reader_list)-set(writer_list)-set(reader_list)-set(self.disconnect_list)))
         
-    def check_delete_blocks(self):
+    def check_reset_chain(self):
         # Remote request for update
         try:
-            response = requests.get(self.api_path + "update", {}, timeout=2).json()
+            response = requests.get(self.api_path + "reset", {}, timeout=2).json()
             if response["reset_number"] > self.reset_number:
                 self.reset_number = response["reset_number"]
                 return True
-        except:
-            verbose_print("Failed to make request to remote writer API")
+        except Exception as e:
+            verbose_print("Failed to make request to remote writer API ", e)
             return False
         
     def get_tcp_ip(self, id):

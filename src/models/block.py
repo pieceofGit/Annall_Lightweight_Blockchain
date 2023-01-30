@@ -2,6 +2,7 @@
     Implements class block
 
 """
+import json
 import hashlib
 from interfaces import (
     i_Block,
@@ -22,6 +23,7 @@ class Block(i_Block):
                 writer_signature : str,
                 timestamp : int,
                 payload : str,
+                round=""  # int
                 ):
         ## Only invariant is that this_hash should be a valid hash_of the block
 
@@ -32,6 +34,9 @@ class Block(i_Block):
         assert isinstance(writer_signature, str)  # writerSignature = signs all fields except this_hash
         assert isinstance(timestamp, int)         # timestamp
         assert isinstance(payload, str)           # payload
+        if not round == "":
+            assert isinstance(round, int)           # payload
+            self.round = round
 
         self.prev_hash = prev_hash
         self.writerID = writerID
@@ -71,17 +76,17 @@ class Block(i_Block):
             this_hash,
             payload
         ) = block_as_tuple
-        b = Block(prev_hash, int(writerID), int(coordinatorID), int(winning_number), writer_signature, int(timestamp), payload)
+        b = Block(str(prev_hash), int(writerID), int(coordinatorID), int(winning_number), writer_signature, int(timestamp), payload)
         if this_hash == b.this_hash:    # Recreates and compares hash
             return b
         verbose_print("Error: trying to create an inconsistent Block - this_hash does not match")
         return None
     
     @classmethod
-    def from_dict(block : dict): ## Factory to create a block from a dict
+    def from_dict(cls, block : dict): ## Factory to create a block from a dict
         
-        b = Block(block.prev_hash, int(block.writerID), int(block.coordinatorID), int(block.winning_number), block.writer_signature, int(block.timestamp), block.payload)
-        if block.this_hash == b.this_hash:
+        b = Block(str(block["prevHash"]), int(block["writerID"]), int(block["coordinatorID"]), int(block["winningNumber"]), block["writerSignature"], int(block["timestamp"]), json.dumps(block["payload"]), int(block["round"]))
+        if block["hash"] == b.this_hash:
             return b
         
         verbose_print("Error: trying to create an inconsistent Block - this_hash does not match")

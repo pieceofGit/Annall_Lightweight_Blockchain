@@ -15,7 +15,7 @@ import os
 import json
 from protocom import ProtoCom
 from models.membershipData import MembershipData
-from src.downloader import Downloader
+from downloader import Downloader
 from tcp_server import TCP_Server, ClientHandler
 from blockBroker import BlockBroker
 import interfaces
@@ -126,8 +126,7 @@ class ProtoEngine(ProtocolEngine):
         comm: ProtocolCommunication,
         blockchain: interfaces.BlockChainEngine,
         clients: ClientServer,
-        mem_data: MembershipData,
-        downloader: Downloader
+        mem_data: MembershipData
 
     ):  # what are the natural arguments
         assert isinstance(keys, tuple)
@@ -138,7 +137,7 @@ class ProtoEngine(ProtocolEngine):
         self.ID = id
         self.keys = keys    # Private keys
         self.mem_data = mem_data
-        self.update_num = 0        
+        self.update_num = 0
         # Defining e
         self.modulus = 65537
         # For how many rounds the blockchain should run for
@@ -150,7 +149,7 @@ class ProtoEngine(ProtocolEngine):
         self.stashed_payload = None
         # PubSub queue and exchange
         self.broker = BlockBroker()       
-        self.downloader = Downloader() 
+        self.downloader = Downloader(mem_data, blockchain)
                     
     def set_rounds(self, round: int):
         ''' A round is a minting of a block, this defines for how many rounds the blockchain runs for'''
@@ -631,7 +630,7 @@ class ProtoEngine(ProtocolEngine):
 
     def check_for_updates(self):
         """Requests an update from the writer api to check if it should delete all blocks and restart the blockchain"""
-        if self.mem_data.check_delete_blocks():
+        if self.mem_data.check_reset_chain():
             self.bcdb.truncate_table()
 
     def run(self):

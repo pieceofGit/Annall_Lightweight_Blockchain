@@ -134,21 +134,21 @@ def add_node():
     add_new_node(node_input_model.dict)
     return Response(status=201)
 
-def get_update_num():
+def get_reset_num():
     with open(app.config["CONF_RESET_FILE"], "r") as writer_api_conf:
-        update_num = json.load(writer_api_conf)
-        return update_num["update_number"]
+        reset_num = json.load(writer_api_conf)
+        return reset_num["reset_number"]
 
-@app.route("/blocks", methods=["DELETE"])
+@app.route("/reset", methods=["DELETE"])
 def delete_chain():
     # if authenticate_writer():
     with open(app.config["CONF_RESET_FILE"], "r") as writer_api_conf:
-        update_num = json.load(writer_api_conf)
+        reset_num = json.load(writer_api_conf)
     with open(app.config["CONF_RESET_FILE"], "w") as writer_api_conf:
-        json.dump({"update_number":update_num["update_number"]+1}, writer_api_conf, indent=4)    
+        json.dump({"reset_number":reset_num["reset_number"]+1}, writer_api_conf, indent=4)    
     return Response(status=204)
 
-@app.route("/update", methods=["GET"])
+@app.route("/reset", methods=["GET"])
 def get_update():
     """Returns number of latest update"""
-    return Response(json.dumps({"update_number": get_update_num(), "restart": True}), mimetype="application/json")
+    return Response(json.dumps({"reset_number": get_reset_num(), "restart": True}), mimetype="application/json")

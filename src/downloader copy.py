@@ -9,8 +9,8 @@ class Downloader:
         self.mem_data = mem_data
         self.bcdb = bcdb
         
-    def get_client_address(self, id):
-        return f'http://{self.mem_data.conf["node_set"][id-1]["hostname"]}:{self.mem_data.conf["node_set"][id-1]["api_port"]}/'
+    def get_client_address(self, num):
+        return f'http://{self.mem_data.conf["node_set"][num]["hostname"]}:{self.mem_data.conf["node_set"][num]["client_port"]}/'
 
     def verify_latest_block(self, latest_block):
         """Check if node latest block is verified by at least 51% of network. If not, drop our db and fetch correct data"""
@@ -46,50 +46,47 @@ class Downloader:
         # Should ask for data from a random running node
         try:
             # Check if node at least has the same chain as others on the network
-            latest_block = self.bcdb.get_latest_block()
             in_sync = False
+            trusted_node_list = None
+            latest_block = self.bcdb.get_latest_block()
+            if latest_block:
+                trusted_node_list, online_nodes  = self.verify_latest_block(latest_block)                    
+                if not online_nodes:    #TODO: If no-one online, search for latest timestamp on e.g. Ripple. Perhaps reference stored in writerAPI
+                    in_sync = True
+            # In sync if got data from a node and new latest block is verified by at least 51% of other nodes in network.
             node_num = 0
-            node_list = self.mem_data.writer_list + self.mem_data.reader_list
+            node_list = trusted_node_list if trusted_node_list else self.mem_data.writer_list + self.mem_data.reader_list
             while not in_sync and node_num < len(node_list):   # Attempt to get data from an active node
                 if latest_block:    # Only get missing blocks
                     # Get missing blocks
                     try:
-                        print({"hash": type(latest_block["hash"]), "round": type(latest_block["round"])})
-                        print(self.get_client_address(node_list[node_num])+"missing_blocks")
-                        request_obj = {"hash": latest_block["hash"], "round": latest_block["round"]}
-                        response = requests.get(self.get_client_address(node_list[node_num])+"missing_blocks", data=json.dumps(request_obj))
-                    except Exception as e:
-                        verbose_print("Failed to get missing blocks from node: ", e)
-                    # Returns latest block or missing blocks
-                    if response.status_code == 200:
-                        missing_blocks = response.json()    
-                        if len(missing_blocks) > 1:
-                            if missing_blocks[0]["prevHash"] == latest_block["prevHash"]: # If not equal, get from another node
-                                for block in missing_blocks[1:]:
-                                    self.bcdb.insert_block(block["round"], Block.from_dict(block))
-                                in_sync = True
-                        else:
-                            # Node is up to date
+                        missing_blocks = requests.get(self.get_client_address(node_list[node_num])+"missing_blocks", json.dumps({"hash": latest_block.hash, "round": latest_block.round}), timeout=2).json()
+                    except:
+                        verbose_print("Failed to get missing blocks from node")
+                    # Returns empty list or missing blocks
+                    if len(missing_blocks) > 1:
+                        if missing_blocks[0].prev_hash == latest_block.prev_hash: # If not equal, get from another node
+                            for block in missing_blocks[1:]:
+                                self.bcdb.insert_block(block.round, Block.from_dict(block))
                             in_sync = True
-                        node_num += 1   # Try next node if node down
+                    else:
+                        # Node is up to date
+                        in_sync = True
                 else:
-                    # Node had no blocks, fetch all blocks
+                    # Get all blocks
                     try:
-                        blocks_to_insert = requests.get(self.get_client_address(node_list[node_num])+"blocks", {}, timeout=2).json()
-                        if len(blocks_to_insert):
-                            blocks_to_insert.reverse()
-                            for block in blocks_to_insert:
-                                insert_block = Block.from_dict(block)
-                                self.bcdb.insert_block(insert_block.round, insert_block)
+                        response = requests.get(self.get_client_address(node_list[node_num])+"blocks", {}, timeout=2).json()
+                        if len(response):
+                            for block in response:
+                                self.bcdb.insert_block(block.round, Block.from_dict(block))
                             in_sync = True
                     except Exception as e:
                         print(e)
-                node_num += 1
-            # Node has latest blocks. Activate node        
-            if  not self.mem_data.node_activated:
+                        
+            latest_block, trusted_node_list, online_nodes  = self.verify_latest_block()
+            if trusted_node_list and online_nodes and not self.mem_data.node_activated:  # Fetched data is verified
                 # Activates node for connecting to other 
-                print("ACTIVATED")
-                # self.mem_data.activate_node()
+                self.mem_data.activate_node()
             # All nodes should have a client api on the same computer as the node running the consensus. It should perhaps not be a thread in the program. 
         except Exception as e:
             print(e)
