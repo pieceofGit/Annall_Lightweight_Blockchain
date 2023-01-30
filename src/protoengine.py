@@ -303,17 +303,17 @@ class ProtoEngine(ProtocolEngine):
         """Bootstrap to the writerset, using comm module
         """
         # ? How do nodes handle a new membership version when one is being proposed? 
-        # TODO: Nodes only add at most one reader and one writer in a round. 
+        # TODO: Nodes only add at most one reader and one writer in a round. Why? 
         # A coordinator can propose one new writer and reader to active set.
         # Any number of nodes can be proposed to be removed from the active set. 
         # New node continuously updates its current version while waiting and gets sent the current version number when added to consensus.
         ## TODO: More suspicious is, this seems to block if any of the writers is not connected.
-        # Either program starting up or node is in waiting list
-        while (len(self.comm.list_connected_peers()) / (len(self.mem_data.writer_list) + len(self.mem_data.reader_list))) < 0.5: # TODO: Needs more sophistication
+        # TODO: Should not block indefinitely if writers are down
+        while (len(self.comm.list_connected_peers()) / (len(self.mem_data.writer_list) + len(self.mem_data.reader_list))) < 0.5:
             # Startup node means that the node is in the active list. 
             # Could have an empty list and wait until nodes are activated. 
             # Blockchain could be turned on and off. The last running nodes need to be the ones to startup the blockchain. 
-            # Or the blockchain is stamped on the bitcoin network. What is the cost of that though?
+            # Or the blockchain is stamped by the latest block hash on an external, always running network.
             # The external party is controlling the membership statically. The nodes handle the dynamism of the membership management.
             # Assume there is an external api for signing up. It runs separately from the blockchain. On startup, nodes get some version of this active membership list.
             # The version number may be different. The coordinator shares the active list, round number, and the list version. 
@@ -322,7 +322,7 @@ class ProtoEngine(ProtocolEngine):
                 # 1
                 # Node 1 connects to node 2 and starts consensus.
                 # Node 2 connects to node 1 and 3 and starts consensus.
-                # Node 3 connects to node node 2 and waits to connect to node 1.
+                # Node 3 connects to node 2 and waits to connect to node 1.
                 # 2
                 # Node 1 selects itself as coordinator
                 # Node 2 selects node 3 as coordinator
@@ -333,8 +333,9 @@ class ProtoEngine(ProtocolEngine):
                 # Node 1 and Node 2 communicate their version number.
                 # Node 3 gets added by Node 1.
                 # When node reach agreement with the version number, they start consensus round.
-                # Coordinator fetches the membership config and proposes new version if it has changes.
+                # Coordinator fetches the membership config and proposes new version if it has changed.
                 # Problem: Nodes do not fetch the same version number. 
+                # When node startup, a node can propose a later version once.
             # ? How should change in membership be handled?
                 # Either should fetch specific version or if proposing coordinator has the same proposed version when he is a proposer, it becomes the current version.
                 # Every node has proposed the same version and the original proposer sets the new proposal as the new version.
@@ -658,7 +659,7 @@ class ProtoEngine(ProtocolEngine):
             time.sleep(1)
         # Node has successfully fetched blockchain and been added to the active node set
         # 2. Node attempts to connect to all active nodes
-        
+        self.join_writer_set()
         # Could be round retry with different coordinator.
         # Both round robin rounds and within a round retry. 
         # A new node could wait for a specific coordinator to join. Could send request when all joined. 
@@ -672,7 +673,6 @@ class ProtoEngine(ProtocolEngine):
         # Nodes in the preset list do not go through the waiting list.
         
         # Node should just wait for a message from any coordinator to join. 
-        self.join_writer_set()
         print("[ALL JOINED] all writers have joined the writer set")
         round = self.bcdb.length    
         print("ROUND: ", round)

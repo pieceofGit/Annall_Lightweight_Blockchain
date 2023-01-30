@@ -4,6 +4,7 @@
 import json
 from enum import unique
 from hashlib import new
+from xml.dom import NotFoundErr
 from pymongo import MongoClient
 import pymongo
 
@@ -25,10 +26,11 @@ class ConfigDB:
         
     def get_config_version(self, index: int):
         """Returns a config version by key and db"""
-        try:
-            return self.configs.find_one({"_id": index})
-        except:
-            return
+        config = self.configs.find_one({"_id": index})
+        if config:
+            return config
+        else: 
+            raise NotFoundErr
         
     def node_exists(self, id: int) -> bool:
         latest_conf =  self.get_latest_config()

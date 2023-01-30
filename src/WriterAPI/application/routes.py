@@ -108,6 +108,14 @@ def deactivate_node():
 def get_config():    
     # Returns the conf file if writer is authenticated
     return Response(json.dumps(app.config["DB"].get_latest_config()), mimetype="application/json", status=200)
+
+@app.route("/config/<int:version>", methods=["GET"])
+def get_config_version(version):    
+    # Returns the conf file if writer is authenticated
+    try:
+        return Response(json.dumps(app.config["DB"].get_config_version(version)), mimetype="application/json", status=200)
+    except:
+        raise InvalidUsage(f"Config version {version} not found", status_code=400)
     # else:
     #     raise InvalidUsage("Writer not whitelisted", status_code=400)
 
