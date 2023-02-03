@@ -17,7 +17,7 @@ class MembershipData:
         self.reader_list = None
         self.conf = None
         self.current_version = None
-        self.proposed_version = None
+        self.proposed_version = 0
         self.waiting_list = []
         self.disconnect_list = []
         self.bcdb = bcdb
@@ -44,26 +44,42 @@ class MembershipData:
         self.writer_list = self.conf["writer_list"]
         self.reader_list = self.conf["reader_list"]
     
-    def waiting_node_get_conf(self):
+    def waiting_node_get_conf(self, version = None):
         try:
-            response = requests.get(self.api_path + "config", {}, timeout=2)
+            if version:
+                response = requests.get(self.api_path + "config/" + version, {}, timeout=2)
+            else:
+                response = requests.get(self.api_path + "config", {}, timeout=2)
             self.conf = response.json()
             self.current_version = self.conf["membership_version"]
             self.set_lists()
         except Exception as e:
             verbose_print("[CONFIG LOCAL] Failed to get config from writer", e)
+    
+    def get_membership_version(self, version):
+        try:
+            response = requests.get(self.api_path + "config/" + version, {}, timeout=2)
+            if response.status_code == 200:
+                self.conf = response.json()
+                self.proposed_version = self.conf["membership_version"]
+                return True
+            else:
+                raise Exception
+        except:
+            return False
 
-    def get_remote_conf(self):
+    def get_remote_conf(self) -> int:
         """Running nodes ask for config and update proposed version"""
         try:
             response = requests.get(self.api_path + "config", {}, timeout=2)
-            verbose_print("[CONFIG node API] Got config from node API")
             self.conf = response.json()
-            if self.current_version and self.conf["membership_version"] > self.current_version:
+            if self.current_version and self.conf["membership_version"] > self.current_version: # New membership file
                 self.proposed_version = self.conf["membership_version"]
-                self.add_to_waiting_and_disconnect_lists(self.conf["writer_list"], self.conf["reader_list"])
+                # self.add_to_waiting_and_disconnect_lists(self.conf["writer_list"], self.conf["reader_list"])
+                return self.proposed_version
             else:
                 self.current_version = self.conf["membership_version"]
+                return self.current_version
         except Exception as e:
             verbose_print("[CONFIG LOCAL] Failed to get config from writer", e)
     

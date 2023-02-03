@@ -137,6 +137,11 @@ def generate_pad():
     import struct
     number = struct.unpack("Q", x)[0]
     return number % modulus
-print(calculate_sum(65537, [(1, generate_pad()),(2, generate_pad()), (3,generate_pad())]))
-# 1000, 0000
-print(1^0)
+# print(calculate_sum(65537, [(1, generate_pad()),(2, generate_pad()), (3,generate_pad())]))
+# # 1000, 0000
+# print(1^0)
+
+dict = {"person": "a", "dogs": "b" }
+
+for i in dict:
+    print(i, "YES")

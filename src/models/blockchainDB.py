@@ -74,14 +74,15 @@ class BlockchainDB(interfaces.BlockChainEngine):
 
     def insert_block(self, block_id : int, block : Block, overwrite=False ):  
         # TODO: Separate from blockchain length and thus degraded.
-        assert isinstance(block_id, int)    # The round 
+        assert isinstance(block_id, int)    # The round of the consensus, not the blockchain length.
         assert isinstance(block, Block)    
 
         ## TODO: Remove DELETE = this is a blockchain, nothing should be deleted.        
         verbose_print(f"[INSERT BLOCK] added block with block id {block_id} and block {block}")
         try:
-            if overwrite:
+            if overwrite:   #TODO: Handle case for round of cancel block.
                 self.cursor.execute(f"DELETE FROM chain WHERE round == {block_id}")
+                
             self.cursor.execute("insert into chain values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [self.length, block.prev_hash, block.writerID, block.coordinatorID, block.winning_number, block.writer_signature, 
             block.timestamp, block.this_hash, block.payload]

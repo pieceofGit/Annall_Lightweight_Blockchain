@@ -260,15 +260,14 @@ class ProtoCom(ProtocolCommunication):
         self.msg_lock = threading.RLock()
         # Define number of writers to connect to
         self.rr_selector = None
-        # set up lists and stuff
+        # set up lists and stuff    
         # dictionary of connected sockets use for storing sockets and stuff
         self.peers = {}
         self.ip = None
         self.listen_port = None
         self.is_writer = self.check_if_writer(self.id)
         # Setup remote_end object for communication with active writers and readers
-        self.connect_to_nodes_in_conf_by_key("writer_list")
-        self.connect_to_nodes_in_conf_by_key("reader_list")
+        self.connect_to_active_nodes()
         verbose_print(f"[IS WRITER] node with id: {self.id} is a writer: {self.is_writer}")
         # set up listening socket
         # Making sure to not run this if either are undefined, unless it crashes
@@ -291,12 +290,13 @@ class ProtoCom(ProtocolCommunication):
             # Received messages are added to this queue and removed when recv_msg() is called
             self.msg_queue = []
 
-    def connect_to_nodes_in_conf_by_key(self, list_key):
-        """Setup RemoteEnd object for all active writers and readers"""
+    def connect_to_active_nodes(self):
+        """Setup RemoteEnd object for all unconnected active writers and readers"""
         try:
-            for i in self.mem_data.conf[list_key]:
+            active_node_list = self.mem_data.writer_list + self.mem_data.reader_list
+            for i in active_node_list:
                 node = self.mem_data.conf["node_set"][i-1]
-                if i != self.id:
+                if i != self.id and i not in self.peers:    # TODO: Does not handle case for reconnecting writer
                     self.peers[i] = RemoteEnd(
                     node["id"], node["hostname"], node["protocol_port"], node["pub_key"], self.check_if_writer(node["id"])
                     )
@@ -304,8 +304,12 @@ class ProtoCom(ProtocolCommunication):
                     self.ip = node["hostname"]
                     self.listen_port = node["protocol_port"]
                     self.pub_key = node["pub_key"]
+            for i in self.peers:
+                if i not in active_node_list:
+                    self.peers.pop(i)   # Remove disconnected nodes
         except:
-            return      
+            return
+        
 
     def check_if_writer(self, id):
         """Returns boolean for if reader or writer node"""

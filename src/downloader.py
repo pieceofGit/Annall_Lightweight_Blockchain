@@ -88,8 +88,8 @@ class Downloader:
             # Node has latest blocks. Activate node        
             if  not self.mem_data.node_activated:
                 # Activates node for connecting to other 
-                print("ACTIVATED")
-                # self.mem_data.activate_node()
+                # print("ACTIVATED")
+                self.mem_data.activate_node()
             # All nodes should have a client api on the same computer as the node running the consensus. It should perhaps not be a thread in the program. 
         except Exception as e:
             print(e)
