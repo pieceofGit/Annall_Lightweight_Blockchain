@@ -1,4 +1,6 @@
 from flask import request
+import json
+
 class BlockInputModel:
     def __init__(self, request_obj) -> None:
         self.error = False
@@ -12,6 +14,9 @@ class BlockInputModel:
     
     def get_payload(self, request_obj):
         if "payload" in request_obj:
+            if "-" in json.dumps(request_obj["payload"]):
+                self.error = True
+                return "Payload cannot include hyphen(-)"
             return request_obj["payload"]
         else:
             self.error = True

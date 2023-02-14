@@ -37,7 +37,7 @@ def handle_bad_request(e):
 @annall.route("/blocks", methods=["POST"])
 def insert_block():
     """ Sends the transaction for insertion as block on the chain. """
-    request_json = request.get_json(request)
+    request_json = request.get_json()
     request_obj = BlockInputModel(request_json)
     if request_obj.error:
         return Response(json.dumps(request_obj.dict), mimetype="application/json", status=400)
