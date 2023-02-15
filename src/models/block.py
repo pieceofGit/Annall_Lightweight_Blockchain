@@ -63,7 +63,11 @@ class Block(i_Block):
         ''' returns true if other is the next block following self '''
         return self.this_hash == other.prev_hash
 
-
+    @classmethod
+    def from_json(cls, json_block: str):
+        json_list = json.loads(json_block)
+        return cls.from_tuple(tuple(json_list))
+    
     @classmethod
     def from_tuple(cls, block_as_tuple : tuple): ## Factory to create a block from a tuple
         (

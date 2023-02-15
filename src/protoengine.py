@@ -15,6 +15,7 @@ import os
 import json
 from protocom import ProtoCom
 from models.membershipData import MembershipData
+from models.message import Message
 from downloader import Downloader
 from tcp_server import TCP_Server, ClientHandler
 from blockBroker import BlockBroker
@@ -134,7 +135,7 @@ class ProtoEngine(ProtocolEngine):
         # The interface initiates the following attributes
         ProtocolEngine.__init__(self, id, comm, blockchain, clients)
 
-        self.ID = id
+        self.id = id
         self.keys = keys    # Private keys
         self.mem_data = mem_data
         self.update_num = 0
@@ -170,12 +171,12 @@ class ProtoEngine(ProtocolEngine):
     def set_writers(self, writers: list):
         for w in writers:
             assert isinstance(w, int)
-        self.mem_data.writer_list = writers
+        self.mem_data.ma_writer_list = writers
     
     def set_readers(self, readers: list):
         for r in readers:
             assert isinstance(r, int)
-        self.mem_data.reader_list = readers
+        self.mem_data.ma_reader_list = readers
     
     def get_timestamp(self):
         # Returns time in Unix epoch time 
@@ -271,10 +272,11 @@ class ProtoEngine(ProtocolEngine):
         """Decides the coordinator for the round
         """
         assert isinstance(round, int)
-        ## NOT SURE WHY THIS IS HERE:  8 - 1 % (3+1) # 7 % 4 = 3
         ## TODO not clear if this really works, e.g. in the case if some node dies, or if the set of writers changes
-        coordinator = (round - 1) % (len(self.mem_data.writer_list))
-        return coordinator + 1
+        # IDs sorted by ascending ID number. Returns index in writer list
+        coordinator_index = (round - 1) % (len(self.mem_data.round_writer_list))
+        # Separate list for round and list for connections.
+        return self.mem_data.round_writer_list[coordinator_index]
 
     def calculate_sum(self, numbers: list):
         """Numbers is a list of <ID, number> pairs. This function calculates the pad for the round from the numbers using xor
@@ -310,7 +312,7 @@ class ProtoEngine(ProtocolEngine):
         ## TODO: More suspicious is, this seems to block if any of the writers is not connected.
         # TODO: Should not block indefinitely if writers are down
         wait = 0
-        while (len(self.comm.list_connected_peers()) / (len(self.mem_data.writer_list) + len(self.mem_data.reader_list))) < 0.5:
+        while (len(self.comm.list_connected_peers()) / (len(self.mem_data.ma_writer_list) + len(self.mem_data.ma_reader_list))) < 0.5:
             # Startup node means that the node is in the active list. 
             # Could have an empty list and wait until nodes are activated. 
             # Blockchain could be turned on and off. The last running nodes need to be the ones to startup the blockchain. 
@@ -356,17 +358,18 @@ class ProtoEngine(ProtocolEngine):
                 print("WAITING TO CONNECT")
             wait += 1
             time.sleep(1)
-        print(f"ID={self.ID} -> connected and ready to build")
+        print(f"ID={self.id} -> connected and ready to build")
         return None
         # ? Connect to at least 51% and move on. Running nodes can at least start consensus and add unconnected nodes to penalty box.
         # Nodes should be able to run without being connected to everyone.
         # Node needs to ask for data from other nodes if it does not get the latest block. 
-    def cancel_round(self, cancel_log: str, round: int):
+    def cancel_round(self, cancel_log: list, round: int):
         """
         Cancel the round, send cancel message to errbody and write cancel block
         """
         self.broadcast("cancel", cancel_log, round, send_to_readers=True)
-        fake_message = f"{round}-{self.ID}-0-cancel-hehe"
+        # f"{round}-{self.ID}-{type}-{message}"
+        fake_message = f"{round}-{self.id}-cancel-{json.dumps(cancel_log)}"
         self.create_cancel_block(fake_message)
 
     def create_block(self, pad: int, coordinatorID: int, round):
@@ -385,7 +388,7 @@ class ProtoEngine(ProtocolEngine):
         signature = self.sign_payload(payload)
         winning_number = pad
         coordinatorID = coordinatorID
-        writerID = self.ID
+        writerID = self.id
         timestamp = self.get_timestamp() ### hmmmm
 
         block = Block( 
@@ -401,23 +404,23 @@ class ProtoEngine(ProtocolEngine):
 
     def create_cancel_block(self, message: str):
         ''' Generates a cancel block '''
-        assert isinstance(message, str)
-        parsed_message = message.split("-")
-        canceller = int(parsed_message[1])
-        round = int(parsed_message[0])
+        assert isinstance(message, Message)
+        canceller = message.from_id
+        round = message.round
         coor_id = self.get_coordinatorID(round)
         prev_hash = self.get_prev_hash()
         prev_hash = str(prev_hash)
         timestamp = self.get_timestamp()
+        payload = message.payload
          
         cancel_block = Block(
             prev_hash=prev_hash, 
             writerID=canceller, 
             coordinatorID=coor_id, 
             winning_number=0,
-            writer_signature="0",
+            writer_signature="0",   #? Should not this be signed
             timestamp=timestamp,
-            payload=f"round {round} cancelled by {canceller}")
+            payload=f"round {round} cancelled by {canceller}")  #TODO: What should be the cancel payload
 
         self.latest_block = cancel_block
         return cancel_block
@@ -432,40 +435,56 @@ class ProtoEngine(ProtocolEngine):
         """Checks for cancel blocks of previous rounds and overwrites block with cancel block"""
         message = self._recv_msg(type="cancel")
         if message is not None:
-            parsed_message = message.split("-")
             cancel_block = self.create_cancel_block(message)
-            if int(parsed_message[0]) != round:
-                self.bcdb.insert_block(int(parsed_message[0]), cancel_block, overwrite=True)
+            if int(message.round) != round:
+                self.bcdb.insert_block(int(message.round), cancel_block, overwrite=True)
                 
-    def get_request_msg(self, id) -> list:
-        """Blocks for request message and sends back parsed list of items in message"""
+    def get_request_msg(self, id):
+        """Blocks for request message and sends back message object"""
         message = None
         while message is None:
             message = self._recv_msg("request", recv_from=id)
             time.sleep(0.01)
-        return ast.literal_eval(message.split("-")[3])
+        return message
     
     def get_announce_msg(self, id):
-        """Blocks for announce message and sends back parsed list of items in message"""
+        """Blocks for announce message and sends back message object"""
         message = None
         while message is None:
             message = self._recv_msg("announce", recv_from=id)
             time.sleep(0.01)
-        return message.split("-")
+        return message
+    
+    def get_round_cancel_messages(self, round):
+        """Blocks for cancel messages and returns list of nodes sending cancel block"""
+        message = None
+        received_msg_disconnect_lists = []
+        received_from_id_list = []
+        no_recv_messages = 0
+        # Receive cancel messages from connected nodes
+        while no_recv_messages < len(self.mem_data.round_writer_list) + len(self.mem_data.round_reader_list) - 1 - len(self.mem_data.round_disconnect_list):
+            message = self._recv_msg(type="cancel", round=round)
+            received_msg_disconnect_lists.append(message.payload)
+            received_from_id_list.append(message.from_id)
+            self.comm.check_disconnect()
+            if message.from_id not in self.mem_data.round_disconnect_list:
+                no_recv_messages += 1
+            time.sleep(0.01)
+        return received_msg_disconnect_lists, received_from_id_list
     
     def get_otp_numbers(self) -> list:
         """Waits for and receives OTP from all active nodes"""
         numbers = []
         no_recv_messages = 0
         # MSG FORMAT <round nr>-<from id>-<to id>-<msg type>-<msg body>
-        while no_recv_messages < len(self.mem_data.writer_list) + len(self.mem_data.reader_list) - 1:
+        while no_recv_messages < len(self.mem_data.round_writer_list) + len(self.mem_data.round_reader_list) - 1:
             message = self._recv_msg(type="reply")
             if message is not None:
-                parsed_message = message.split("-")
-                from_id = ast.literal_eval(parsed_message[1])
                 no_recv_messages += 1
-                if from_id in self.mem_data.writer_list:
-                    numbers.append([int(parsed_message[1]), int(parsed_message[3])])    #(id, otp)
+                if message.from_id in self.mem_data.round_writer_list:
+                    numbers.append([message.from_id, message.payload])    #(id, otp)
+            if self.comm.check_disconnect():    # Returns true if anyone disconnected
+                return
             time.sleep(0.01)
         return numbers
     
@@ -474,21 +493,19 @@ class ProtoEngine(ProtocolEngine):
         while message is None:
             message = self._recv_msg(type="block", recv_from=winner_id, round=round)    # Gets back tuple block
             time.sleep(0.01)
-        parsed_message = message.split("-")
-        payload = ast.literal_eval(parsed_message[3])   #8-tuple of 
-        if not payload:   # Winner had nothing to write. Round skipped
+        if not json.loads(message.payload):   # Winner had nothing to write. Round skipped
             return
-        block = Block.from_tuple(payload) # Converts tuple block to block object
+        # Receives json payload
+        block = Block.from_json(message.payload) # Converts tuple block to block object
         if not self.verify_block(block):
             self.cancel_round("Block not correct", round)   # Sets latest block as cancel block
         else:
             # Check if other writer cancelled block
             message = self._recv_msg(type="cancel")
             if message is not None:
-                parsed_message = message.split("-")
                 cancel_block = self.create_cancel_block(message)    # Block object
-                if int(parsed_message[0]) != round: # Overwrite block in prior round
-                    self.bcdb.insert_block(int(parsed_message[0]), cancel_block, overwrite=True) # Overwrites prior round but adds new block at end
+                if message.round != round: # Overwrite block in prior round
+                    self.bcdb.insert_block(message.round, cancel_block, overwrite=True) # Overwrites prior round but adds new block at end
                     self.latest_block = block
                 else:
                     # The block does not belong to this round
@@ -503,9 +520,8 @@ class ProtoEngine(ProtocolEngine):
         assert isinstance(round, int)
         assert isinstance(coordinatorID, int)
         # Step 1 - Receive request from Coordinator
-        message, proposed_version  = self.get_request_msg(coordinatorID)  # [<]
-        message, proposed_version = message[3]
-        success = self.check_membership_version_update(proposed_version)
+        message  = self.get_request_msg(coordinatorID)  # [<]
+        success = self.check_membership_version_update(message.version)
         if not success:
             self.cancel_round("Proposed membership version incorrect", round)   # Sets latest block as cancel block
 
@@ -514,8 +530,8 @@ class ProtoEngine(ProtocolEngine):
         self._send_msg(round, "reply", pad, sent_to=coordinatorID)
 
         # Step 3 - Waiting for annoucement from the Coordinator
-        parsed_message = self.get_announce_msg(coordinatorID)
-        winner = ast.literal_eval(parsed_message[3])
+        message = self.get_announce_msg(coordinatorID)
+        winner = message.payload
         winner_id = winner[2]
         received_block = self.receive_block(winner_id, round)
         if not received_block:
@@ -527,8 +543,8 @@ class ProtoEngine(ProtocolEngine):
         assert isinstance(round, int)
         assert isinstance(coordinatorID, int)
         # Step 1 - Receive request from Coordinator
-        round, proposed_mem_version  = self.get_request_msg(coordinatorID)
-        success = self.check_membership_version_update(proposed_mem_version)
+        msg  = self.get_request_msg(coordinatorID)
+        success = self.check_membership_version_update(msg.version)
         # Throw cancel block if not success
         if not success:
             self.cancel_round("Proposed membership version incorrect", round)   # Sets latest block as cancel block
@@ -539,19 +555,19 @@ class ProtoEngine(ProtocolEngine):
         message = self.get_announce_msg(coordinatorID)
         # Step 4 - Verify new block from winner or add a cancel block
         # [<round>, <coordinatorid>, msgtype, [[[<OTP_numbers>], <OTP_winner>, winner_id]
-        winner = ast.literal_eval(message[3])
+        winner = message.payload
         winner_verified = self.verify_round_winner(winner, pad)
         winner_id = winner[2]
-        if winner_verified and self.ID == winner_id:    # Node is winning writer
+        if winner_verified and self.id == winner_id:    # Node is winning writer
             # First check if the previous round was cancelled and I had not seen the message yet
             self.check_for_old_cancel_message(round)
             block = self.create_block(pad, coordinatorID, round)    # Returns false if payload queue is empty
             self.latest_block = block
             # Broadcast our newest block before writing into chain
             if not block:   # Winning writer had nothing to write
-                self.broadcast("block", str(block), round, send_to_readers=True)  
+                self.broadcast("block", json.dumps(block), round, send_to_readers=True)  
                 return
-            self.broadcast("block", str(block.as_tuple()), round, send_to_readers=True)  
+            self.broadcast("block", json.dumps(block.as_tuple()), round, send_to_readers=True)  
         elif winner_verified:
             received_block = self.receive_block(winner_id, round)
             if not received_block:
@@ -563,15 +579,25 @@ class ProtoEngine(ProtocolEngine):
         self.publish_block()
 
     def coordinator_round(self, round: int):
-        vverbose_print(f"Round: {round} and ID={self.ID}")
+        vverbose_print(f"Round: {round} and ID={self.id}")
         assert isinstance(round, int)
         self.check_for_old_cancel_message(round=round)  #TODO: Clear up cancel blocks
         # Step 0 - Fetch latest membership configuration file from MA
-        latest_version = self.mem_data.get_remote_conf()
+        self.mem_data.get_remote_conf()
         # Step 1 - Request OTP number from writers. Piggyback version number on message
-        self.broadcast(msg_type="request", msg=(round, latest_version), round=round, send_to_readers=True)
+        self.broadcast(msg_type="request", msg=round, round=round, send_to_readers=True)
         # Step 2 - Wait for numbers reply from all
         numbers = self.get_otp_numbers()
+        if not numbers: # Did not receive OTP from all nodes. Someone disconnected
+            # Either the node is acting malicious and forcing us to cancel and be in penalty box
+            # Or the node is actually down and others should throw a cancel block.
+            self.cancel_round(self.mem_data.round_disconnect_list, round) # Creates cancel block with disconnect list as message
+            # Now the node should check if others agree with cancellation
+            received_msg_disconnect_lists, received_from_id_list = self.get_round_cancel_messages(round) #TODO: Add max timeout to share cancel block
+            # Assume everyone agrees. Round cancelled because of node shutdown.
+            # Everyone has the same disconnect list and does not include the node in the next N rounds.
+            self.bcdb.insert_block(self.latest_block)
+            return
         # What is happening is an honest node sends that there is a new version, and proposes this version.
         # Then all honest nodes obey and fetch the latest version. If the version does not exist or isn't available, the nodes throw a cancel block. 
         # Send back current version with announce message. 
@@ -622,8 +648,6 @@ class ProtoEngine(ProtocolEngine):
         # The node then knows the round number and knows that it is added in the next round and can get data up to that point and then wait for the next coordinator.
         # ? Next coordinator does not comply
         # It sends a cancel block to all nodes, but the round could be complete... the next one should comply and wait for the request by the new node.
-        
-        
         # 1. Node waits until it is activated
         while not self.mem_data.node_activated:
             time.sleep(1)
@@ -648,17 +672,19 @@ class ProtoEngine(ProtocolEngine):
         print("ROUND: ", round)
         if self.comm.is_writer:
             while True:
+                self.mem_data.set_round_lists()
                 self.check_for_chain_reset()
                 if self.mem_data.proposed_version > self.mem_data.current_version:
                     self.mem_data.update_version()
                     self.comm.connect_to_active_nodes() # Sets up socket connection
                 coordinator = self.get_coordinatorID(round)
-                vverbose_print(f"ID: {self.ID}, CordinatorId: {coordinator}", coordinator == self.ID)
-                if coordinator == self.ID:
+                vverbose_print(f"ID: {self.id}, CordinatorId: {coordinator}", coordinator == self.id)
+                if coordinator == self.id:
                     self.coordinator_round(round)
                 else:
                     self.writer_round(round, coordinator)
                 vverbose_print(f"[ROUND COMPLETE] round {round} finished with writer with ID {coordinator} as  the coordinator")
+                self.mem_data.add_to_penalty_box(round)
                 round += 1
                 if round > self.rounds and self.rounds:
                     break   # Stops the program
@@ -677,7 +703,8 @@ class ProtoEngine(ProtocolEngine):
         assert isinstance(sent_to, (int, NoneType))
         assert isinstance(type, (str, NoneType))
         # implements a remote procedure call wrt protocolCommunication
-        self.comm.send_msg(f"{round}-{self.ID}-{type}-{message}", send_to=sent_to, send_to_readers=send_to_readers)
+        msg = Message.create_msg(round=round, from_id=self.id, message=message, type=type, version=self.mem_data.get_version())
+        self.comm.send_msg(message=msg, send_to=sent_to, send_to_readers=send_to_readers)
 
     # MSG FORMAT <round nr>-<from id>-<to id>-<msg type>-<msg body>
     def _recv_msg(self, type=None, recv_from=None, round=None):
@@ -687,29 +714,29 @@ class ProtoEngine(ProtocolEngine):
         # implements a remote procedure call wrt protocolCommunication
         rec = self.comm.recv_msg()  # Checks for new messages from other writers and adds them to the queue
         for message in rec:
-            self.message_queue.put(message[1])
+            self.message_queue.put(message[1])  # Protoengine has its own Queue object. Not a list like in protocom.
         
         if self.message_queue.empty():
-            
             vverbose_print("message queue empty")
             return None
-        mess = self.message_queue.get() # Reader checks for cancel messages and takes request message
-        parsed_message = mess.split("-")
+        msg_from_queue = self.message_queue.get() # Reader checks for cancel messages and takes request message
+        msg = Message.from_json(msg_from_queue) # Takes msg json and loads into object
+        if not msg:
+            self.message_queue.put(msg_from_queue)
+            return None
         type_check = True
         from_check = True
         round_check = True
-
         if type:
-            type_check = parsed_message[2] == type
+            type_check = msg.type == type
         if recv_from:
-            from_check = int(parsed_message[1]) == recv_from
+            from_check = msg.from_id == recv_from
         if round:
-            round_check = int(parsed_message[0]) == round
-
+            round_check = msg.round == round
         if type_check and from_check and round_check:
-            return mess
+            return msg  # Returns msg object if all is true
         else:
-            self.message_queue.put(mess)    # Message added back. Was not supposed to be taken off of the queue
+            self.message_queue.put(msg)    # Message added back. Was not supposed to be taken off of the queue
         
         return None
 

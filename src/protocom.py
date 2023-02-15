@@ -293,7 +293,7 @@ class ProtoCom(ProtocolCommunication):
     def connect_to_active_nodes(self):
         """Setup RemoteEnd object for all unconnected active writers and readers"""
         try:
-            active_node_list = self.mem_data.writer_list + self.mem_data.reader_list
+            active_node_list = self.mem_data.ma_writer_list + self.mem_data.ma_reader_list
             for i in active_node_list:
                 node = self.mem_data.conf["node_set"][i-1]
                 if i != self.id and i not in self.peers:    # TODO: Does not handle case for reconnecting writer
@@ -309,6 +309,15 @@ class ProtoCom(ProtocolCommunication):
                     self.peers.pop(i)   # Remove disconnected nodes
         except:
             return
+        
+    def check_disconnect(self):
+        """Checks for disconnected nodes and adds them to disconnect list."""
+        for node in self.peers.values():
+            if not node.is_active:
+                self.mem_data.round_disconnect_list.append(node.rem_id)
+        if len(self.mem_data.round_disconnect_list):
+            return True
+        return False
         
 
     def check_if_writer(self, id):
@@ -360,7 +369,7 @@ class ProtoCom(ProtocolCommunication):
                     in_conn.sendall(repl_msg)
                 except Exception as e:
                     verbose_print("Failed to send reply", e)
-                    in_conn.close()
+                    in_conn.close() # Closes connection
                     return
                 time.sleep(2)
                 try:
@@ -471,8 +480,7 @@ class ProtoCom(ProtocolCommunication):
             msg = self.peers[r_id].read_single_msg()
         except Exception as e:
             verbose_print(">!! ", "Failed to read from socket ", e)
-            # this means connection is closed
-            # close socket here do not put on a removelist
+            # Connection is closed. Remove socket
             try:
                 self.peers[r_id].close(self.rr_selector)
             except Exception as e:
@@ -498,6 +506,7 @@ class ProtoCom(ProtocolCommunication):
         if msg_typ == pMsgTyp.data:
             with self.msg_lock:
                 self.msg_queue.append((r_id, msg_data))
+            print(self.msg_queue)
             rep_msg = pMsg.data_ack_msg(self.id, r_id)
         elif msg_typ == pMsgTyp.data_ack:
             # ? put on some special queue
