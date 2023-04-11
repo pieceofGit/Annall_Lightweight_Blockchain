@@ -263,12 +263,12 @@ class ProtoCom(ProtocolCommunication):
         # set up lists and stuff    
         # dictionary of connected sockets use for storing sockets and stuff
         self.peers = {}
-        self.ip = None
-        self.listen_port = None
-        self.is_writer = self.check_if_writer(self.id)
+        self.ip = self.mem_data.conf["node_set"][self.id-1]["hostname"]
+        self.listen_port = self.mem_data.conf["node_set"][self.id-1]["protocol_port"]
+        self.pub_key = self.mem_data.conf["node_set"][self.id-1]["pub_key"]
         # Setup remote_end object for communication with active writers and readers
-        self.connect_to_active_nodes()
-        verbose_print(f"[IS WRITER] node with id: {self.id} is a writer: {self.is_writer}")
+        self.connect_to_active_nodes()  # ? Node fetches a config where it is not active, thus no ip and listen_port
+        verbose_print(f"[IS WRITER] node with id: {self.id} is a writer: {self.mem_data.is_writer}")
         # set up listening socket
         # Making sure to not run this if either are undefined, unless it crashes
         if (self.ip != None) or (self.listen_port != None):
@@ -300,18 +300,15 @@ class ProtoCom(ProtocolCommunication):
                     self.peers[i] = RemoteEnd(
                     node["id"], node["hostname"], node["protocol_port"], node["pub_key"], self.check_if_writer(node["id"])
                     )
-                elif i == self.id:
-                    self.ip = node["hostname"]
-                    self.listen_port = node["protocol_port"]
-                    self.pub_key = node["pub_key"]
             for i in self.peers:
                 if i not in active_node_list:
                     self.peers.pop(i)   # Remove disconnected nodes
         except:
             return
-        
+    
     def check_disconnect(self):
         """Checks for disconnected nodes and adds them to disconnect list."""
+        return False
         for node in self.peers.values():
             if not node.is_active:
                 self.mem_data.round_disconnect_list.append(node.rem_id)
@@ -322,6 +319,8 @@ class ProtoCom(ProtocolCommunication):
 
     def check_if_writer(self, id):
         """Returns boolean for if reader or writer node"""
+        if id == self.id:
+            return self.mem_data.is_writer
         for i in self.mem_data.conf["writer_list"]:
             if i == id:
                 return True
@@ -505,8 +504,8 @@ class ProtoCom(ProtocolCommunication):
         # if request contains data reply with that data else send list of connected ids
         if msg_typ == pMsgTyp.data:
             with self.msg_lock:
+                print("Received data from", r_id, ":", msg_data)
                 self.msg_queue.append((r_id, msg_data))
-            print(self.msg_queue)
             rep_msg = pMsg.data_ack_msg(self.id, r_id)
         elif msg_typ == pMsgTyp.data_ack:
             # ? put on some special queue

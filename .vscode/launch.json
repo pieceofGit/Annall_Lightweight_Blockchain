@@ -4,6 +4,7 @@
   // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
   "configurations": [
+    
     {
       "name": "Python: Main 1",
       "type": "python",
@@ -32,6 +33,16 @@
       "console": "integratedTerminal",
       "justMyCode": true,
       "args": ["-myID", "3", "-r 0", "-conf", "configs/config-local.json"],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Python: Main 4",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}//src//main.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": ["-myID", "4", "-r 0", "-conf", "configs/config-local.json"],
       "cwd": "${workspaceFolder}"
     },
     {

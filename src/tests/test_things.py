@@ -147,7 +147,7 @@ for i in dict:
     print(i, "YES")
     
     
-this_list = [1,3,7,4,2,8]
+this_list = [1,3,22,4,2,8]
 print(this_list)
 this_list.sort()
 print(this_list)
@@ -155,3 +155,6 @@ import json
 some_thing = json.dumps((1, json.dumps({"a_dict":"field"})))
 print(some_thing)
 print(json.loads(some_thing))
+values = [1,3,22,4,2,8]
+
+print(values.index(max(values)))

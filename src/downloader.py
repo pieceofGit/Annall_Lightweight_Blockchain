@@ -3,23 +3,29 @@ import requests
 import json
 from models.block import Block
 from interfaces import verbose_print
+from threading import Thread
+
 
 class Downloader:
-    def __init__(self, mem_data, bcdb) -> None:
+    def __init__(self, mem_data, bcdb, stop_event=None) -> None:
         self.mem_data = mem_data
         self.bcdb = bcdb
-        
+        self.stop_event = stop_event
+        if stop_event:
+            self.thread = Thread(target=self.download_helper, name="DownloadThread")
+            self.thread.start()
+    
     def get_client_address(self, id):
         return f'http://{self.mem_data.conf["node_set"][id-1]["hostname"]}:{self.mem_data.conf["node_set"][id-1]["api_port"]}/'
 
     def verify_latest_block(self, latest_block):
         """Check if node latest block is verified by at least 51% of network. If not, drop our db and fetch correct data"""
         trusted_nodes = []  # List of node id's that verify node latest block
-        reader_and_writer_list = self.mem_data.writer_list + self.mem_data.reader_list
-        if self.mem_data.id in reader_and_writer_list:
-            reader_and_writer_list.remove(self.mem_data.id)
+        reader_and_ma_writer_list = self.mem_data.ma_writer_list + self.mem_data.ma_reader_list
+        if self.mem_data.id in reader_and_ma_writer_list:
+            reader_and_ma_writer_list.remove(self.mem_data.id)
         responding_nodes = 0
-        for node in reader_and_writer_list:
+        for node in reader_and_ma_writer_list:
             try:
                 response = requests.get(self.get_client_address(node)+"blocks/"+latest_block["hash"]+"/verified", timeout=2).json()
                 if response["verified"]:
@@ -28,7 +34,7 @@ class Downloader:
             except:
                 verbose_print("Node did not respond with verification of latest block")
                 
-        if ((len(trusted_nodes) / len(reader_and_writer_list))) > 0.5:
+        if ((len(trusted_nodes) / len(reader_and_ma_writer_list))) > 0.5:
             return trusted_nodes, True  # TODO: Should be randomized list, from which node we fetch the data
         else:
             # Majority did not validate our latest block hash
@@ -38,6 +44,10 @@ class Downloader:
             else:
                 # No other node online. Startup on our own
                 return None, False
+    
+    def download_helper(self):
+        while not self.stop_event.is_set():
+            self.download_db()
     
     def download_db(self):  # run function for thread
         """Fetches all blocks, stores in db, and compares, then activates node and quits"""
@@ -49,7 +59,9 @@ class Downloader:
             latest_block = self.bcdb.get_latest_block()
             in_sync = False
             node_num = 0
-            node_list = self.mem_data.writer_list + self.mem_data.reader_list
+            node_list = self.mem_data.ma_writer_list + self.mem_data.ma_reader_list
+            if self.mem_data.id in node_list:
+                node_list.remove(self.mem_data.id)
             while not in_sync and node_num < len(node_list):   # Attempt to get data from an active node
                 if latest_block:    # Only get missing blocks
                     # Get missing blocks
@@ -73,7 +85,7 @@ class Downloader:
                             in_sync = True
                         node_num += 1   # Try next node if node down
                 else:
-                    # Node had no blocks, fetch all blocks
+                    # Node had no blocks, fetch all blocks from any peer in network
                     try:
                         blocks_to_insert = requests.get(self.get_client_address(node_list[node_num])+"blocks", {}, timeout=2).json()
                         if len(blocks_to_insert):
@@ -81,7 +93,7 @@ class Downloader:
                             for block in blocks_to_insert:
                                 insert_block = Block.from_dict(block)
                                 self.bcdb.insert_block(insert_block.round, insert_block)
-                            in_sync = True
+                            in_sync = True  # TODO: Check if all blocks are verified by 51% of network
                     except Exception as e:
                         print(e)
                 node_num += 1
@@ -92,7 +104,7 @@ class Downloader:
                 self.mem_data.activate_node()
             # All nodes should have a client api on the same computer as the node running the consensus. It should perhaps not be a thread in the program. 
         except Exception as e:
-            print(e)
+            print(e, "FAILED HERE")
             
         
 if __name__ == "__main__":

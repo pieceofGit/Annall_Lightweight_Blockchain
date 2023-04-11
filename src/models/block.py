@@ -41,7 +41,7 @@ class Block(i_Block):
         self.prev_hash = prev_hash
         self.writerID = writerID
         self.coordinatorID = coordinatorID
-        self.payload = payload  #TODO: move payload to be the last field
+        self.payload = payload
         self.winning_number = winning_number
         self.writer_signature = writer_signature
         self.timestamp = timestamp
@@ -62,6 +62,12 @@ class Block(i_Block):
     def is_next(self, other):
         ''' returns true if other is the next block following self '''
         return self.this_hash == other.prev_hash
+
+    def set_payload(self, payload):
+        ''' edits payload and recreates hash '''
+        assert isinstance(payload, str)
+        self.payload = payload
+        self.this_hash = self._hash_block()
 
     @classmethod
     def from_json(cls, json_block: str):

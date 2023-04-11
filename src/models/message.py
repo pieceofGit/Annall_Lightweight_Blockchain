@@ -16,15 +16,13 @@ class Message:
     
     @classmethod
     def from_json(self, json_msg):
-        try:
-            msg = Message(json_msg)
-            if not msg.error:
-                return msg
-            else:
-                return False
-        except:
-            return
-        
+        msg = Message(json_msg)
+        if not msg.error:
+            return msg
+        else:
+            print("Error in message object: ", msg.error)
+            return False
+    
     def get_payload(self, key):
         if key in self.msg_obj.keys():
             return self.msg_obj[key]

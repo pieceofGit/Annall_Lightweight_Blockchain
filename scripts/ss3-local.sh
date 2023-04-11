@@ -1,3 +1,5 @@
 #!/bin/bash
 # programming-language file id transactionRounds 
-python3 ./src/main.py -myID 3 -r 0 -conf config-local.json
+source ./venv/bin/activate
+pip install -r requirements.txt
+python3 -u ./src/main.py -myID 3 -r 0 -conf configs/config-local.json
