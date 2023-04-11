@@ -56,6 +56,7 @@ class MembershipData:
             self.round_reader_list = self.conf["reader_list"]
         self.ma_writer_list = self.conf["writer_list"]
         self.ma_reader_list = self.conf["reader_list"]
+        
     
     def waiting_node_get_conf(self, version = None):
         try:

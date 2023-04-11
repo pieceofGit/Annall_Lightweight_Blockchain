@@ -153,7 +153,6 @@ class RemoteEnd:
             @returns string
             """
         # TODO handle exception when int fails. Read all message buffer and throw away
-        # if self.is_active:
         byte_length = r_socket.recv(4)
         vverbose_print("Read length:", byte_length)
         if byte_length == b"":

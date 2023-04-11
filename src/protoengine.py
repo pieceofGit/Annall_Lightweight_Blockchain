@@ -150,7 +150,7 @@ class ProtoEngine(ProtocolEngine):
         self.stashed_payload = None
         # PubSub queue and exchange
         self.broker = BlockBroker()       
-        self.downloader = Downloader(mem_data, blockchain)
+        self.downloader = Downloader(mem_data, blockchain)  # For periodically checking for new blocks while waiting to join
                     
     def set_rounds(self, round: int):
         ''' A round is a minting of a block, this defines for how many rounds the blockchain runs for'''
@@ -271,6 +271,7 @@ class ProtoEngine(ProtocolEngine):
         assert isinstance(round, int)
         ## TODO not clear if this really works, e.g. in the case if some node dies, or if the set of writers changes
         # IDs sorted by ascending ID number. Returns index in writer list
+        self.mem_data.round_writer_list.sort()
         coordinator_index = (round - 1) % (len(self.mem_data.round_writer_list))
         # Separate list for round and list for connections.
         return self.mem_data.round_writer_list[coordinator_index]
@@ -699,7 +700,7 @@ class ProtoEngine(ProtocolEngine):
         # 1. Node waits until it is activated
         while not self.mem_data.node_activated:
             time.sleep(1)
-        self.mem_data.downloader_clean_up()
+        self.mem_data.downloader_clean_up() # Clean up downloader thread
         # Node has successfully fetched blockchain and been added to the active node set
         # 2. Node attempts to connect to all active nodes
         self.join_writer_set()
@@ -717,7 +718,7 @@ class ProtoEngine(ProtocolEngine):
         
         # Node should just wait for a message from any coordinator to join. 
         print("[ALL JOINED] all writers have joined the writer set")
-        round = self.bcdb.length
+        round = self.bcdb.length    #TODO: Node should get the round number from running nodes, if not genesis node
         print("ROUND: ", round)
         if self.mem_data.is_writer:
             while True:
@@ -726,6 +727,7 @@ class ProtoEngine(ProtocolEngine):
                 if self.mem_data.proposed_version > self.mem_data.current_version:
                     self.mem_data.update_version()
                     self.comm.connect_to_active_nodes() # Sets up socket connection for incoming node
+                    round = self.bcdb.length    #TODO: Should never reset the consensus round number
                     time.sleep(2)   # New nodes need time to connect, otherwise they are registered as disconnected.
                 coordinator = self.get_coordinatorID(round)
                 vverbose_print(f"ID: {self.id}, CordinatorId: {coordinator}", coordinator == self.id)
