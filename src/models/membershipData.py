@@ -14,13 +14,13 @@ class MembershipData:
         self.conf_file_name = conf_file 
         self.ma_writer_list = None # As given by the membership authority (MA)
         self.ma_reader_list = None 
-        self.round_writer_list = None # Changes based on penalty box
+        self.round_writer_list = None # Changes based on the penalty box
         self.round_reader_list = None 
         self.conf = None
         self.current_version = None
         self.proposed_version = 0
         self.waiting_list = []
-        self.round_disconnect_list = []   # Resets every round
+        self.round_disconnect_list = []   # Nodes to be set in penalty box in next round
         self.bcdb = bcdb
         self.penalty_box = {}
         self.node_activated = False
@@ -42,9 +42,22 @@ class MembershipData:
             self.node_activated = True
 
     def set_lists(self):
-        """Updates the active sets"""
+        """Updates the active sets.""" #TODO: Does not remove gracefully quit nodes.
+        #TODO: Unneceessarily complicated. Simplify.
         if self.node_activated:
-            
+            remove_list = [id for id in self.round_writer_list+self.round_reader_list if id not in self.conf["writer_list"]]
+            for id in remove_list:
+                if id in self.round_writer_list:
+                    self.round_writer_list.remove(id)
+                if id in self.round_reader_list:
+                    self.round_reader_list.remove(id)
+                if id in self.round_disconnect_list:
+                    self.round_disconnect_list.remove(id)
+                if id in self.waiting_list:
+                    self.waiting_list.remove(id)
+                if id in self.penalty_box:
+                    self.penalty_box.remove(id)
+            # Only add new nodes, not nodes currently in penalty box.
             for writer in self.conf["writer_list"]:
                 if writer not in self.ma_writer_list:
                     self.round_writer_list.append(writer)
@@ -54,6 +67,7 @@ class MembershipData:
         else:
             self.round_writer_list = self.conf["writer_list"]
             self.round_reader_list = self.conf["reader_list"]
+        
         self.ma_writer_list = self.conf["writer_list"]
         self.ma_reader_list = self.conf["reader_list"]
         
@@ -101,7 +115,7 @@ class MembershipData:
             self.current_version = 0
 
     def get_version(self):
-        """Returns proposed or current version"""
+        """Returns proposed or current version. Sent with each message in protocol."""
         if self.proposed_version  > self.current_version:
             return self.proposed_version
         else:
@@ -149,8 +163,8 @@ class MembershipData:
             else:
                 self.penalty_box[node_key] = {"id": node, "counter": 1, "in_penalty_box": True, "round_added": round}
        
-    def set_round_lists(self):
-        """Moves nodes from """
+    def set_round_lists(self, round):
+        """Updates per-round active sets."""
         for node in self.round_disconnect_list:
             # Remove from active node list
             if node in self.ma_writer_list:

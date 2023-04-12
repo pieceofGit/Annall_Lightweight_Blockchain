@@ -503,7 +503,7 @@ class ProtoCom(ProtocolCommunication):
         # if request contains data reply with that data else send list of connected ids
         if msg_typ == pMsgTyp.data:
             with self.msg_lock:
-                print("Received data from", r_id, ":", msg_data)
+                vverbose_print("Received data from", r_id, ":", msg_data)
                 self.msg_queue.append((r_id, msg_data))
             rep_msg = pMsg.data_ack_msg(self.id, r_id)
         elif msg_typ == pMsgTyp.data_ack:
@@ -592,6 +592,7 @@ class ProtoCom(ProtocolCommunication):
                     except Exception as e:
                         verbose_print(">!!", "Failed to send to id: ", rem_id, "With exception: ", type(e), e)
                         continue
+                vverbose_print("Sent message to", id_list, "with message:", message, "is_active: ", self.peers[rem_id].is_active)
             return id_list
         else:
             if self.peers[send_to].is_active:
@@ -602,7 +603,7 @@ class ProtoCom(ProtocolCommunication):
                 except Exception as e:
                     verbose_print(">!!", "Failed to send to id: ", send_to)
             return [] # TODO: should this not be [sent_to]
-
+ 
     def recv_msg(self, recv_from: int = None) -> list:
         """ returns a list of tuples of ([id]: int, [msg]: string) """
         # return all messages

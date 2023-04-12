@@ -585,9 +585,9 @@ class ProtoEngine(ProtocolEngine):
         # Step 1 - Receive request from Coordinator
         message  = self.get_request_msg(coordinator_id)
         # Step 1.1 - Check for new membership version based on message
-        new_membership_version_exists = self.check_membership_version_update(message.version)
+        is_valid_version = self.check_membership_version_update(message.version)
         # Throw cancel block if not valid membership version
-        if not new_membership_version_exists:
+        if not is_valid_version:
             self.cancel_round(faulty_node=coordinator_id, round=round)   # Sets latest block as cancel block
         # Step 2 - Generate next number and transmit to Coordinator
         pad = self.generate_pad()
@@ -666,7 +666,7 @@ class ProtoEngine(ProtocolEngine):
             self.bcdb.truncate_table()
             
     def check_membership_version_update(self, version: int) -> bool:
-        """Attempts to update membership version and returns bool"""
+        """Attempts to update membership version and returns its success boolean"""
         if version > self.mem_data.current_version:
             update_complete = self.mem_data.get_membership_version(version)
             if update_complete:
@@ -722,13 +722,14 @@ class ProtoEngine(ProtocolEngine):
         print("ROUND: ", round)
         if self.mem_data.is_writer:
             while True:
-                self.mem_data.set_round_lists() # Update penalty box, disconnect list and active node lists
+                self.mem_data.set_round_lists(round) # Update penalty box, disconnect list and active node lists
                 self.check_for_chain_reset()
                 if self.mem_data.proposed_version > self.mem_data.current_version:
                     self.mem_data.update_version()
                     self.comm.connect_to_active_nodes() # Sets up socket connection for incoming node
-                    round = self.bcdb.length    #TODO: Should never reset the consensus round number
-                    time.sleep(2)   # New nodes need time to connect, otherwise they are registered as disconnected.
+                    self.join_writer_set()
+                    round = self.bcdb.length    #TODO: Should never reset the consensus round number. Perhaps has effect on penalty box.
+                    # time.sleep(2)   # New nodes need time to connect, otherwise they are registered as disconnected.
                 coordinator = self.get_coordinatorID(round)
                 vverbose_print(f"ID: {self.id}, CordinatorId: {coordinator}", coordinator == self.id)
                 if coordinator == self.id:
