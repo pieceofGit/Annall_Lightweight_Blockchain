@@ -726,7 +726,7 @@ class ProtoEngine(ProtocolEngine):
                 self.check_for_chain_reset()
                 if self.mem_data.proposed_version > self.mem_data.current_version:
                     self.mem_data.update_version()
-                    self.comm.connect_to_active_nodes() # Sets up socket connection for incoming node
+                    self.comm.set_active_nodes() # Sets up socket connection for incoming node
                     self.join_writer_set()
                     round = self.bcdb.length    #TODO: Should never reset the consensus round number. Perhaps has effect on penalty box.
                     # time.sleep(2)   # New nodes need time to connect, otherwise they are registered as disconnected.

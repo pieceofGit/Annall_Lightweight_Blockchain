@@ -2,7 +2,7 @@
 import requests
 import json
 from models.block import Block
-from interfaces import verbose_print
+from interfaces import verbose_print, vverbose_print
 from threading import Thread
 
 
@@ -71,7 +71,7 @@ class Downloader:
                         request_obj = {"hash": latest_block["hash"], "round": latest_block["round"]}
                         response = requests.get(self.get_client_address(node_list[node_num])+"missing_blocks", data=json.dumps(request_obj))
                     except Exception as e:
-                        verbose_print("Failed to get missing blocks from node: ", e)
+                        vverbose_print("Failed to get missing blocks from node: ", e)
                     # Returns latest block or missing blocks
                     if response.status_code == 200:
                         missing_blocks = response.json()    

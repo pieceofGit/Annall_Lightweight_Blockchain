@@ -266,7 +266,7 @@ class ProtoCom(ProtocolCommunication):
         self.listen_port = self.mem_data.conf["node_set"][self.id-1]["protocol_port"]
         self.pub_key = self.mem_data.conf["node_set"][self.id-1]["pub_key"]
         # Setup remote_end object for communication with active writers and readers
-        self.connect_to_active_nodes()  # ? Node fetches a config where it is not active, thus no ip and listen_port
+        self.set_active_nodes()  # ? Node fetches a config where it is not active, thus no ip and listen_port
         verbose_print(f"[IS WRITER] node with id: {self.id} is a writer: {self.mem_data.is_writer}")
         # set up listening socket
         # Making sure to not run this if either are undefined, unless it crashes
@@ -289,7 +289,7 @@ class ProtoCom(ProtocolCommunication):
             # Received messages are added to this queue and removed when recv_msg() is called
             self.msg_queue = []
 
-    def connect_to_active_nodes(self):
+    def set_active_nodes(self):
         """Setup RemoteEnd object for all unconnected active writers and readers"""
         try:
             active_node_list = self.mem_data.ma_writer_list + self.mem_data.ma_reader_list
@@ -299,10 +299,13 @@ class ProtoCom(ProtocolCommunication):
                     self.peers[i] = RemoteEnd(
                     node["id"], node["hostname"], node["protocol_port"], node["pub_key"], self.check_if_writer(node["id"])
                     )
-            for i in self.peers:
+            peer_keys = list(self.peers.keys())
+            for i in peer_keys:
                 if i not in active_node_list:
-                    self.peers.pop(i)   # Remove disconnected nodes
-        except:
+                    self.peers[i].close(self.rr_selector)
+                    self.peers.pop(i)
+        except Exception as e:
+            print("FAILED IN CONNECT TO ACTIVE NODES", e)
             return
     
     def check_disconnect(self):
@@ -412,15 +415,16 @@ class ProtoCom(ProtocolCommunication):
         # n = random.randrange(start=0, stop=len(self.peers.keys()))
         # rearrange list such that it starts on index n
         w_list = list(set(w_list) - set(self.list_connected_peers()))
-        if len(w_list) == 0:    # Connected to all nodes in network
+        if len(w_list) == 0:    # Node is Connected to all nodes in network
             self.conn_modulus = 0
             return
         self.conn_modulus += 1
         if self.conn_modulus >= len(w_list):
             self.conn_modulus = 0
-        r_id = w_list[self.conn_modulus]
+        r_id = w_list[self.conn_modulus]    # Selects a node to connect to round robin with modulus
         # for r_id in w_list:
         # NB only connect to those with higher number
+        #? Why only connect to those with higher number?
         if r_id > self.id and not self.peers[r_id].is_active:
             vverbose_print(">", "Attempting to connect to id: ", r_id)
             try:
@@ -480,7 +484,7 @@ class ProtoCom(ProtocolCommunication):
             verbose_print(">!! ", "Failed to read from socket ", e)
             # Connection is closed. Remove socket
             try:
-                self.peers[r_id].close(self.rr_selector)
+                self.peers[r_id].close(self.rr_selector)  #TODO: Removing the peer prior from dict, makes this faulty
             except Exception as e:
                 verbose_print(">!! ", "Failed to close socket with exception: ", type(e), e)
             return
