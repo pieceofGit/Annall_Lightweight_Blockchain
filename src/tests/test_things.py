@@ -158,3 +158,36 @@ print(json.loads(some_thing))
 values = [1,3,22,4,2,8]
 
 print(values.index(max(values)))
+
+
+# a = 0
+
+# a += True
+# print("A: ", a)
+
+# mem_data = {}
+# if mem_data.get(1, None).get("penalty_box", None):
+#     print("FALSE")
+# else:
+#     print("TRUE")
+
+def get_coordinator(round_number, num_coordinators, rounds_per_coordinator):
+    coordinator_index = (round_number - 1) // rounds_per_coordinator % num_coordinators
+    return coordinator_index
+
+num_rounds = 15  # Total number of rounds
+num_coordinators = 3  # Total number of coordinators
+rounds_per_coordinator = 5  # Number of rounds per coordinator
+
+for round_number in range(1, num_rounds + 1):
+    coordinator_index = get_coordinator(round_number, num_coordinators, rounds_per_coordinator)
+    print(f"Round {round_number}: Coordinator {coordinator_index + 1}")
+
+round_writer_list = [1,2,3,4]
+import math
+print(len(round_writer_list)/3)
+f = math.floor(len(round_writer_list)/3)
+print(f)
+the_round = 20
+for round_i in range(the_round-math.floor((len(round_writer_list)-1)/3)-1, the_round+1):
+    print(round_i)

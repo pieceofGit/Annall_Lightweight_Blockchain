@@ -308,16 +308,18 @@ class ProtoCom(ProtocolCommunication):
             print("FAILED IN CONNECT TO ACTIVE NODES", e)
             return
     
-    def check_disconnect(self):
-        """Checks for disconnected nodes and adds them to disconnect list."""
-        return False
+    def peers_disconnected(self):
+        """Checks for disconnected nodes and adds them to the round disconnect list if they are not in the penalty box."""
+        # return False
         for node in self.peers.values():
             if not node.is_active:
-                self.mem_data.round_disconnect_list.append(node.rem_id)
-        if len(self.mem_data.round_disconnect_list):
+                # Do not add node to disconnected_nodes if it is currently in the penalty box
+                node_in_penalty_box = self.mem_data.penalty_box.get(self.mem_data.get_pub_key_by_id(node.rem_id), None)
+                if not node_in_penalty_box:
+                    self.mem_data.disconnected_nodes.append(node.rem_id)
+        if len(self.mem_data.disconnected_nodes) > 0:
             return True
         return False
-        
 
     def check_if_writer(self, id):
         """Returns boolean for if reader or writer node"""

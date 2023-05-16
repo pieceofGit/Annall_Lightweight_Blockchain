@@ -21,6 +21,7 @@ class MembershipData:
         self.proposed_version = 0
         self.waiting_list = []
         self.round_disconnect_list = []   # Nodes to be set in penalty box in next round
+        self.disconnected_nodes = []    # Nodes disconnected from in current round
         self.bcdb = bcdb
         self.penalty_box = {}
         self.node_activated = False
@@ -150,18 +151,20 @@ class MembershipData:
         if self.stop_event:
             self.stop_event.set()
             self.downloader.thread.join()
-
         
+    def get_pub_key_by_id(self, id):
+        return self.conf["node_set"][id-1]["pub_key"]
         
     def add_to_penalty_box(self, round):
-        for node in self.round_disconnect_list:
-            node_key = self.mem_data.conf[node]["pub_key"]
+        """Adds nodes from round_disconnect_list voted on, to penalty box."""
+        for node_id in self.round_disconnect_list:
+            node_key = self.conf["node_set"][node_id-1]["pub_key"]
             if self.penalty_box.get(node_key, None):
                 self.penalty_box[node_key]["counter"] += 1
                 self.penalty_box[node_key]["in_penalty_box"] = True
-                self.penalty_box[node_key]["round_added"] = round
+                self.penalty_box[node_key]["curr_counter"] = 2**self.penalty_box[node_key]["counter"]
             else:
-                self.penalty_box[node_key] = {"id": node, "counter": 1, "in_penalty_box": True, "round_added": round}
+                self.penalty_box[node_key] = {"id": node_id, "counter": 1, "in_penalty_box": True, "curr_counter": 2}
        
     def set_round_lists(self, round):
         """Updates per-round active sets."""
@@ -169,11 +172,11 @@ class MembershipData:
             # Remove from active node list
             if node in self.ma_writer_list:
                 self.round_writer_list.remove(node)
-            else:
+            elif node in self.ma_reader_list:
                 self.round_reader_list.remove(node)
         for key in self.penalty_box:
             if self.penalty_box[key]["in_penalty_box"]:
-                if round > self.penalty_box[key]["round_added"] + 2 ** self.penalty_box[key]["counter"]:
+                if self.penalty_box[key]["curr_counter"] <= 0:
                     # Node is no longer in penalty box
                     self.penalty_box[key]["in_penalty_box"] = False
                     # Add node back to round active node set
@@ -183,6 +186,14 @@ class MembershipData:
                         self.round_reader_list.append(self.penalty_box[key]["id"])
         self.round_reader_list.sort()
         self.round_writer_list.sort()
+        self.disconnected_nodes = []
+        self.round_disconnect_list = []
+    
+    def decrease_penalty_box_counters(self):
+        for key in self.penalty_box:
+            if self.penalty_box[key]["in_penalty_box"]:
+                self.penalty_box[key]["curr_counter"] -= 1
+                
         
     def update_version(self):
         """Updates active reader set and changes current version when changes have been applied"""
