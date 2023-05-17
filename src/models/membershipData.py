@@ -46,7 +46,7 @@ class MembershipData:
         """Updates the active sets.""" #TODO: Does not remove gracefully quit nodes.
         #TODO: Unneceessarily complicated. Simplify.
         if self.node_activated:
-            remove_list = [id for id in self.round_writer_list+self.round_reader_list if id not in self.conf["writer_list"]]
+            remove_list = [id for id in self.round_writer_list + self.round_reader_list if id not in self.conf["writer_list"] + self.conf["reader_list"]]
             for id in remove_list:
                 if id in self.round_writer_list:
                     self.round_writer_list.remove(id)
@@ -66,11 +66,11 @@ class MembershipData:
                 if writer not in self.ma_reader_list:
                     self.round_reader_list.append(reader)
         else:
-            self.round_writer_list = self.conf["writer_list"]
-            self.round_reader_list = self.conf["reader_list"]
+            self.round_writer_list = self.conf["writer_list"].copy()
+            self.round_reader_list = self.conf["reader_list"].copy()
         
-        self.ma_writer_list = self.conf["writer_list"]
-        self.ma_reader_list = self.conf["reader_list"]
+        self.ma_writer_list = self.conf["writer_list"].copy()
+        self.ma_reader_list = self.conf["reader_list"].copy()
         
     
     def waiting_node_get_conf(self, version = None):
@@ -101,7 +101,7 @@ class MembershipData:
 
     def get_remote_conf(self) -> int:
         """Running nodes ask for config and update proposed version"""
-        try:
+        try: 
             response = requests.get(self.api_path + "config", {}, timeout=2)
             self.conf = response.json()
             if self.current_version and self.conf["membership_version"] > self.current_version: # New membership file
@@ -179,7 +179,7 @@ class MembershipData:
                 if self.penalty_box[key]["curr_counter"] <= 0:
                     # Node is no longer in penalty box
                     self.penalty_box[key]["in_penalty_box"] = False
-                    # Add node back to round active node set
+                    # Add node back to round active node set based on MA set
                     if self.penalty_box[key]["id"] in self.ma_writer_list:
                         self.round_writer_list.append(self.penalty_box[key]["id"])
                     else:

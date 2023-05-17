@@ -313,9 +313,11 @@ class ProtoCom(ProtocolCommunication):
         # return False
         for node in self.peers.values():
             if not node.is_active:
-                # Do not add node to disconnected_nodes if it is currently in the penalty box
-                node_in_penalty_box = self.mem_data.penalty_box.get(self.mem_data.get_pub_key_by_id(node.rem_id), None)
-                if not node_in_penalty_box:
+                # Do not add node to disconnected_nodes if it is in the penalty box for the current round
+                node_in_penalty_box_dict = self.mem_data.penalty_box.get(self.mem_data.get_pub_key_by_id(node.rem_id), None)
+                if not node_in_penalty_box_dict:
+                    self.mem_data.disconnected_nodes.append(node.rem_id)
+                elif not node_in_penalty_box_dict["in_penalty_box"]:
                     self.mem_data.disconnected_nodes.append(node.rem_id)
         if len(self.mem_data.disconnected_nodes) > 0:
             return True
@@ -506,6 +508,7 @@ class ProtoCom(ProtocolCommunication):
             pass """
         # TODO what if msg_type is data_ack ???
         # TODO When receive ECHO request reply with ECHO reply
+        #TODO Nothing that seems to stop a node outside of the whitelisted nodes, to join the network
         # if request contains data reply with that data else send list of connected ids
         if msg_typ == pMsgTyp.data:
             with self.msg_lock:

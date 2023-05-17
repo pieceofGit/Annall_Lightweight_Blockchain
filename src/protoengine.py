@@ -143,6 +143,7 @@ class ProtoEngine(ProtocolEngine):
         self.modulus = 65537
         # For how many rounds the blockchain should run for
         self.rounds = None        
+        self.cancel_seq_num = 0
         # Messages in our writer's queue
         self.message_queue = Queue()
         self.cancel_message_queue = Queue()
@@ -258,7 +259,7 @@ class ProtoEngine(ProtocolEngine):
         if queue.empty():        
             vverbose_print("[PAYLOAD QUEUE ] empty")
             # If empty we just return anything
-            return False
+            return "Writer had nothing to write"
         else:
             payload = queue.get()
             vverbose_print(f"INSERTING PAYLOAD TO CHAIN \n", payload)
@@ -278,8 +279,8 @@ class ProtoEngine(ProtocolEngine):
             return 2
         else:
             return self.mem_data.round_writer_list[coordinator_index]
-    
-    def get_cancel_coordinator_id(self):
+
+    def get_cancel_coordinatorID(self):
         """Decides the coordinator for a cancel round in the membership protocol.
         Should only change when there is a view-change in the cancellation."""
         return self.mem_data.round_writer_list[0]
@@ -318,7 +319,7 @@ class ProtoEngine(ProtocolEngine):
         ## TODO: More suspicious is, this seems to block if any of the writers is not connected.
         # TODO: Should not block indefinitely if writers are down
         wait = 0
-        while (len(self.comm.list_connected_peers()) / (len(self.mem_data.ma_writer_list) + len(self.mem_data.ma_reader_list))) < 0.5:
+        while (len(self.comm.list_connected_peers()) / (len(self.mem_data.ma_writer_list) + len(self.mem_data.round_reader_list))) < 0.5:
             if not self.mem_data.is_genesis_node:
                 # Consensus is ongoing while node waits, and node needs to stay updated
                 # 1. get new config
@@ -412,18 +413,18 @@ class ProtoEngine(ProtocolEngine):
             winning_number=0,
             writer_signature="0",   #? Should this not be signed
             timestamp=timestamp,
-            payload=json.dumps({"type": "cancel", "payload": json.dumps(self.mem_data.round_disconnect_list)}))
+            payload=json.dumps({"type": "cancel", "payload": json.dumps((self.mem_data.round_disconnect_list, self.cancel_seq_num))}))
         self.latest_block = cancel_block
         return cancel_block
 
     def publish_block(self, round: int):
         """Winning writer fetches latest block in chain and publishes it to queue"""
         if not self.mem_data.conf["is_local"]:
-            latest_block = self.bcdb.get_block_by_round_number(round)
-            self.broker.publish_block(json.dumps(latest_block))
+            # latest_block = self.bcdb.get_block_by_round_number(round)
+            self.broker.publish_block(json.dumps(self.latest_block.as_tuple()))
             
     def get_cancel_block_payload(self, round):
-        return json.dumps({"type": "cancel", "faulty_node": self.mem_data.round_disconnect_list, "prev_hash": self.get_prev_hash(round=round), "round": round})
+        return json.dumps({"type": "cancel", "faulty_node": self.mem_data.round_disconnect_list, "cancel_seq_num": self.cancel_seq_num, "prev_hash": self.get_prev_hash(round=round), "round": round})
         
     def check_for_old_cancel_message(self, round):
         """Checks for cancel blocks of previous rounds and overwrites block with cancel block"""
@@ -435,17 +436,26 @@ class ProtoEngine(ProtocolEngine):
             
     def propose_cancel(self, faulty_node: int, round: int):
         """Broadcasts a round cancellation proposal"""
-        payload = json.dumps({"type": "propose_cancel", "faulty_node": faulty_node})
+        # Need a unique identifier to differentiate between old and current cancel messages
+        # Nodes do also not have a consensus on the prev_hash.
+        payload = json.dumps({"type": "propose_cancel", "prev_hash": self.get_prev_hash(), "cancel_seq_num": self.cancel_seq_num, "faulty_node": faulty_node})
         msg = self.broadcast("propose_cancel", payload, round, send_to_readers=True)
         
     def get_propose_cancel(self, round):
         """Checks for propose_cancel message and returns round of propose_cancel, and the accuser and accusee id"""
         for round_i in range(round-math.floor((len(self.mem_data.round_writer_list)-1)/3)-1, round+1):
             propose_message = self._recv_msg(type="propose_cancel", round=round_i, cancel_msg=True)
+            # What does the node do about duplicate propose_cancel messages?
+            # TODO: Need to differentiate between old and current cancel messages
+            # It should be the prev_hash, because a cancelled round has a prev_hash.
+            # If a round was successfully cancelled, all honest nodes should have had the same prev_hash. No, not if a node was behind and threw a propose_cancel message.
+            # All honest nodes should have the same lates prev_hash, if a round was cancelled. That should hold.
+            # But if it is a round that was not cancelled, the nodes can have a different prev_hash.
             if propose_message:
-                payload = json.loads(propose_message.payload)
-                faulty_node = payload["faulty_node"]
-                return propose_message.round, propose_message.from_id, faulty_node
+                payload = json.loads(propose_message.payload)   
+                if payload["cancel_seq_num"] >= self.cancel_seq_num:    # Only check new cancel messages
+                    faulty_node = payload["faulty_node"]
+                    return propose_message.round, propose_message.from_id, faulty_node
         return round, None, None
  
     def vote_cancel(self, faulty_node: int, round: int):
@@ -482,7 +492,7 @@ class ProtoEngine(ProtocolEngine):
         else:
             vote_accuser += 1
             votes.append(accuser_id)
-        while len(votes) < len(self.mem_data.ma_writer_list) + len(self.mem_data.ma_reader_list) and not consensus:
+        while len(votes) < len(self.mem_data.round_writer_list) + len(self.mem_data.round_reader_list) and not consensus:
             message = self._recv_msg(type="vote_cancel", round=round, cancel_msg=True)
             if message is not None:
                 payload = json.loads(message.payload)
@@ -495,18 +505,19 @@ class ProtoEngine(ProtocolEngine):
                 votes.append(payload["faulty_node"])
                 # Check if consensus reached
                 # TODO: Nodes in penalty box are not a part of the consensus
-                if vote_accuser > len(self.mem_data.ma_writer_list) / 2 or vote_accusee > len(self.mem_data.ma_writer_list) / 2:
+                if vote_accuser > len(self.mem_data.round_writer_list) / 2 or vote_accusee > len(self.mem_data.round_writer_list) / 2:
                     consensus = True
             time.sleep(0.01)
         # Majority voted for accuser
-        if vote_accuser > len(self.mem_data.ma_writer_list) / 2:
+        if vote_accuser > len(self.mem_data.round_writer_list) / 2:
             # Both nodes sanctioned from consensus
             self.mem_data.round_disconnect_list.append(accuser_id)
             self.mem_data.round_disconnect_list.append(accusee_id)
         else:
             # Accusee sanctioned from consensus
             self.mem_data.round_disconnect_list.append(accusee_id)
-            
+        self.cancel_seq_num += 1
+
     def vote(self, accuser_id, accusee_id, round):
         if accusee_id in self.mem_data.disconnected_nodes:
             self.vote_cancel(faulty_node=accusee_id, round=round)
@@ -517,17 +528,17 @@ class ProtoEngine(ProtocolEngine):
         
     def node_check_round_cancelled(self, round: int):
         """Helper function for checking if round is cancelled"""
-        cancel_round, accuser_id, accusee_id = self.get_propose_cancel(round)
-        if self.get_coordinatorID(round) == self.id:
+        if self.get_cancel_coordinatorID() == self.id:
             return self.coordinator_round_cancelled(round)
         else:
             return self.writer_round_cancelled(round)
     
     def writer_round_cancelled(self, round) -> tuple:
         """Checks for round cancellation messages for the current round and proposes a cancellation if it has not been proposed yet"""
+        cancel_round = round
         cancel_round, accuser_id, accusee_id = self.get_propose_cancel(round)
-            
-        if not accusee_id and self.comm.peers_disconnected():  # Check and returns true if any node has disconnected
+        peer_disconnected =  self.comm.peers_disconnected()
+        if  peer_disconnected and not accusee_id:  # Check and returns true if any node has disconnected
             accusee_id = self.mem_data.disconnected_nodes[0]
         if accusee_id:
             # Broadcast own cancel message proposal, calculate votes, and set cancel block
@@ -535,7 +546,7 @@ class ProtoEngine(ProtocolEngine):
             # Waits for request_cancel from coordinator
             accuser_id, accusee_id = self.get_request_cancel(cancel_round)
             # Broadcast own vote
-            self.vote(accuser_id, accusee_id, round)
+            self.vote(accuser_id, accusee_id, cancel_round)
             # Given that coordinator is not faulty node, nodes are synced on vote
             # Create cancel block and moves on. Each node creates its own cancel block. Payload is the disconnect list
             self.insert_cancel_block(round, cancel_round, accuser_id)
@@ -609,8 +620,8 @@ class ProtoEngine(ProtocolEngine):
             if round_cancelled:
                 return None, cancel_round
             time.sleep(0.01)
-        if not json.loads(message.payload):   # Winner had nothing to write. Round skipped
-            return None, None
+        # if not json.loads(message.payload):   # Winner had nothing to write. Round skipped
+        #     return None, None
         # Receives json payload
         block = Block.from_json(message.payload) # Converts tuple block to block object
         if not self.verify_block(block):
@@ -682,9 +693,9 @@ class ProtoEngine(ProtocolEngine):
             self.check_for_old_cancel_message(round)
             block = self.create_block(pad, coordinator_id, round)    # Returns false if payload queue is empty
             self.latest_block = block
-            if not block:   # Node has nothing to write
-                self.broadcast("block", json.dumps(block), round, send_to_readers=True)  
-                return round
+            # if not block:   # Node has nothing to write
+            #     self.broadcast("block", json.dumps(block), round, send_to_readers=True)  
+            #     return round
             self.broadcast("block", json.dumps(block.as_tuple()), round, send_to_readers=True)  
         elif winner_verified:   # Node receives block from winner
             received_block, cancel_round = self.receive_block(winner_id, round)
@@ -783,7 +794,7 @@ class ProtoEngine(ProtocolEngine):
                 elif curr_round < round:
                     # Round was cancelled in a prior round, node needs to delete later blocks
                     ...
-                round = curr_round  
+                round = curr_round
                 self.mem_data.decrease_penalty_box_counters()
                 self.mem_data.add_to_penalty_box(round)
                 round += 1
