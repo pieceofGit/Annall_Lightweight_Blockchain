@@ -13,20 +13,20 @@ class MembershipData:
         self.prepend_path = prepend_path
         self.conf_file_name = conf_file 
         self.ma_writer_list = None # As given by the membership authority (MA)
-        self.ma_reader_list = None 
+        self.ma_reader_list = None # As given by the membership authority (MA)
         self.round_writer_list = None # Changes based on the penalty box
-        self.round_reader_list = None 
-        self.conf = None
-        self.current_version = None
-        self.proposed_version = 0
-        self.waiting_list = []
+        self.round_reader_list = None # Changes based on the penalty box
+        self.conf = None    # Current config
+        self.current_version = None # Current version of config
+        self.proposed_version = 0   # Proposed version of config
+        self.waiting_list = []  # Nodes waiting to be added to round_writer_list or round_reader list
         self.round_disconnect_list = []   # Nodes to be set in penalty box in next round
         self.disconnected_nodes = []    # Nodes disconnected from in current round
-        self.bcdb = bcdb
-        self.penalty_box = {}
+        self.bcdb = bcdb    
+        self.penalty_box = {}   # Stores state for nodes in penalty box   
         self.node_activated = False
         self.is_writer = is_writer
-        self.reset_number = 0
+        self.reset_number = 0   # Reset number for blockchain from MA
         with open(self.prepend_path + self.conf_file_name, "r") as conf_file:
             self.conf = json.load(conf_file)
             self.api_path = f'http://{self.conf["writer_api"]["hostname"]}:{self.conf["writer_api"]["port"]}/'
@@ -34,8 +34,10 @@ class MembershipData:
         self.get_remote_conf()
         self.set_lists()
         self.stop_event = None
+        # This logic does not work if a joined node crashes.
+        # Also, do nodes share the penalty box anywhere for new nodes?
         self.is_genesis_node = self.id in self.ma_reader_list or self.id in self.ma_writer_list   # Genesis nodes start up without needing to fetch data
-        if not self.is_genesis_node:    
+        if not self.is_genesis_node:
             self.stop_event = Event()   # Stop downloading process after successful db download
             self.downloader = Downloader(self, bcdb, self.stop_event)
         else:
@@ -43,8 +45,8 @@ class MembershipData:
             self.node_activated = True
 
     def set_lists(self):
-        """Updates the active sets.""" #TODO: Does not remove gracefully quit nodes.
-        #TODO: Unneceessarily complicated. Simplify.
+        """Updates the active sets."""
+        #TODO: crashed nodes should be able to join again
         if self.node_activated:
             remove_list = [id for id in self.round_writer_list + self.round_reader_list if id not in self.conf["writer_list"] + self.conf["reader_list"]]
             for id in remove_list:

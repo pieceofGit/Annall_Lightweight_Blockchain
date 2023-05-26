@@ -55,9 +55,6 @@ def get_missing_blocks():
     except Exception as e:
         raise InvalidUsage(f"Failed to read database {e}", status=500)
 
-# @annall.errorhandler(400)
-# def handle_bad_request(e):
-#     return Response(json.dumps({"error": f"Could not parse the request object {e}"}), mimetype="application/json", status=400)
 
 @annall.route("/blocks", methods=["POST"])
 def insert_block():

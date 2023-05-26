@@ -30,16 +30,6 @@ class Message:
             self.error = True
         return f"Missing key '{key}' or missing value for key '{key}' in request object"    
 
-
-    # def get_payload_type(self):
-    #     if self.type == "request":
-    #         return int  # Round
-    #     elif self.type == "reply":
-    #         return int  # OTP
-    #     elif self.type == "announce":
-    #         return list
-    #     else:
-    #         return typing.Any
         
     def get_input(self, key, key_type):
         if key in self.msg_obj.keys():
