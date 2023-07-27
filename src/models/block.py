@@ -68,9 +68,23 @@ class Block(i_Block):
         assert isinstance(payload, str)
         self.payload = payload
         self.this_hash = self._hash_block()
+    
+    def as_tuple(self):
+        ''' returns a tuple representation of the block '''
+        return (
+            self.prev_hash,
+            self.writerID,
+            self.coordinatorID,
+            self.winning_number,
+            self.writer_signature,
+            self.timestamp,
+            self.this_hash,
+            self.payload
+        )
 
     @classmethod
-    def from_json(cls, json_block: str):
+    def from_json_tuple(cls, json_block: str):
+        """Takes in string json, loads, and returns tuple"""
         json_list = json.loads(json_block)
         return cls.from_tuple(tuple(json_list))
     
@@ -95,7 +109,7 @@ class Block(i_Block):
     @classmethod
     def from_dict(cls, block : dict): ## Factory to create a block from a dict
         
-        b = Block(str(block["prevHash"]), int(block["writerID"]), int(block["coordinatorID"]), int(block["winningNumber"]), block["writerSignature"], int(block["timestamp"]), json.dumps(block["payload"]), int(block["round"]))
+        b = Block(str(block["prevHash"]), int(block["writerID"]), int(block["coordinatorID"]), int(block["winningNumber"]), block["writerSignature"], int(block["timestamp"]), block["payload"], int(block["round"]))
         if block["hash"] == b.this_hash:
             return b
         

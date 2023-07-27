@@ -10,10 +10,58 @@
 #         print(input)
 #     else:
 #         print("FAKE")
-    
+some_list = [1,2,3,4,5]
+
+import time
+timeout = 10
+run_time = time.time()
+print("run_time", run_time)
+while time.time() < run_time + timeout:
+    print("BEFORE TIMEOUT", time.time(), run_time, timeout)
+    time.sleep(0.5)
+
+num = 1
+num2 = num
+num = 2 # Immutable, so num2's value is not changed
+print(num2, "NUMBER 2")
+
 # tested(True, any)
+def get_cancel_coordinatorID(pen_box, view_change_num: int = None):
+    """Decides the coordinator for a cancel round in the membership protocol.
+    Should only change when there is a view-change in the cancellation."""
+    print(type(pen_box))
+    sorted_nodes = sorted(pen_box.values(), key=lambda x: (x["honest_counter"], -x["id"]), reverse=True)
+    coordinator_id = sorted_nodes[view_change_num]["id"]
+    return coordinator_id
+
+pen_box = {"aaa": {"id": 4, "honest_counter": 2},"some_key": {"id": 1, "honest_counter": 2}, "other_key": {"id": 2, "honest_counter": 2}, "third_key": {"id": 3, "honest_counter": 1}}
+print("FIRST OUTPUT", get_cancel_coordinatorID(pen_box, 0))
+print("SECOND OUTPUT", get_cancel_coordinatorID(pen_box, 1))
+print("THIRD OUTPUT", get_cancel_coordinatorID(pen_box, 2))
+print("THIRD OUTPUT", get_cancel_coordinatorID(pen_box, 3))
 
 # print(bb_list, bb_list[1:])
+from queue import Queue
+from weakref import ref
+some_queue = Queue()
+some_queue.put(1)
+some_queue.put(2)
+ref_copy = some_queue
+print("REF: ", ref_copy)
+print("some", some_queue)
+ref_copy.get()
+print("REF: ", ref_copy)
+print("some", some_queue)
+ref_copy.get()
+print("REF: ", ref_copy)
+print("some", some_queue)
+ref_copy.put(1)
+print("REF: ", ref_copy)
+print("some", some_queue)
+ref_copy.put(2)
+print("REF: ", ref_copy)
+print("some", some_queue)
+
 
 a_list = [1,2,3]
 
