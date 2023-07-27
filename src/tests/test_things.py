@@ -10,6 +10,56 @@
 #         print(input)
 #     else:
 #         print("FAKE")
+def calculate_sum(numbers: list, modulus):
+    """Numbers is a list of <ID, number> pairs. This function calculates the pad for the round from the numbers using xor
+    then it calculates which ID corresponds to the number 'closest' to the pad. Returns a list of length 3, containing
+    [<id number pairs>, <pad>, <winner_id>]
+    Tiebreaker decided by lower ID number
+    """
+    assert isinstance(numbers, list)
+
+    pad = 0
+    for number in numbers:
+        pad ^= number[1]
+    # Same as pad = pad%self.modulus
+    pad %= modulus
+    # calculate winner, finds the minimum difference for all submitted numbers from the calculated pad.
+    winner, number = min(
+        numbers,
+        key=lambda x: [
+            min((x[1] - pad) % modulus, (pad - x[1]) % modulus),
+            x[0],
+        ],
+    )
+    return [numbers, pad, winner]
+
+def verify_round_winner(numbers: list, my_number: int):
+    """Verifies if the round winner is the writer
+    Verifies that all details are correct. 
+    """
+    assert isinstance(numbers, list)
+    assert len(numbers) == 3
+    assert isinstance(my_number, int)
+    # Calculate the sum to check if we have the correct results
+    verified_results = calculate_sum(numbers[0], 65537)
+    # Checking if we are using the same OTP
+    same_pad = verified_results[1] == numbers[1]
+    # Checking if the use the same winner for the calculation
+    same_winner = verified_results[2] == numbers[2]
+    # Check if all the entries match up for each
+    my_numb_exists = any([my_number == entry[1] for entry in numbers[0]])
+    # correct case here would return True, True, True
+    return same_pad and same_winner and my_numb_exists
+pad = 45712
+a_list = [[[3, 59550]], 59550, 3]
+numbers = [[3,59950]]
+winner = calculate_sum(numbers, 65537)
+winner_verified = verify_round_winner(winner, pad)
+
+print(winner, winner_verified)
+
+
+
 some_list = [1,2,3,4,5]
 
 import time

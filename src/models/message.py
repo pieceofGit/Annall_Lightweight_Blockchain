@@ -10,10 +10,11 @@ class Message:
         self.from_id = self.get_input("from_id", int)
         self.version = self.get_input("version", int)
         self.cancel_round = self.get_input("cancel_number", int)
+        self.view = self.get_input("view", int)
         
     @classmethod
-    def create_msg(self, round, from_id, message, type, version, cancel_round):
-        return json.dumps({"round": round, "from_id": from_id, "payload": message, "type": type, "version": version, "cancel_number": cancel_round})
+    def create_msg(self, round, from_id, message, type, version, cancel_round, view=0):
+        return json.dumps({"round": round, "from_id": from_id, "payload": message, "type": type, "version": version, "cancel_number": cancel_round, "view": view})
     
     def __str__(self) -> str:
         return f"Message(round={self.round}, type={self.type}, payload={self.payload}, from_id={self.from_id}, version={self.version})"
