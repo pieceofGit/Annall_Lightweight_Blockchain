@@ -315,9 +315,9 @@ class ProtoCom(ProtocolCommunication):
             if not node.is_active:
                 # Do not add node to disconnected_nodes if it is in the penalty box for the current round
                 node_in_penalty_box_dict = self.mem_data.penalty_box.get(self.mem_data.get_pub_key_by_id(node.rem_id), None)
-                if not node_in_penalty_box_dict:
+                if not node_in_penalty_box_dict and not node.rem_id in self.mem_data.disconnected_nodes:    # Key does not exist in penalty box
                     self.mem_data.disconnected_nodes.append(node.rem_id)
-                elif not node_in_penalty_box_dict["in_penalty_box"]:
+                elif not node_in_penalty_box_dict["in_penalty_box"] and not node.rem_id in self.mem_data.disconnected_nodes:    # Key exists in penalty box but is not in penalty box
                     self.mem_data.disconnected_nodes.append(node.rem_id)
         if len(self.mem_data.disconnected_nodes) > 0:
             return True

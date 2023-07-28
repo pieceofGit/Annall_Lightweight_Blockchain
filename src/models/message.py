@@ -9,7 +9,7 @@ class Message:
         self.payload = self.get_payload("payload")
         self.from_id = self.get_input("from_id", int)
         self.version = self.get_input("version", int)
-        self.cancel_round = self.get_input("cancel_number", int)
+        self.cancel_number = self.get_input("cancel_number", int)
         self.view = self.get_input("view", int)
         
     @classmethod

@@ -288,15 +288,11 @@ class ProtoEngine(ProtocolEngine):
         """Decides the coordinator for the round
         """
         assert isinstance(round, int)
-        ## TODO not clear if this really works, e.g. in the case if some node dies, or if the set of writers changes
         # IDs sorted by ascending ID number. Returns index in writer list
         self.mem_data.round_writer_list.sort()
         coordinator_index = (round - 1) % (len(self.mem_data.round_writer_list))
         # Separate list for round and list for connections.
-        if self.mem_data.round_writer_list[coordinator_index] == 3:
-            return 2
-        else:
-            return self.mem_data.round_writer_list[coordinator_index]
+        return self.mem_data.round_writer_list[coordinator_index]
 
     def get_cancel_coordinatorID(self, view_change_num: int = None):
         """Decides the coordinator for a cancel round in the membership protocol.
@@ -341,7 +337,7 @@ class ProtoEngine(ProtocolEngine):
         ## TODO: More suspicious is, this seems to block if any of the writers is not connected.
         # TODO: Should not block indefinitely if writers are down
         wait = 0
-        while (len(self.comm.list_connected_peers()) / (len(self.mem_data.ma_writer_list) + len(self.mem_data.round_reader_list))) < 0.5:
+        while (len(self.comm.list_connected_peers()) < (len(self.mem_data.ma_writer_list) + len(self.mem_data.round_reader_list)-1)):
             if not self.mem_data.is_genesis_node:
                 # Consensus is ongoing while node waits, and node needs to stay updated
                 # 1. get new config
@@ -458,7 +454,21 @@ class ProtoEngine(ProtocolEngine):
         latest_block_dict = self.bcdb.get_latest_block(dict_form=True)
         block_obj = Block.from_dict(latest_block_dict)
         return block_obj.as_tuple()
-                
+    
+    def get_latest_block_as_block_obj(self):
+        latest_block_dict = self.bcdb.get_latest_block(dict_form=True)
+        try:
+            return Block.from_dict(latest_block_dict)
+        except:
+            return None
+            
+    def check_append_block(self, block: Block):
+        latest_block = self.get_latest_block_as_block_obj()
+        if latest_block:
+            if block.is_next(latest_block):
+                self.bcdb.insert_block(block.round, block)
+                return True
+        
     def check_view_change(self, view: int) -> tuple:
         """Checks for view-change messages and returns (bool, min_view_change_value)
         Node broadcasts a view-change if:
@@ -481,7 +491,7 @@ class ProtoEngine(ProtocolEngine):
         invalid_view_change_messages = []
         while not self.view_change_message_queue.empty():
             msg = self.view_change_message_queue.get()
-            if msg.cancel_round == self.cancel_number and msg.view > view and msg.from_id in active_nodes_in_round:
+            if msg.cancel_number == self.cancel_number and msg.view > view and msg.from_id in active_nodes_in_round:
                 if counter == 0:
                     min_view_change_value = msg.view
                 elif msg.view < min_view_change_value:
@@ -489,7 +499,7 @@ class ProtoEngine(ProtocolEngine):
                 if self.get_cancel_coordinatorID(msg.view) == self.id:
                     node_is_coordinator += 1
                 count_view_change_num_node_is_coordinator[msg.view] += 1
-                self.view_change_message_queue.append(msg)
+                valid_view_change_messages.append(msg)
             else:
                 invalid_view_change_messages.append(msg)
                 if msg.view > min_view_change_value:
@@ -530,12 +540,8 @@ class ProtoEngine(ProtocolEngine):
             # <view, round, from_id, cancel_round, cancel_msg, payload=(verified_announce, block), timestamp>
             # check for the latest verified announce and block
             json_msg = json.loads(msg.payload)
-            block = Block.from_json_tuple(json_msg["block"]) # Converts tuple json block to block object
             # Check if need to append block
-            if block.this_hash != self.bcdb.get_latest_block(dict_form=False, col="hash")[0][0]:
-                if block.round > self.bcdb.get_latest_block(dict_form=False, col="round")[0][0] and self.bcdb.get_latest_block(dict_form=False, col="round")[0][0] == block.prev_hash:
-                    # is_verified = self.verify_announce(verified_announce)
-                    self.bcdb.insert_block(block.round, block)  # TODO: Verify before inserting into bcdb
+            self.check_append_block(Block.from_any(json_msg["block"]))
             faulty_node = json_msg["faulty_node"]
         # Start by node just sending its tuple of fault
         payload = json.dumps({"prev_hash": self.get_prev_hash(), "view": view, "cancel_number": self.cancel_number, "block": self.get_latest_block_as_tuple(), "faulty_node": faulty_node})    #TODO: payload should be cancel msg, all verified announce
@@ -561,6 +567,7 @@ class ProtoEngine(ProtocolEngine):
             payload = json.loads(propose_message.payload)
             if payload["cancel_number"] >= self.cancel_number:    # Only check new cancel messages
                 faulty_node = payload["faulty_node"]
+                self.check_append_block(Block.from_any(payload["block"]))
                 # TODO: Node receives verified announce message
                 return propose_message.from_id, faulty_node
         return None, None
@@ -572,10 +579,10 @@ class ProtoEngine(ProtocolEngine):
     
     def send_request_cancel(self, vote: tuple, view: int):
         """Broadcasts a round cancellation vote"""
-        payload = json.dumps({"type": "request_cancel", "vote": vote})
+        payload = json.dumps({"type": "request_cancel", "vote": vote, "block": self.get_latest_block_as_tuple(), "cancel_number": self.cancel_number, "view": view})
         msg = self.broadcast("request_cancel", payload, self.bcdb.length, view=view, send_to_readers=True)
     
-    def get_request_cancel(self, round, accuser_id, accused_id, view=0):    # -> accuser_id, accused_id, broadcasted_view_change, broadcast_new_view, received_req_cancel
+    def get_request_cancel(self, accuser_id, accused_id, view=0):    # -> accuser_id, accused_id, broadcasted_view_change, broadcast_new_view, received_req_cancel
         """Blocks for request cancel message and returns accuser, accuser_id, and whether it broadcasted a view-change message.
         If timer expires or f+1 received view-change messages, returns None, None, True"""
         broadcasted_view_change = False
@@ -584,9 +591,10 @@ class ProtoEngine(ProtocolEngine):
         run_time = time.time()
         min_view_change = view
         received_request_cancel = False
-        while time.time() < run_time + self.timeout:   # May not be its own vote proposal
+        while time.time() < run_time + self.timeout*(view+1):   # May not be its own vote proposal
             request_cancel_message = self._recv_msg(type="request_cancel", cancel_msg=True, cancel_round=self.cancel_number, view=view)
             if request_cancel_message:
+                self.check_append_block(Block.from_any(json.loads(request_cancel_message.payload)["block"]))
                 received_request_cancel = True
                 payload = json.loads(request_cancel_message.payload)
                 accuser_id = payload["vote"][0]     # From coordinator, accuser is the one who proposed the cancellation
@@ -634,7 +642,8 @@ class ProtoEngine(ProtocolEngine):
                     pass
                 votes.append(payload["faulty_node"])
                 # Check if consensus reached
-                if vote_accuser > len(self.mem_data.round_writer_list) / 2 or vote_accused > len(self.mem_data.round_writer_list) / 2:
+                # Should be that we expect deterministic votes so that f+1 votes for accuser or accused is enough
+                if vote_accuser > len(self.mem_data.round_writer_list) / 3 or vote_accused > len(self.mem_data.round_writer_list) / 3:
                     consensus = True
             # Check for view-change messages
             # if self.check_view_change(round, view):
@@ -661,6 +670,7 @@ class ProtoEngine(ProtocolEngine):
 
     def vote(self, accuser_id, accused_id, view=0, broadcasted_view_change=False):
         """Node votes for accusing or accused node"""
+        self.comm.peers_disconnected()
         if accused_id in self.mem_data.disconnected_nodes:  # Agrees with accusing node
             self.send_vote_cancel(faulty_node=accused_id, view=view)
             self.get_vote_ballot(accuser_id, accused_id, vote_for_accused=True, view=view, broadcasted_view_change=broadcasted_view_change)    # Blocks on receiving all votes
@@ -672,18 +682,12 @@ class ProtoEngine(ProtocolEngine):
         """Helper function for checking if round is cancelled and selecting coordinator for cancellation round"""
         self.view = view
         if self.get_cancel_coordinatorID(view) == self.id:
-            if accuser_id:
-                return self.coordinator_round_cancelled(view, accuser_id, accused_id)
-            else:
-                return self.coordinator_round_cancelled(view, accuser_id, accused_id)
+            return self.coordinator_round_cancelled(view, accuser_id, accused_id)
         else:
-            if accuser_id:
-                return self.writer_round_cancelled(view, accuser_id, accused_id)
-            else:
-                return self.writer_round_cancelled(view, accuser_id, accused_id)
+            return self.writer_round_cancelled(view, accuser_id, accused_id)
 
     
-    def writer_round_cancelled(self, round, view: int=0, accuser_id=None, accused_id=None):
+    def writer_round_cancelled(self, view: int=0, accuser_id=None, accused_id=None):
         """Checks for round cancellation messages for the current round and proposes a cancellation if it has not been proposed yet. Goes through the cancellation protocol"""
         # If view > 0, round already cancelled. Do not send another propose_cancel message.
         if view is None:
@@ -698,9 +702,9 @@ class ProtoEngine(ProtocolEngine):
             if view == 0:
                 self.send_propose_cancel(faulty_node=accused_id)   # Broadcasts own cancel block proposal
             # Waits for request_cancel from coordinator 
-            accuser_id, accused_id, broadcasted_view_change, broadcast_new_view, received_request_cancel, min_view_change = self.get_request_cancel(accuser_id, accused_id, round, view)
+            accuser_id, accused_id, broadcasted_view_change, broadcast_new_view, received_request_cancel, min_view_change = self.get_request_cancel(accuser_id, accused_id, view)
             if broadcast_new_view:
-                self.send_new_view(view+1)
+                self.send_new_view(min_view_change)
                 return self.node_check_round_cancelled(view+1, accuser_id, accused_id)   # Commit to moving to new view
             if not received_request_cancel and broadcasted_view_change:  # Timed out before receiving request_cancel message or received 2f+1 view-change messages for view where node is coordinator, coordinator is faulty. Move to next view
                 return self.node_check_round_cancelled(view+1, accuser_id, accused_id)   # Commit to moving to new view
@@ -736,7 +740,7 @@ class ProtoEngine(ProtocolEngine):
                 # 3. Did not broadcast view change and success.
                 # 4. Should broadcast new_view and failed.
                 if broadcast_new_view:
-                    self.send_new_view(view+1)
+                    self.send_new_view(min_view_change)
                     return self.node_check_round_cancelled(view+1, accuser_id, accused_id)   # Commit to moving to new view
                 if not received_request_cancel and broadcasted_view_change:  # Timed out before receiving request_cancel message or received 2f+1 view-change messages for view where node is coordinator, coordinator is faulty. Move to next view
                     return self.node_check_round_cancelled(view+1, accuser_id, accused_id)   # Commit to moving to new view
@@ -763,12 +767,8 @@ class ProtoEngine(ProtocolEngine):
             if msg:
                 received_messages += 1
                 dict_payload = json.loads(msg.payload)
-                node_latest_block = Block.from_tuple(tuple(dict_payload["block"]))
                 # Check if node has newer block
-                own_latest_block = self.bcdb.get_latest_block(dict_form=True)
-                if node_latest_block.prev_hash == own_latest_block["hash"]:
-                    # Append block
-                    self.bcdb.insert_block(node_latest_block.round, node_latest_block)
+                self.check_append_block(Block.from_any(tuple(dict_payload["block"])))
                 # Check for 2f+1 received_messages
                 if received_messages >= 2*math.floor((len(self.mem_data.round_writer_list)-1)/3)+1:
                     return achieved_majority, broadcasted_view_change, achieved_majority, min_view_change
@@ -839,7 +839,7 @@ class ProtoEngine(ProtocolEngine):
         # if not json.loads(message.payload):   # Winner had nothing to write. Round skipped
         #     return None, None
         # Receives json payload
-        block = Block.from_json_tuple(message.payload) # Converts tuple json block to block object
+        block = Block.from_any(message.payload) # Converts tuple json block to block object
         if not self.verify_block(block):
             self.cancel_round(faulty_node=winner_id,round=round)   # Sets latest block as cancel block 
         else:
@@ -1080,7 +1080,7 @@ class ProtoEngine(ProtocolEngine):
                 if round:    # Only check for round if not cancel or view-change message. 
                     round_check = msg.round == round
                 if cancel_msg or view_change_msg:
-                    cancel_round_check = msg.cancel_round == self.cancel_number
+                    cancel_round_check = msg.cancel_number == self.cancel_number
                 if type_check and from_check and round_check and cancel_round_check:
                     stop_searching = True
                     found_msg = msg
@@ -1126,10 +1126,10 @@ class ProtoEngine(ProtocolEngine):
         if round:
             round_check = msg.round == round
         if cancel_round:
-            cancel_round_check = msg.cancel_round == cancel_round
+            cancel_round_check = msg.cancel_number == cancel_round
         if view_change:
             view_check = msg.view == view
-        if type_check and from_check and round_check and cancel_round_check:
+        if type_check and from_check and round_check and cancel_round_check and view_check:
             return msg  # Returns msg object if all is true
         else:
             if cancel_msg:

@@ -191,9 +191,9 @@ class MembershipData:
         """Updates per-round active sets."""
         for node in self.round_disconnect_list:
             # Remove from active node list
-            if node in self.ma_writer_list:
+            if node in self.ma_writer_list and node in self.round_writer_list:
                 self.round_writer_list.remove(node)
-            elif node in self.ma_reader_list:
+            elif node in self.ma_reader_list and node in self.round_reader_list:
                 self.round_reader_list.remove(node)
         self.update_penalty_box()  # Update penalty box variables
         self.add_to_penalty_box(round)  # Add nodes to penalty box from disconnect list

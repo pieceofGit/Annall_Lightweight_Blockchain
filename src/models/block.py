@@ -81,6 +81,21 @@ class Block(i_Block):
             self.this_hash,
             self.payload
         )
+        
+    @classmethod 
+    def from_any(cls, block):
+        if isinstance(block, dict):
+            return cls.from_dict(block)
+        elif isinstance(block, Block):
+            return block
+        elif isinstance(block, list):
+            return cls.from_tuple(tuple(block))
+        elif isinstance(block, tuple):
+            return cls.from_tuple(block)
+        elif isinstance(block, str):
+            loaded_block = json.loads(block)
+            return cls.from_any(loaded_block)
+        
 
     @classmethod
     def from_json_tuple(cls, json_block: str):
