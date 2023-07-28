@@ -723,7 +723,7 @@ class ProtoEngine(ProtocolEngine):
         # Check for received propose_cancel
         is_accuser = False
         if view == 0:
-            # Node in view 0 
+            # Node in view 0
             accuser_id, accused_id = self.get_propose_cancel()
             if self.comm.peers_disconnected() and not accused_id:  # Check and returns true if any node has disconnected
                 accused_id = self.mem_data.disconnected_nodes[0]
